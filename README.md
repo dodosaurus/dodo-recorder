@@ -16,6 +16,8 @@ A desktop application for recording browser interactions and voice commentary, p
 
 - Node.js 18+
 - npm or yarn
+- macOS/Linux: `make` and C++ compiler (Xcode CLI tools or build-essential)
+- Windows: [Install make](https://gnuwin32.sourceforge.net/packages/make.htm)
 
 ### Installation
 
@@ -23,10 +25,27 @@ A desktop application for recording browser interactions and voice commentary, p
 npm install
 ```
 
+This will automatically compile whisper.cpp. Then download the Whisper model:
+
+```bash
+npm run whisper:download
+```
+
+Or manually download `ggml-base.en.bin` from [HuggingFace](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin) and place it in:
+```
+node_modules/whisper-node/lib/whisper.cpp/models/
+```
+
+### Verify Whisper Setup
+
+```bash
+npm run whisper:test
+```
+
 ### Development
 
 ```bash
-npm run electron:dev
+npm run dev
 ```
 
 ### Build
@@ -34,16 +53,6 @@ npm run electron:dev
 ```bash
 npm run electron:build
 ```
-
-## Whisper Model Setup
-
-For voice transcription, download the Whisper model:
-
-1. Download `ggml-base.en.bin` from [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp/tree/main)
-2. Place it in the app's data folder:
-   - **macOS**: `~/Library/Application Support/dodo-recorder/models/`
-   - **Windows**: `%APPDATA%/dodo-recorder/models/`
-   - **Linux**: `~/.config/dodo-recorder/models/`
 
 ## Session Output Format
 
@@ -80,6 +89,17 @@ session-YYYY-MM-DD-HHMMSS/
 }
 ```
 
+## Available Whisper Models
+
+| Model     | Disk   | RAM     | Quality |
+|-----------|--------|---------|---------|
+| tiny.en   |  75 MB | ~390 MB | Fast, basic |
+| base.en   | 142 MB | ~500 MB | Good balance (default) |
+| small.en  | 466 MB | ~1.0 GB | Better quality |
+| medium.en | 1.5 GB | ~2.6 GB | High quality |
+
+Download from: https://huggingface.co/ggerganov/whisper.cpp/tree/main
+
 ## Tech Stack
 
 - **Electron** - Cross-platform desktop framework
@@ -87,10 +107,9 @@ session-YYYY-MM-DD-HHMMSS/
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
 - **Playwright** - Browser automation
-- **Whisper.cpp** - Local voice transcription
+- **Whisper.cpp** - Local voice transcription (via whisper-node)
 - **Zustand** - State management
 
 ## License
 
 MIT
-

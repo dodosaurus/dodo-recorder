@@ -1,4 +1,4 @@
-import { chromium, Browser, Page, CDPSession } from 'playwright'
+import { chromium, Browser, Page } from 'playwright'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -27,7 +27,6 @@ interface RecordedAction {
 export class BrowserRecorder extends EventEmitter {
   private browser: Browser | null = null
   private page: Page | null = null
-  private cdpSession: CDPSession | null = null
   private actions: RecordedAction[] = []
   private startTime: number = 0
 
@@ -45,7 +44,6 @@ export class BrowserRecorder extends EventEmitter {
     })
 
     this.page = await context.newPage()
-    this.cdpSession = await this.page.context().newCDPSession(this.page)
 
     await this.setupEventListeners()
     
@@ -57,7 +55,7 @@ export class BrowserRecorder extends EventEmitter {
   }
 
   private async setupEventListeners(): Promise<void> {
-    if (!this.page || !this.cdpSession) return
+    if (!this.page) return
 
     await this.page.exposeFunction('__dodoRecordAction', (data: string) => {
       try {
@@ -73,7 +71,8 @@ export class BrowserRecorder extends EventEmitter {
         const rect = element.getBoundingClientRect()
         const attributes: Record<string, string> = {}
         
-        for (const attr of element.attributes) {
+        for (let i = 0; i < element.attributes.length; i++) {
+          const attr = element.attributes[i]
           attributes[attr.name] = attr.value
         }
 
@@ -123,11 +122,11 @@ export class BrowserRecorder extends EventEmitter {
         return {
           selector,
           role,
-          name: ariaLabel || text?.slice(0, 50),
+          name: ariaLabel || text.slice(0, 50),
           testId,
           xpath: generateXPath(element),
           css: selector,
-          text: text?.slice(0, 100),
+          text: text.slice(0, 100),
           placeholder,
           boundingBox: {
             x: Math.round(rect.x),
@@ -212,7 +211,6 @@ export class BrowserRecorder extends EventEmitter {
       await this.browser.close()
       this.browser = null
       this.page = null
-      this.cdpSession = null
     }
   }
 }

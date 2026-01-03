@@ -9,23 +9,27 @@ interface TranscriptSegment {
   text: string
 }
 
+interface WhisperResult {
+  start: string
+  end: string
+  speech: string
+}
+
 export class Transcriber {
-  private modelPath: string | null = null
   private isInitialized = false
+  private modelName = 'base.en'
 
   async initialize(): Promise<void> {
-    const modelsDir = path.join(app.getPath('userData'), 'models')
+    const whisperNodeDir = path.dirname(require.resolve('whisper-node/package.json'))
+    const whisperModelsDir = path.join(whisperNodeDir, 'lib/whisper.cpp/models')
+    const modelPath = path.join(whisperModelsDir, `ggml-${this.modelName}.bin`)
     
-    if (!fs.existsSync(modelsDir)) {
-      fs.mkdirSync(modelsDir, { recursive: true })
-    }
-
-    this.modelPath = path.join(modelsDir, 'ggml-base.en.bin')
-    
-    if (!fs.existsSync(this.modelPath)) {
-      console.log('Whisper model not found. Please download ggml-base.en.bin')
-      console.log('Download from: https://huggingface.co/ggerganov/whisper.cpp/tree/main')
-      console.log(`Place in: ${modelsDir}`)
+    if (!fs.existsSync(modelPath)) {
+      console.error('Whisper model not found at:', modelPath)
+      console.error('Please run: cd node_modules/whisper-node/lib/whisper.cpp && make')
+      console.error('Then copy ggml-base.en.bin to:', whisperModelsDir)
+    } else {
+      console.log('Whisper model ready:', modelPath)
     }
     
     this.isInitialized = true
@@ -34,11 +38,6 @@ export class Transcriber {
   async transcribe(audioBuffer: Buffer): Promise<TranscriptSegment[]> {
     if (!this.isInitialized) {
       throw new Error('Transcriber not initialized')
-    }
-
-    if (!this.modelPath || !fs.existsSync(this.modelPath)) {
-      console.warn('Whisper model not available, returning empty transcript')
-      return []
     }
 
     try {
@@ -50,9 +49,15 @@ export class Transcriber {
       const wavPath = path.join(tempDir, `audio-${Date.now()}.wav`)
       fs.writeFileSync(wavPath, audioBuffer)
 
+      console.log('Transcribing audio file:', wavPath)
       const segments = await this.runWhisper(wavPath)
+      console.log('Transcription complete, segments:', segments.length)
       
-      fs.unlinkSync(wavPath)
+      try {
+        fs.unlinkSync(wavPath)
+      } catch {
+        console.warn('Could not delete temp audio file')
+      }
       
       return segments
     } catch (error) {
@@ -61,23 +66,38 @@ export class Transcriber {
     }
   }
 
+  private parseTimestamp(timestamp: string): number {
+    const parts = timestamp.split(':')
+    if (parts.length === 3) {
+      const hours = parseInt(parts[0], 10)
+      const minutes = parseInt(parts[1], 10)
+      const seconds = parseFloat(parts[2])
+      return Math.round((hours * 3600 + minutes * 60 + seconds) * 1000)
+    }
+    return 0
+  }
+
   private async runWhisper(audioPath: string): Promise<TranscriptSegment[]> {
     try {
-      const whisper = await import('whisper-node')
+      const whisper = (await import('whisper-node')).default
       
-      const result = await whisper.whisper(audioPath, {
-        modelPath: this.modelPath!,
-        language: 'en',
+      const result: WhisperResult[] | null = await whisper(audioPath, {
+        modelName: this.modelName,
+        whisperOptions: {
+          language: 'en',
+          word_timestamps: false,
+        }
       })
 
       if (!result || !Array.isArray(result)) {
+        console.log('Whisper returned no results')
         return []
       }
 
-      return result.map((segment: { start: number; end: number; speech: string }, index: number) => ({
+      return result.map((segment, index) => ({
         id: `t${index + 1}`,
-        startTime: Math.round(segment.start * 1000),
-        endTime: Math.round(segment.end * 1000),
+        startTime: this.parseTimestamp(segment.start),
+        endTime: this.parseTimestamp(segment.end),
         text: segment.speech.trim(),
       }))
     } catch (error) {
@@ -86,4 +106,3 @@ export class Transcriber {
     }
   }
 }
-

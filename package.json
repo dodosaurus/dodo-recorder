@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build && electron-builder",
     "preview": "vite preview",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "vite build && electron-builder",
+    "postinstall": "cd node_modules/whisper-node/lib/whisper.cpp && make -j4",
+    "whisper:download": "curl -L -o node_modules/whisper-node/lib/whisper.cpp/models/ggml-base.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin",
+    "whisper:test": "node scripts/test-whisper.js"
   },
   "keywords": [
     "playwright",
