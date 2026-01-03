@@ -1,13 +1,8 @@
 import path from 'path'
 import fs from 'fs'
 import { app } from 'electron'
-
-interface TranscriptSegment {
-  id: string
-  startTime: number
-  endTime: number
-  text: string
-}
+import { ensureDir, safeUnlink, getTempPath } from '../utils/fs'
+import type { TranscriptSegment } from '../../shared/types'
 
 interface WhisperResult {
   start: string
@@ -42,22 +37,16 @@ export class Transcriber {
 
     try {
       const tempDir = path.join(app.getPath('temp'), 'dodo-recorder')
-      if (!fs.existsSync(tempDir)) {
-        fs.mkdirSync(tempDir, { recursive: true })
-      }
+      await ensureDir(tempDir)
       
-      const wavPath = path.join(tempDir, `audio-${Date.now()}.wav`)
-      fs.writeFileSync(wavPath, audioBuffer)
+      const wavPath = getTempPath(tempDir, 'audio', '.wav')
+      await fs.promises.writeFile(wavPath, audioBuffer)
 
       console.log('Transcribing audio file:', wavPath)
       const segments = await this.runWhisper(wavPath)
       console.log('Transcription complete, segments:', segments.length)
       
-      try {
-        fs.unlinkSync(wavPath)
-      } catch {
-        console.warn('Could not delete temp audio file')
-      }
+      await safeUnlink(wavPath)
       
       return segments
     } catch (error) {

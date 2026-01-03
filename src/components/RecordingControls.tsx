@@ -3,20 +3,26 @@ import { Button } from '@/components/ui/button'
 import { Play, Square, Save, Loader2 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { generateSessionId } from '@/lib/utils'
+import { useShallow } from 'zustand/react/shallow'
 import type { RecordedAction, SessionBundle, TimelineEntry } from '@/types/session'
 
 export function RecordingControls() {
-  const status = useRecordingStore((state) => state.status)
-  const startUrl = useRecordingStore((state) => state.startUrl)
-  const outputPath = useRecordingStore((state) => state.outputPath)
-  const actions = useRecordingStore((state) => state.actions)
-  const transcriptSegments = useRecordingStore((state) => state.transcriptSegments)
-  const notes = useRecordingStore((state) => state.notes)
-  const isVoiceEnabled = useRecordingStore((state) => state.isVoiceEnabled)
-  const setStatus = useRecordingStore((state) => state.setStatus)
-  const setStartTime = useRecordingStore((state) => state.setStartTime)
-  const addAction = useRecordingStore((state) => state.addAction)
-  const reset = useRecordingStore((state) => state.reset)
+  const {
+    status, startUrl, outputPath, actions, transcriptSegments, notes, isVoiceEnabled,
+    setStatus, setStartTime, addAction, reset
+  } = useRecordingStore(useShallow((state) => ({
+    status: state.status,
+    startUrl: state.startUrl,
+    outputPath: state.outputPath,
+    actions: state.actions,
+    transcriptSegments: state.transcriptSegments,
+    notes: state.notes,
+    isVoiceEnabled: state.isVoiceEnabled,
+    setStatus: state.setStatus,
+    setStartTime: state.setStartTime,
+    addAction: state.addAction,
+    reset: state.reset,
+  })))
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
@@ -214,4 +220,3 @@ export function RecordingControls() {
     </div>
   )
 }
-

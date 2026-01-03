@@ -1,28 +1,7 @@
 import { chromium, Browser, Page } from 'playwright'
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-
-interface ElementTarget {
-  selector: string
-  role?: string
-  name?: string
-  testId?: string
-  xpath?: string
-  css?: string
-  text?: string
-  placeholder?: string
-  boundingBox?: { x: number; y: number; width: number; height: number }
-}
-
-interface RecordedAction {
-  id: string
-  timestamp: number
-  type: 'click' | 'fill' | 'navigate' | 'keypress' | 'select' | 'check' | 'scroll'
-  target?: ElementTarget
-  value?: string
-  url?: string
-  key?: string
-}
+import type { RecordedAction, ElementTarget } from '../../shared/types'
 
 export class BrowserRecorder extends EventEmitter {
   private browser: Browser | null = null
@@ -67,14 +46,12 @@ export class BrowserRecorder extends EventEmitter {
     })
 
     await this.page.addInitScript(() => {
+      const escapeQuotes = (str: string): string => {
+        return str.replace(/"/g, '\\"').replace(/'/g, "\\'")
+      }
+
       const getElementInfo = (element: Element): object => {
         const rect = element.getBoundingClientRect()
-        const attributes: Record<string, string> = {}
-        
-        for (let i = 0; i < element.attributes.length; i++) {
-          const attr = element.attributes[i]
-          attributes[attr.name] = attr.value
-        }
 
         const testId = element.getAttribute('data-testid') || 
                        element.getAttribute('data-test-id') ||
@@ -86,18 +63,20 @@ export class BrowserRecorder extends EventEmitter {
         const placeholder = element.getAttribute('placeholder')
         
         let selector = element.tagName.toLowerCase()
-        if (element.id) {
+        if (element.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(element.id)) {
           selector = `#${element.id}`
         } else if (testId) {
-          selector = `[data-testid="${testId}"]`
+          selector = `[data-testid="${escapeQuotes(testId)}"]`
         } else if (ariaLabel) {
-          selector = `[aria-label="${ariaLabel}"]`
+          selector = `[aria-label="${escapeQuotes(ariaLabel)}"]`
         } else if (text && text.length < 50) {
-          selector = `${element.tagName.toLowerCase()}:has-text("${text.slice(0, 30)}")`
+          selector = `${element.tagName.toLowerCase()}:has-text("${escapeQuotes(text.slice(0, 30))}")`
         }
 
         const generateXPath = (el: Element): string => {
-          if (el.id) return `//*[@id="${el.id}"]`
+          if (el.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(el.id)) {
+            return `//*[@id="${el.id}"]`
+          }
           
           const parts: string[] = []
           let current: Element | null = el
@@ -214,4 +193,3 @@ export class BrowserRecorder extends EventEmitter {
     }
   }
 }
-

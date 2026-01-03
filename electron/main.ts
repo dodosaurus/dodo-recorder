@@ -3,6 +3,9 @@ import path from 'path'
 import { BrowserRecorder } from './browser/recorder'
 import { SessionWriter } from './session/writer'
 import { Transcriber } from './audio/transcriber'
+import { handleIpc, ipcError, ipcSuccess } from './utils/ipc'
+import { validateUrl, validateOutputPath, validateAudioBuffer } from './utils/validation'
+import type { SessionBundle } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 let browserRecorder: BrowserRecorder | null = null
@@ -55,10 +58,7 @@ app.on('activate', () => {
   }
 })
 
-ipcMain.on('window-minimize', () => {
-  mainWindow?.minimize()
-})
-
+ipcMain.on('window-minimize', () => mainWindow?.minimize())
 ipcMain.on('window-maximize', () => {
   if (mainWindow?.isMaximized()) {
     mainWindow.unmaximize()
@@ -66,79 +66,80 @@ ipcMain.on('window-maximize', () => {
     mainWindow?.maximize()
   }
 })
-
-ipcMain.on('window-close', () => {
-  mainWindow?.close()
-})
+ipcMain.on('window-close', () => mainWindow?.close())
 
 ipcMain.handle('select-output-folder', async () => {
   const result = await dialog.showOpenDialog(mainWindow!, {
     properties: ['openDirectory', 'createDirectory'],
     title: 'Select Output Folder for Sessions',
   })
-  
   if (result.canceled) return null
   return result.filePaths[0]
 })
 
 ipcMain.handle('start-recording', async (_, startUrl: string, outputPath: string) => {
-  try {
+  const urlValidation = validateUrl(startUrl)
+  if (!urlValidation.valid) {
+    return ipcError(urlValidation.error, 'URL validation failed')
+  }
+
+  const pathValidation = validateOutputPath(outputPath)
+  if (!pathValidation.valid) {
+    return ipcError(pathValidation.error, 'Path validation failed')
+  }
+
+  return handleIpc(async () => {
     browserRecorder = new BrowserRecorder()
     sessionWriter = new SessionWriter(outputPath)
     transcriber = new Transcriber()
-    
+
     browserRecorder.on('action', (action) => {
       mainWindow?.webContents.send('action-recorded', action)
     })
-    
+
     await browserRecorder.start(startUrl)
     await transcriber.initialize()
-    
-    return { success: true }
-  } catch (error) {
-    console.error('Failed to start recording:', error)
-    return { success: false, error: String(error) }
-  }
+
+    return {}
+  }, 'Failed to start recording')
 })
 
 ipcMain.handle('stop-recording', async () => {
-  try {
+  return handleIpc(async () => {
     const actions = browserRecorder?.getActions() || []
     await browserRecorder?.stop()
     browserRecorder = null
-    
-    return { success: true, actions }
-  } catch (error) {
-    console.error('Failed to stop recording:', error)
-    return { success: false, error: String(error) }
-  }
+    return { actions }
+  }, 'Failed to stop recording')
 })
 
-ipcMain.handle('save-session', async (_, sessionData) => {
-  try {
-    if (!sessionWriter) {
-      throw new Error('Session writer not initialized')
-    }
-    
-    const sessionPath = await sessionWriter.write(sessionData)
-    return { success: true, path: sessionPath }
-  } catch (error) {
-    console.error('Failed to save session:', error)
-    return { success: false, error: String(error) }
+ipcMain.handle('save-session', async (_, sessionData: SessionBundle) => {
+  if (!sessionWriter) {
+    return ipcError('Session writer not initialized')
   }
+
+  if (!sessionData?.metadata?.id) {
+    return ipcError('Invalid session data: missing metadata.id')
+  }
+
+  return handleIpc(async () => {
+    const sessionPath = await sessionWriter!.write(sessionData)
+    return { path: sessionPath }
+  }, 'Failed to save session')
 })
 
 ipcMain.handle('transcribe-audio', async (_, audioBuffer: ArrayBuffer) => {
-  try {
+  const bufferValidation = validateAudioBuffer(audioBuffer)
+  if (!bufferValidation.valid) {
+    return ipcError(bufferValidation.error, 'Audio validation failed')
+  }
+
+  return handleIpc(async () => {
     if (!transcriber) {
       transcriber = new Transcriber()
       await transcriber.initialize()
     }
-    
     const segments = await transcriber.transcribe(Buffer.from(audioBuffer))
-    return { success: true, segments }
-  } catch (error) {
-    console.error('Failed to transcribe audio:', error)
-    return { success: false, error: String(error) }
-  }
+    return { segments }
+  }, 'Failed to transcribe audio')
 })

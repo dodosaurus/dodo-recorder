@@ -2,8 +2,10 @@ import { useRecordingStore } from '@/stores/recordingStore'
 import { formatTimestamp, cn } from '@/lib/utils'
 import { MousePointer2, Type, Navigation, Keyboard, ListChecks, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useShallow } from 'zustand/react/shallow'
+import type { RecordedAction, ActionType } from '@/types/session'
 
-const actionIcons = {
+const actionIcons: Record<ActionType, typeof MousePointer2> = {
   click: MousePointer2,
   fill: Type,
   navigate: Navigation,
@@ -13,7 +15,7 @@ const actionIcons = {
   scroll: MousePointer2,
 }
 
-const actionColors = {
+const actionColors: Record<ActionType, string> = {
   click: 'text-blue-400',
   fill: 'text-green-400',
   navigate: 'text-purple-400',
@@ -23,10 +25,32 @@ const actionColors = {
   scroll: 'text-cyan-400',
 }
 
+function getActionDescription(action: RecordedAction): string {
+  switch (action.type) {
+    case 'click':
+      return action.target?.name || action.target?.selector || 'Element'
+    case 'fill': {
+      const fieldName = action.target?.placeholder || action.target?.name || action.target?.selector || 'Field'
+      const value = action.value ? `"${action.value.slice(0, 30)}${action.value.length > 30 ? '...' : ''}"` : ''
+      return `${fieldName} → ${value}`
+    }
+    case 'navigate':
+      return action.url || ''
+    case 'keypress':
+      return action.key || ''
+    case 'select':
+      return `${action.target?.name || 'Select'} → ${action.value}`
+    default:
+      return action.target?.selector || ''
+  }
+}
+
 export function ActionsList() {
-  const actions = useRecordingStore((state) => state.actions)
-  const removeAction = useRecordingStore((state) => state.removeAction)
-  const status = useRecordingStore((state) => state.status)
+  const { actions, removeAction, status } = useRecordingStore(useShallow((state) => ({
+    actions: state.actions,
+    removeAction: state.removeAction,
+    status: state.status,
+  })))
 
   if (actions.length === 0) {
     return (
@@ -52,25 +76,7 @@ export function ActionsList() {
         {actions.map((action, index) => {
           const Icon = actionIcons[action.type] || MousePointer2
           const colorClass = actionColors[action.type] || 'text-muted-foreground'
-          
-          const getActionDescription = () => {
-            switch (action.type) {
-              case 'click':
-                return action.target?.name || action.target?.selector || 'Element'
-              case 'fill':
-                const fieldName = action.target?.placeholder || action.target?.name || action.target?.selector || 'Field'
-                const value = action.value ? `"${action.value.slice(0, 30)}${action.value.length > 30 ? '...' : ''}"` : ''
-                return `${fieldName} → ${value}`
-              case 'navigate':
-                return action.url || ''
-              case 'keypress':
-                return action.key || ''
-              case 'select':
-                return `${action.target?.name || 'Select'} → ${action.value}`
-              default:
-                return action.target?.selector || ''
-            }
-          }
+          const description = getActionDescription(action)
 
           return (
             <div
@@ -96,8 +102,8 @@ export function ActionsList() {
                     {formatTimestamp(action.timestamp)}
                   </span>
                 </div>
-                <p className="text-sm text-foreground mt-0.5 truncate" title={getActionDescription()}>
-                  {getActionDescription()}
+                <p className="text-sm text-foreground mt-0.5 truncate" title={description}>
+                  {description}
                 </p>
                 {action.target?.testId && (
                   <code className="text-xs text-primary mt-1 block">
@@ -123,4 +129,3 @@ export function ActionsList() {
     </div>
   )
 }
-

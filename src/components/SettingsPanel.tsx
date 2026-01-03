@@ -3,15 +3,21 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Folder, Mic } from 'lucide-react'
+import { useShallow } from 'zustand/react/shallow'
 
 export function SettingsPanel() {
-  const startUrl = useRecordingStore((state) => state.startUrl)
-  const setStartUrl = useRecordingStore((state) => state.setStartUrl)
-  const outputPath = useRecordingStore((state) => state.outputPath)
-  const setOutputPath = useRecordingStore((state) => state.setOutputPath)
-  const isVoiceEnabled = useRecordingStore((state) => state.isVoiceEnabled)
-  const setVoiceEnabled = useRecordingStore((state) => state.setVoiceEnabled)
-  const status = useRecordingStore((state) => state.status)
+  const {
+    startUrl, setStartUrl, outputPath, setOutputPath,
+    isVoiceEnabled, setVoiceEnabled, status
+  } = useRecordingStore(useShallow((state) => ({
+    startUrl: state.startUrl,
+    setStartUrl: state.setStartUrl,
+    outputPath: state.outputPath,
+    setOutputPath: state.setOutputPath,
+    isVoiceEnabled: state.isVoiceEnabled,
+    setVoiceEnabled: state.setVoiceEnabled,
+    status: state.status,
+  })))
 
   const isDisabled = status === 'recording' || status === 'processing'
 
@@ -86,4 +92,3 @@ export function SettingsPanel() {
     </div>
   )
 }
-

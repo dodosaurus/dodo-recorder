@@ -1,10 +1,12 @@
+import type { RecordedAction, SessionBundle, TranscriptSegment, IpcResult } from '../../shared/types'
+
 export interface ElectronAPI {
   selectOutputFolder: () => Promise<string | null>
-  startRecording: (startUrl: string, outputPath: string) => Promise<{ success: boolean; error?: string }>
-  stopRecording: () => Promise<{ success: boolean; actions?: unknown[]; error?: string }>
-  saveSession: (sessionData: unknown) => Promise<{ success: boolean; path?: string; error?: string }>
-  transcribeAudio: (audioBuffer: ArrayBuffer) => Promise<{ success: boolean; segments?: unknown[]; error?: string }>
-  onActionRecorded: (callback: (action: unknown) => void) => () => void
+  startRecording: (startUrl: string, outputPath: string) => Promise<IpcResult>
+  stopRecording: () => Promise<IpcResult<{ actions: RecordedAction[] }>>
+  saveSession: (sessionData: SessionBundle) => Promise<IpcResult<{ path: string }>>
+  transcribeAudio: (audioBuffer: ArrayBuffer) => Promise<IpcResult<{ segments: TranscriptSegment[] }>>
+  onActionRecorded: (callback: (action: RecordedAction) => void) => () => void
   minimizeWindow?: () => void
   maximizeWindow?: () => void
   closeWindow?: () => void

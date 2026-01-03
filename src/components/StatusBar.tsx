@@ -1,11 +1,23 @@
 import { useRecordingStore } from '@/stores/recordingStore'
 import { cn, formatTimestamp } from '@/lib/utils'
 import { useEffect, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+import type { RecordingStatus } from '@/types/session'
+
+const statusConfig: Record<RecordingStatus, { label: string; color: string }> = {
+  idle: { label: 'Ready', color: 'bg-muted-foreground' },
+  recording: { label: 'Recording', color: 'bg-destructive animate-pulse-recording' },
+  paused: { label: 'Paused', color: 'bg-yellow-500' },
+  processing: { label: 'Processing', color: 'bg-primary' },
+  saving: { label: 'Saving', color: 'bg-accent' },
+}
 
 export function StatusBar() {
-  const status = useRecordingStore((state) => state.status)
-  const startTime = useRecordingStore((state) => state.startTime)
-  const actions = useRecordingStore((state) => state.actions)
+  const { status, startTime, actionsCount } = useRecordingStore(useShallow((state) => ({
+    status: state.status,
+    startTime: state.startTime,
+    actionsCount: state.actions.length,
+  })))
   const [elapsed, setElapsed] = useState(0)
 
   useEffect(() => {
@@ -20,14 +32,6 @@ export function StatusBar() {
 
     return () => clearInterval(interval)
   }, [status, startTime])
-
-  const statusConfig = {
-    idle: { label: 'Ready', color: 'bg-muted-foreground' },
-    recording: { label: 'Recording', color: 'bg-destructive animate-pulse-recording' },
-    paused: { label: 'Paused', color: 'bg-yellow-500' },
-    processing: { label: 'Processing', color: 'bg-primary' },
-    saving: { label: 'Saving', color: 'bg-accent' },
-  }
 
   const { label, color } = statusConfig[status]
 
@@ -44,11 +48,10 @@ export function StatusBar() {
             <span className="text-foreground font-medium">{formatTimestamp(elapsed)}</span>
           </div>
           <div className="text-muted-foreground">
-            <span className="text-foreground font-medium">{actions.length}</span> actions
+            <span className="text-foreground font-medium">{actionsCount}</span> actions
           </div>
         </>
       )}
     </div>
   )
 }
-
