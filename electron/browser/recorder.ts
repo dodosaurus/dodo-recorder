@@ -1,6 +1,6 @@
 import { chromium, Browser, Page } from 'playwright'
 import { EventEmitter } from 'events'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'crypto'
 import type { RecordedAction, ElementTarget } from '../../shared/types'
 
 export class BrowserRecorder extends EventEmitter {
@@ -172,7 +172,7 @@ export class BrowserRecorder extends EventEmitter {
 
   private recordAction(partial: Omit<RecordedAction, 'id' | 'timestamp'>): void {
     const action: RecordedAction = {
-      id: uuidv4(),
+      id: randomUUID(),
       timestamp: Date.now() - this.startTime,
       ...partial,
     }
