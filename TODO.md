@@ -1,0 +1,6 @@
+- [ ] fix voice recording and transcription - does not work yet
+- [ ] add assertion mode where elements will on hover will be highlighted like with Playwright Codgene/dev tools insepcting elements
+- [ ] defaulting saving sessions to some folder/caching from previous selection; URL and path should be cached
+- [ ] add new logo, some nice icon
+- [ ] when actions and voice will be working, review the session files, so it makes sense and we do not have a lot of residual context
+- [ ] add button to take screenshot
