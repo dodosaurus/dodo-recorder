@@ -8,4 +8,6 @@ export type {
   RecordingStatus,
   ActionType,
   IpcResult,
+  Locator,
+  LocatorStrategy,
 } from '../../shared/types'

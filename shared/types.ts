@@ -1,5 +1,21 @@
+export type LocatorStrategy = 
+  | 'testId'
+  | 'id'
+  | 'role'
+  | 'placeholder'
+  | 'text'
+  | 'css'
+  | 'xpath'
+
+export interface Locator {
+  strategy: LocatorStrategy
+  value: string
+  confidence: 'high' | 'medium' | 'low'
+}
+
 export interface ElementTarget {
   selector: string
+  locators: Locator[]
   role?: string
   name?: string
   testId?: string
@@ -7,6 +23,9 @@ export interface ElementTarget {
   css?: string
   text?: string
   placeholder?: string
+  tagName?: string
+  innerText?: string
+  attributes?: Record<string, string>
   boundingBox?: {
     x: number
     y: number
@@ -18,7 +37,7 @@ export interface ElementTarget {
 export interface RecordedAction {
   id: string
   timestamp: number
-  type: 'click' | 'fill' | 'navigate' | 'keypress' | 'select' | 'check' | 'scroll'
+  type: 'click' | 'fill' | 'navigate' | 'keypress' | 'select' | 'check' | 'scroll' | 'assert'
   target?: ElementTarget
   value?: string
   url?: string

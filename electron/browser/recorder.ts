@@ -50,63 +50,189 @@ export class BrowserRecorder extends EventEmitter {
         return str.replace(/"/g, '\\"').replace(/'/g, "\\'")
       }
 
+      type LocatorStrategy = 'testId' | 'id' | 'role' | 'placeholder' | 'text' | 'css' | 'xpath'
+      interface Locator {
+        strategy: LocatorStrategy
+        value: string
+        confidence: 'high' | 'medium' | 'low'
+      }
+
+      const generateXPath = (el: Element): string => {
+        if (el.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(el.id)) {
+          return `//*[@id="${el.id}"]`
+        }
+        
+        const parts: string[] = []
+        let current: Element | null = el
+        
+        while (current && current.nodeType === Node.ELEMENT_NODE) {
+          let index = 1
+          let sibling = current.previousElementSibling
+          
+          while (sibling) {
+            if (sibling.tagName === current.tagName) index++
+            sibling = sibling.previousElementSibling
+          }
+          
+          const tagName = current.tagName.toLowerCase()
+          parts.unshift(index > 1 ? `${tagName}[${index}]` : tagName)
+          current = current.parentElement
+        }
+        
+        return '/' + parts.join('/')
+      }
+
+      const generateCssSelector = (el: Element): string => {
+        const parts: string[] = []
+        let current: Element | null = el
+        
+        while (current && current.nodeType === Node.ELEMENT_NODE && parts.length < 4) {
+          let selector = current.tagName.toLowerCase()
+          
+          if (current.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(current.id)) {
+            parts.unshift(`#${current.id}`)
+            break
+          }
+          
+          if (current.className && typeof current.className === 'string') {
+            const classes = current.className.trim().split(/\s+/).filter(c => 
+              c && !/^(ng-|js-|is-|has-)/.test(c) && c.length < 30
+            ).slice(0, 2)
+            if (classes.length) {
+              selector += '.' + classes.join('.')
+            }
+          }
+          
+          const parent = current.parentElement
+          if (parent) {
+            const siblings = Array.from(parent.children).filter(c => c.tagName === current!.tagName)
+            if (siblings.length > 1) {
+              const index = siblings.indexOf(current) + 1
+              selector += `:nth-of-type(${index})`
+            }
+          }
+          
+          parts.unshift(selector)
+          current = current.parentElement
+        }
+        
+        return parts.join(' > ')
+      }
+
+      const buildLocators = (element: Element): Locator[] => {
+        const locators: Locator[] = []
+        const tagName = element.tagName.toLowerCase()
+        
+        const testId = element.getAttribute('data-testid') || 
+                       element.getAttribute('data-test-id') ||
+                       element.getAttribute('data-test')
+        if (testId) {
+          locators.push({
+            strategy: 'testId',
+            value: `[data-testid="${escapeQuotes(testId)}"]`,
+            confidence: 'high'
+          })
+        }
+        
+        if (element.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(element.id)) {
+          locators.push({
+            strategy: 'id',
+            value: `#${element.id}`,
+            confidence: 'high'
+          })
+        }
+        
+        const role = element.getAttribute('role')
+        const ariaLabel = element.getAttribute('aria-label')
+        if (role && ariaLabel) {
+          locators.push({
+            strategy: 'role',
+            value: `getByRole('${role}', { name: '${escapeQuotes(ariaLabel)}' })`,
+            confidence: 'high'
+          })
+        } else if (ariaLabel) {
+          locators.push({
+            strategy: 'role',
+            value: `getByLabel('${escapeQuotes(ariaLabel)}')`,
+            confidence: 'medium'
+          })
+        }
+        
+        const placeholder = element.getAttribute('placeholder')
+        if (placeholder && ['input', 'textarea'].includes(tagName)) {
+          locators.push({
+            strategy: 'placeholder',
+            value: `getByPlaceholder('${escapeQuotes(placeholder)}')`,
+            confidence: 'medium'
+          })
+        }
+        
+        const text = (element.textContent || '').trim()
+        if (text && text.length > 0 && text.length < 50 && ['button', 'a', 'span', 'label', 'h1', 'h2', 'h3', 'h4', 'p'].includes(tagName)) {
+          locators.push({
+            strategy: 'text',
+            value: `getByText('${escapeQuotes(text.slice(0, 40))}')`,
+            confidence: text.length < 20 ? 'medium' : 'low'
+          })
+        }
+        
+        const cssSelector = generateCssSelector(element)
+        if (cssSelector) {
+          locators.push({
+            strategy: 'css',
+            value: cssSelector,
+            confidence: cssSelector.includes('#') ? 'medium' : 'low'
+          })
+        }
+        
+        locators.push({
+          strategy: 'xpath',
+          value: generateXPath(element),
+          confidence: 'low'
+        })
+        
+        const priorityOrder: LocatorStrategy[] = ['testId', 'id', 'role', 'placeholder', 'text', 'css', 'xpath']
+        locators.sort((a, b) => priorityOrder.indexOf(a.strategy) - priorityOrder.indexOf(b.strategy))
+        
+        return locators.slice(0, 3)
+      }
+
       const getElementInfo = (element: Element): object => {
         const rect = element.getBoundingClientRect()
+        const tagName = element.tagName.toLowerCase()
 
         const testId = element.getAttribute('data-testid') || 
                        element.getAttribute('data-test-id') ||
                        element.getAttribute('data-test')
 
         const ariaLabel = element.getAttribute('aria-label')
-        const role = element.getAttribute('role') || element.tagName.toLowerCase()
+        const role = element.getAttribute('role') || tagName
         const text = (element.textContent || '').trim().slice(0, 100)
         const placeholder = element.getAttribute('placeholder')
         
-        let selector = element.tagName.toLowerCase()
-        if (element.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(element.id)) {
-          selector = `#${element.id}`
-        } else if (testId) {
-          selector = `[data-testid="${escapeQuotes(testId)}"]`
-        } else if (ariaLabel) {
-          selector = `[aria-label="${escapeQuotes(ariaLabel)}"]`
-        } else if (text && text.length < 50) {
-          selector = `${element.tagName.toLowerCase()}:has-text("${escapeQuotes(text.slice(0, 30))}")`
-        }
+        const locators = buildLocators(element)
+        const selector = locators.length > 0 ? locators[0].value : tagName
 
-        const generateXPath = (el: Element): string => {
-          if (el.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(el.id)) {
-            return `//*[@id="${el.id}"]`
-          }
-          
-          const parts: string[] = []
-          let current: Element | null = el
-          
-          while (current && current.nodeType === Node.ELEMENT_NODE) {
-            let index = 1
-            let sibling = current.previousElementSibling
-            
-            while (sibling) {
-              if (sibling.tagName === current.tagName) index++
-              sibling = sibling.previousElementSibling
-            }
-            
-            const tagName = current.tagName.toLowerCase()
-            parts.unshift(index > 1 ? `${tagName}[${index}]` : tagName)
-            current = current.parentElement
-          }
-          
-          return '/' + parts.join('/')
+        const attrs: Record<string, string> = {}
+        for (let i = 0; i < element.attributes.length; i++) {
+          const attr = element.attributes[i]
+          if (['class', 'style', 'onclick', 'onmouseover'].includes(attr.name)) continue
+          attrs[attr.name] = attr.value.slice(0, 100)
         }
 
         return {
           selector,
+          locators,
           role,
           name: ariaLabel || text.slice(0, 50),
           testId,
           xpath: generateXPath(element),
-          css: selector,
+          css: generateCssSelector(element),
           text: text.slice(0, 100),
           placeholder,
+          tagName,
+          innerText: text.slice(0, 200),
+          attributes: Object.keys(attrs).length > 0 ? attrs : undefined,
           boundingBox: {
             x: Math.round(rect.x),
             y: Math.round(rect.y),
@@ -120,10 +246,17 @@ export class BrowserRecorder extends EventEmitter {
         const target = e.target as Element
         if (!target) return
         
-        (window as unknown as { __dodoRecordAction: (data: string) => void }).__dodoRecordAction(JSON.stringify({
-          type: 'click',
+        const assertMode = e.altKey === true || e.metaKey === true
+        
+        ;(window as unknown as { __dodoRecordAction: (data: string) => void }).__dodoRecordAction(JSON.stringify({
+          type: assertMode ? 'assert' : 'click',
           target: getElementInfo(target),
         }))
+        
+        if (assertMode) {
+          e.preventDefault()
+          e.stopPropagation()
+        }
       }, true)
 
       document.addEventListener('input', (e) => {
