@@ -1,11 +1,32 @@
 import type { RecordedAction, TranscriptSegment } from '../../shared/types'
 
 // Configuration constants for the distribution algorithm
-const TIME_WINDOWS = {
+// These can be overridden via settings
+let TIME_WINDOWS = {
   LOOKBACK: 10000,  // 10 seconds before action
   LOOKAHEAD: 5000,  // 5 seconds after action
   LONG_SEGMENT_THRESHOLD: 3000, // 3+ seconds = long segment
-} as const
+}
+
+/**
+ * Update time windows configuration
+ * @param config - New configuration values
+ */
+export function updateTimeWindows(config: {
+  lookbackMs?: number
+  lookaheadMs?: number
+  longSegmentThresholdMs?: number
+}): void {
+  if (config.lookbackMs !== undefined) {
+    TIME_WINDOWS.LOOKBACK = config.lookbackMs
+  }
+  if (config.lookaheadMs !== undefined) {
+    TIME_WINDOWS.LOOKAHEAD = config.lookaheadMs
+  }
+  if (config.longSegmentThresholdMs !== undefined) {
+    TIME_WINDOWS.LONG_SEGMENT_THRESHOLD = config.longSegmentThresholdMs
+  }
+}
 
 /**
  * Distributes voice segments across actions using a sophisticated algorithm
@@ -128,8 +149,8 @@ function distributeSegmentsToActions(
     // Skip pre-action segments (already handled)
     if (segment.endTime < firstActionTime) return
 
-    const segmentMidpoint = (segment.startTime + segment.endTime) / 2
-    const assignment = findBestActionForSegment(segment, segmentMidpoint, actions)
+    const segmentMidpointMs = (segment.startTime + segment.endTime) / 2
+    const assignment = findBestActionForSegment(segment, segmentMidpointMs, actions)
 
     assignSegmentToActions(segment, assignment, voiceMap)
   })
@@ -188,13 +209,13 @@ type SegmentAssignment = SingleAssignment | SplitAssignment
  */
 function findBestActionForSegment(
   segment: TranscriptSegment,
-  segmentMidpoint: number,
+  segmentMidpointMs: number,
   actions: RecordedAction[]
 ): SegmentAssignment {
   const relevantActions = findRelevantActions(segment, actions)
 
   if (relevantActions.length === 0) {
-    return { type: 'single', actionId: findClosestAction(segmentMidpoint, actions).id }
+    return { type: 'single', actionId: findClosestAction(segmentMidpointMs, actions).id }
   }
 
   if (relevantActions.length === 1) {
@@ -204,7 +225,7 @@ function findBestActionForSegment(
   // Multiple relevant actions - determine if segment should be split
   return shouldSplitSegment(segment, relevantActions)
     ? { type: 'split', actionIds: relevantActions.map(a => a.id) }
-    : { type: 'single', actionId: findClosestAction(segmentMidpoint, relevantActions).id }
+    : { type: 'single', actionId: findClosestAction(segmentMidpointMs, relevantActions).id }
 }
 
 /**
@@ -244,23 +265,23 @@ function shouldSplitSegment(
   segment: TranscriptSegment,
   relevantActions: RecordedAction[]
 ): boolean {
-  const segmentDuration = segment.endTime - segment.startTime
-  const actionSpan = relevantActions[relevantActions.length - 1].timestamp - relevantActions[0].timestamp
+  const segmentDurationMs = segment.endTime - segment.startTime
+  const actionSpanMs = relevantActions[relevantActions.length - 1].timestamp - relevantActions[0].timestamp
   
-  return segmentDuration > TIME_WINDOWS.LONG_SEGMENT_THRESHOLD && actionSpan > 0
+  return segmentDurationMs > TIME_WINDOWS.LONG_SEGMENT_THRESHOLD && actionSpanMs > 0
 }
 
 /**
  * Helper: Find action closest to timestamp
  */
 function findClosestAction(
-  timestamp: number,
+  timestampMs: number,
   actions: RecordedAction[]
 ): RecordedAction {
   return actions.reduce((closest, action) => {
-    const closestDist = Math.abs(closest.timestamp - timestamp)
-    const actionDist = Math.abs(action.timestamp - timestamp)
-    return actionDist < closestDist ? action : closest
+    const closestDistMs = Math.abs(closest.timestamp - timestampMs)
+    const actionDistMs = Math.abs(action.timestamp - timestampMs)
+    return actionDistMs < closestDistMs ? action : closest
   })
 }
 

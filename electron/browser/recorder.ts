@@ -9,7 +9,14 @@ export class BrowserRecorder extends EventEmitter {
   private page: Page | null = null
   private actions: RecordedAction[] = []
   private startTime: number = 0
+  private frameNavigatedHandler: ((frame: any) => void) | null = null
 
+  /**
+   * Starts recording browser interactions
+   * @param url - The URL to navigate to
+   * @throws {Error} If browser fails to launch or navigate
+   * @returns Promise that resolves when recording has started
+   */
   async start(url: string): Promise<void> {
     this.startTime = Date.now()
     this.actions = []
@@ -225,6 +232,15 @@ export class BrowserRecorder extends EventEmitter {
           const priorityOrder: LocatorStrategy[] = ['testId', 'id', 'role', 'placeholder', 'text', 'css', 'xpath']
           locators.sort((a, b) => priorityOrder.indexOf(a.strategy) - priorityOrder.indexOf(b.strategy))
           
+          // Ensure we always have at least one locator (fallback to xpath)
+          if (locators.length === 0) {
+            locators.push({
+              strategy: 'xpath',
+              value: locatorGenerator.generateXPath(element),
+              confidence: 'low'
+            })
+          }
+          
           return locators.slice(0, 3)
         },
       }
@@ -240,7 +256,8 @@ export class BrowserRecorder extends EventEmitter {
         const placeholder = element.getAttribute('placeholder')
         
         const locators = locatorGenerator.buildLocators(element)
-        const selector = locators.length > 0 ? locators[0].value : tagName
+        // Fallback to tagName if no locators found (should not happen due to buildLocators guarantee)
+        const selector = locators.length > 0 ? locators[0].value : `${tagName}[1]`
 
         const attrs: Record<string, string> = {}
         for (let i = 0; i < element.attributes.length; i++) {
@@ -329,7 +346,7 @@ export class BrowserRecorder extends EventEmitter {
       }, true)
     })
 
-    this.page.on('framenavigated', (frame) => {
+    this.frameNavigatedHandler = (frame: any) => {
       try {
         if (frame === this.page?.mainFrame()) {
           this.recordAction({
@@ -340,7 +357,9 @@ export class BrowserRecorder extends EventEmitter {
       } catch (error) {
         logger.error('Error handling frame navigation:', error)
       }
-    })
+    }
+    
+    this.page.on('framenavigated', this.frameNavigatedHandler)
   }
 
   private recordAction(partial: Omit<RecordedAction, 'id' | 'timestamp'>): void {
@@ -354,11 +373,25 @@ export class BrowserRecorder extends EventEmitter {
     this.emit('action', action)
   }
 
+  /**
+   * Gets all recorded actions
+   * @returns Array of recorded actions (copy to prevent external modification)
+   */
   getActions(): RecordedAction[] {
     return [...this.actions]
   }
 
+  /**
+   * Stops the browser recorder and cleans up resources
+   * Removes all event listeners to prevent memory leaks
+   */
   async stop(): Promise<void> {
+    // Remove all event listeners
+    if (this.page && this.frameNavigatedHandler) {
+      this.page.removeListener('framenavigated', this.frameNavigatedHandler)
+      this.frameNavigatedHandler = null
+    }
+    
     if (this.browser) {
       await this.browser.close()
       this.browser = null

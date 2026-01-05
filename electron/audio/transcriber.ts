@@ -20,17 +20,33 @@ interface WhisperResult {
 
 export class Transcriber {
   private isInitialized = false
-  private modelName = 'base.en'
+  private modelName: string
+  private modelPath?: string
+  private transcriptionTimeoutMs: number
 
+  constructor(
+    modelName: string = 'base.en',
+    transcriptionTimeoutMs: number = 300000,
+    modelPath?: string
+  ) {
+    this.modelName = modelName
+    this.transcriptionTimeoutMs = transcriptionTimeoutMs
+    this.modelPath = modelPath
+  }
+
+  /**
+   * Initializes the transcriber by checking for Whisper model availability
+   * @throws {Error} If model is not found (logs error but doesn't throw)
+   * @returns Promise that resolves when initialization is complete
+   */
   async initialize(): Promise<void> {
-    const whisperNodeDir = path.dirname(require.resolve('whisper-node/package.json'))
-    const whisperModelsDir = path.join(whisperNodeDir, 'lib/whisper.cpp/models')
-    const modelPath = path.join(whisperModelsDir, `ggml-${this.modelName}.bin`)
+    // Use custom model path if provided, otherwise use default
+    const modelPath = this.modelPath || this.getDefaultModelPath()
     
     if (!fs.existsSync(modelPath)) {
       logger.error('Whisper model not found at:', modelPath)
       logger.error('Please run: cd node_modules/whisper-node/lib/whisper.cpp && make')
-      logger.error('Then copy ggml-base.en.bin to:', whisperModelsDir)
+      logger.error('Then copy ggml-base.en.bin to the models directory')
     } else {
       logger.info('Whisper model ready:', modelPath)
     }
@@ -38,6 +54,20 @@ export class Transcriber {
     this.isInitialized = true
   }
 
+  /**
+   * Get the default model path based on model name
+   */
+  private getDefaultModelPath(): string {
+    const whisperNodeDir = path.dirname(require.resolve('whisper-node/package.json'))
+    const whisperModelsDir = path.join(whisperNodeDir, 'lib/whisper.cpp/models')
+    return path.join(whisperModelsDir, `ggml-${this.modelName}.bin`)
+  }
+
+  /**
+   * Transcribes audio buffer to text segments
+   * @param audioBuffer - Audio data buffer to transcribe
+   * @returns Promise that resolves with array of transcript segments (empty array on error)
+   */
   async transcribe(audioBuffer: Buffer): Promise<TranscriptSegment[]> {
     if (!this.isInitialized) {
       throw new Error('Transcriber not initialized')
@@ -57,7 +87,7 @@ export class Transcriber {
       await safeUnlink(inputPath)
 
       logger.info('Transcribing audio file:', wavPath)
-      const segments = await this.runWhisper(wavPath)
+      const segments = await this.transcribeWithTimeout(wavPath)
       logger.info('Transcription complete, segments:', segments.length)
       
       await safeUnlink(wavPath)
@@ -99,6 +129,25 @@ export class Transcriber {
     return 0
   }
 
+  /**
+   * Transcribe audio with timeout protection
+   * @param audioPath - Path to the audio file
+   * @returns Promise that resolves with transcript segments or rejects on timeout
+   */
+  private async transcribeWithTimeout(audioPath: string): Promise<TranscriptSegment[]> {
+    return Promise.race([
+      this.runWhisper(audioPath),
+      new Promise<TranscriptSegment[]>((_, reject) =>
+        setTimeout(() => reject(new Error('Transcription timeout')), this.transcriptionTimeoutMs)
+      )
+    ])
+  }
+
+  /**
+   * Run Whisper transcription on audio file
+   * @param audioPath - Path to the audio file
+   * @returns Promise that resolves with transcript segments
+   */
   private async runWhisper(audioPath: string): Promise<TranscriptSegment[]> {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports

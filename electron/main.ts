@@ -1,90 +1,16 @@
 import { app, BrowserWindow, ipcMain, dialog, systemPreferences, session } from 'electron'
 import path from 'path'
-import { BrowserRecorder } from './browser/recorder'
-import { SessionWriter } from './session/writer'
-import { Transcriber } from './audio/transcriber'
-import { handleIpc, ipcError } from './utils/ipc'
-import { validateUrl, validateOutputPath, validateAudioBuffer } from './utils/validation'
-import { distributeVoiceSegments, generateFullTranscript } from './utils/voiceDistribution'
+import { cleanupOldTempFiles } from './utils/fs'
 import { logger } from './utils/logger'
-import type { SessionBundle, RecordedAction, TranscriptSegment } from '../shared/types'
+import { getSettingsStore } from './settings/store'
+import { updateTimeWindows } from './utils/voiceDistribution'
+import { registerAllHandlers } from './ipc/handlers'
 
 let mainWindow: BrowserWindow | null = null
-let browserRecorder: BrowserRecorder | null = null
-let transcriber: Transcriber | null = null
-let sessionWriter: SessionWriter | null = null
-let isRecording = false
 
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 const isMac = process.platform === 'darwin'
 const ALLOWED_PERMISSIONS = ['media', 'microphone', 'audioCapture'] as const
-
-function validateSessionBundle(data: unknown): data is SessionBundle {
-  if (!data || typeof data !== 'object') return false
-  
-  const bundle = data as Partial<SessionBundle>
-  
-  // Validate required fields exist and have correct types
-  if (!Array.isArray(bundle.actions)) return false
-  if (!Array.isArray(bundle.timeline)) return false
-  if (!Array.isArray(bundle.transcript)) return false
-  if (!bundle.metadata || typeof bundle.metadata !== 'object') return false
-  if (typeof bundle.metadata.id !== 'string') return false
-  if (typeof bundle.notes !== 'string') return false
-  
-  // Validate actions array structure
-  for (const action of bundle.actions) {
-    if (!action || typeof action !== 'object') return false
-    if (typeof action.id !== 'string') return false
-    if (typeof action.timestamp !== 'number') return false
-    if (typeof action.type !== 'string') return false
-  }
-  
-  // Validate timeline array structure
-  for (const entry of bundle.timeline) {
-    if (!entry || typeof entry !== 'object') return false
-    if (typeof entry.timestamp !== 'number') return false
-    if (typeof entry.type !== 'string') return false
-  }
-  
-  // Validate transcript array structure
-  for (const segment of bundle.transcript) {
-    if (!segment || typeof segment !== 'object') return false
-    if (typeof segment.id !== 'string') return false
-    if (typeof segment.startTime !== 'number') return false
-    if (typeof segment.endTime !== 'number') return false
-    if (typeof segment.text !== 'string') return false
-  }
-  
-  return true
-}
-
-function validateRecordedActionsArray(data: unknown): data is RecordedAction[] {
-  if (!Array.isArray(data)) return false
-  
-  for (const action of data) {
-    if (!action || typeof action !== 'object') return false
-    if (typeof action.id !== 'string') return false
-    if (typeof action.timestamp !== 'number') return false
-    if (typeof action.type !== 'string') return false
-  }
-  
-  return true
-}
-
-function validateTranscriptSegmentsArray(data: unknown): data is TranscriptSegment[] {
-  if (!Array.isArray(data)) return false
-  
-  for (const segment of data) {
-    if (!segment || typeof segment !== 'object') return false
-    if (typeof segment.id !== 'string') return false
-    if (typeof segment.startTime !== 'number') return false
-    if (typeof segment.endTime !== 'number') return false
-    if (typeof segment.text !== 'string') return false
-  }
-  
-  return true
-}
 
 async function requestMicrophonePermission(): Promise<boolean> {
   if (isMac) {
@@ -143,9 +69,24 @@ async function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null
   })
+
+  // Register all IPC handlers after window is created
+  registerAllHandlers(mainWindow)
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(async () => {
+  // Initialize settings
+  const settings = getSettingsStore()
+  
+  // Apply voice distribution settings
+  updateTimeWindows(settings.getVoiceDistributionConfig())
+  
+  // Clean up old temp files on startup (older than 24 hours)
+  const tempDir = path.join(app.getPath('temp'), 'dodo-recorder')
+  await cleanupOldTempFiles(tempDir, 24 * 60 * 60 * 1000)
+  
+  await createWindow()
+})
 
 app.on('window-all-closed', () => {
   if (!isMac) {
@@ -180,6 +121,7 @@ ipcMain.on('window-maximize', () => {
 })
 ipcMain.on('window-close', () => mainWindow?.close())
 
+// Simple IPC handlers that don't need extraction
 ipcMain.handle('select-output-folder', async () => {
   const result = await dialog.showOpenDialog(mainWindow!, {
     properties: ['openDirectory', 'createDirectory'],
@@ -187,137 +129,4 @@ ipcMain.handle('select-output-folder', async () => {
   })
   if (result.canceled) return null
   return result.filePaths[0]
-})
-
-ipcMain.handle('start-recording', async (_, startUrl: string, outputPath: string) => {
-  // Check if already recording
-  if (isRecording) {
-    return ipcError('Recording already in progress')
-  }
-
-  const urlValidation = validateUrl(startUrl)
-  if (!urlValidation.valid) {
-    return ipcError(urlValidation.error, 'URL validation failed')
-  }
-
-  const pathValidation = validateOutputPath(outputPath)
-  if (!pathValidation.valid) {
-    return ipcError(pathValidation.error, 'Path validation failed')
-  }
-
-  return handleIpc(async () => {
-    isRecording = true
-    
-    try {
-      browserRecorder = new BrowserRecorder()
-      sessionWriter = new SessionWriter(outputPath)
-      transcriber = new Transcriber()
-
-      browserRecorder.on('action', (action) => {
-        mainWindow?.webContents.send('action-recorded', action)
-      })
-
-      await browserRecorder.start(startUrl)
-      await transcriber.initialize()
-
-      return {}
-    } catch (error) {
-      // Cleanup on failure
-      await browserRecorder?.stop()
-      browserRecorder = null
-      sessionWriter = null
-      transcriber = null
-      isRecording = false
-      throw error
-    }
-  }, 'Failed to start recording')
-})
-
-ipcMain.handle('stop-recording', async () => {
-  if (!isRecording) {
-    return ipcError('No recording in progress')
-  }
-
-  return handleIpc(async () => {
-    const actions = browserRecorder?.getActions() || []
-    await browserRecorder?.stop()
-    browserRecorder = null
-    isRecording = false
-    return { actions }
-  }, 'Failed to stop recording')
-})
-
-ipcMain.handle('save-session', async (_, sessionData: unknown) => {
-  logger.info('[IPC] Saving session...')
-  
-  if (!sessionWriter) {
-    logger.error('[IPC] Session writer not initialized')
-    return ipcError('Session writer not initialized')
-  }
-
-  if (!validateSessionBundle(sessionData)) {
-    logger.error('[IPC] Invalid session data structure')
-    return ipcError('Invalid session data structure')
-  }
-
-  logger.info(`[IPC] Session has ${sessionData.actions.length} actions, ${sessionData.transcript.length} transcript segments`)
-  
-  return handleIpc(async () => {
-    const sessionPath = await sessionWriter!.write(sessionData)
-    logger.info('[IPC] Session saved to:', sessionPath)
-    return { path: sessionPath }
-  }, 'Failed to save session')
-})
-
-ipcMain.handle('transcribe-audio', async (_, audioBuffer: ArrayBuffer) => {
-  const bufferValidation = validateAudioBuffer(audioBuffer)
-  if (!bufferValidation.valid) {
-    return ipcError(bufferValidation.error, 'Audio validation failed')
-  }
-
-  return handleIpc(async () => {
-    if (!transcriber) {
-      transcriber = new Transcriber()
-      await transcriber.initialize()
-    }
-    const segments = await transcriber.transcribe(Buffer.from(audioBuffer))
-    return { segments }
-  }, 'Failed to transcribe audio')
-})
-
-ipcMain.handle('distribute-voice-segments', async (
-  _,
-  actions: unknown,
-  segments: unknown,
-  startTime: unknown
-) => {
-  if (!validateRecordedActionsArray(actions)) {
-    return ipcError('Invalid actions array structure')
-  }
-  
-  if (!validateTranscriptSegmentsArray(segments)) {
-    return ipcError('Invalid transcript segments array structure')
-  }
-  
-  if (typeof startTime !== 'number') {
-    return ipcError('Invalid startTime: must be a number')
-  }
-  
-  logger.info(`[IPC] Distributing ${segments.length} voice segments across ${actions.length} actions`)
-  return handleIpc(async () => {
-    const actionsWithVoice = distributeVoiceSegments(actions, segments, startTime)
-    logger.info(`[IPC] Distribution complete, ${actionsWithVoice.length} actions with voice`)
-    return { actions: actionsWithVoice }
-  }, 'Failed to distribute voice segments')
-})
-
-ipcMain.handle('generate-full-transcript', async (_, segments: unknown) => {
-  if (!validateTranscriptSegmentsArray(segments)) {
-    return ipcError('Invalid transcript segments array structure')
-  }
-  
-  return handleIpc(async () => {
-    const transcript = generateFullTranscript(segments)
-    return { transcript }
-  }, 'Failed to generate transcript')
 })
