@@ -7,6 +7,7 @@ export interface ElectronAPI {
   stopRecording: () => Promise<IpcResult<{ actions: RecordedAction[] }>>
   saveSession: (sessionData: SessionBundle) => Promise<IpcResult<{ path: string }>>
   transcribeAudio: (audioBuffer: ArrayBuffer) => Promise<IpcResult<{ segments: TranscriptSegment[] }>>
+  checkMicrophonePermission: () => Promise<{ granted: boolean; denied?: boolean }>
   onActionRecorded: (callback: (action: RecordedAction) => void) => () => void
   minimizeWindow: () => void
   maximizeWindow: () => void
@@ -26,6 +27,9 @@ const electronAPI: ElectronAPI = {
   
   transcribeAudio: (audioBuffer: ArrayBuffer) =>
     ipcRenderer.invoke('transcribe-audio', audioBuffer),
+
+  checkMicrophonePermission: () =>
+    ipcRenderer.invoke('check-microphone-permission'),
   
   onActionRecorded: (callback: (action: RecordedAction) => void) => {
     const handler = (_: unknown, action: RecordedAction) => callback(action)

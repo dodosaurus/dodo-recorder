@@ -17,7 +17,7 @@ export default defineConfig({
           build: {
             outDir: 'dist-electron',
             rollupOptions: {
-              external: ['playwright', 'whisper-node']
+              external: ['playwright', 'whisper-node', 'ffmpeg-static', 'fluent-ffmpeg']
             }
           }
         }

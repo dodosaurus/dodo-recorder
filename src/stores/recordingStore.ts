@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { RecordedAction, TranscriptSegment, RecordingStatus } from '@/types/session'
 
+export type AudioStatus = 'idle' | 'recording' | 'processing' | 'complete' | 'error'
+
 interface RecordingState {
   status: RecordingStatus
   actions: RecordedAction[]
@@ -11,15 +13,23 @@ interface RecordingState {
   notes: string
   isVoiceEnabled: boolean
   
+  audioStatus: AudioStatus
+  audioChunksCount: number
+  audioError: string | null
+  
   setStatus: (status: RecordingStatus) => void
   addAction: (action: RecordedAction) => void
   removeAction: (id: string) => void
   addTranscriptSegment: (segment: TranscriptSegment) => void
+  setTranscriptSegments: (segments: TranscriptSegment[]) => void
   setStartTime: (time: number) => void
   setStartUrl: (url: string) => void
   setOutputPath: (path: string) => void
   setNotes: (notes: string) => void
   setVoiceEnabled: (enabled: boolean) => void
+  setAudioStatus: (status: AudioStatus) => void
+  incrementAudioChunks: () => void
+  setAudioError: (error: string | null) => void
   reset: () => void
 }
 
@@ -32,6 +42,9 @@ const initialState = {
   outputPath: '',
   notes: '',
   isVoiceEnabled: true,
+  audioStatus: 'idle' as AudioStatus,
+  audioChunksCount: 0,
+  audioError: null as string | null,
 }
 
 export const useRecordingStore = create<RecordingState>((set) => ({
@@ -50,6 +63,8 @@ export const useRecordingStore = create<RecordingState>((set) => ({
   addTranscriptSegment: (segment) => set((state) => ({
     transcriptSegments: [...state.transcriptSegments, segment]
   })),
+
+  setTranscriptSegments: (segments) => set({ transcriptSegments: segments }),
   
   setStartTime: (time) => set({ startTime: time }),
   
@@ -60,6 +75,14 @@ export const useRecordingStore = create<RecordingState>((set) => ({
   setNotes: (notes) => set({ notes }),
   
   setVoiceEnabled: (enabled) => set({ isVoiceEnabled: enabled }),
+
+  setAudioStatus: (audioStatus) => set({ audioStatus }),
+
+  incrementAudioChunks: () => set((state) => ({ 
+    audioChunksCount: state.audioChunksCount + 1 
+  })),
+
+  setAudioError: (audioError) => set({ audioError }),
   
   reset: () => set(initialState),
 }))

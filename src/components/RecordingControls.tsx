@@ -1,6 +1,6 @@
 import { useRecordingStore } from '@/stores/recordingStore'
 import { Button } from '@/components/ui/button'
-import { Play, Square, Save, Loader2 } from 'lucide-react'
+import { Play, Square, Save, Loader2, Mic, MicOff } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { generateSessionId } from '@/lib/utils'
 import { useShallow } from 'zustand/react/shallow'
@@ -9,7 +9,9 @@ import type { RecordedAction, SessionBundle, TimelineEntry } from '@/types/sessi
 export function RecordingControls() {
   const {
     status, startUrl, outputPath, actions, transcriptSegments, notes, isVoiceEnabled,
-    setStatus, setStartTime, addAction, reset
+    audioStatus, audioChunksCount, audioError,
+    setStatus, setStartTime, addAction, setTranscriptSegments, reset,
+    setAudioStatus, incrementAudioChunks, setAudioError
   } = useRecordingStore(useShallow((state) => ({
     status: state.status,
     startUrl: state.startUrl,
@@ -18,10 +20,17 @@ export function RecordingControls() {
     transcriptSegments: state.transcriptSegments,
     notes: state.notes,
     isVoiceEnabled: state.isVoiceEnabled,
+    audioStatus: state.audioStatus,
+    audioChunksCount: state.audioChunksCount,
+    audioError: state.audioError,
     setStatus: state.setStatus,
     setStartTime: state.setStartTime,
     addAction: state.addAction,
+    setTranscriptSegments: state.setTranscriptSegments,
     reset: state.reset,
+    setAudioStatus: state.setAudioStatus,
+    incrementAudioChunks: state.incrementAudioChunks,
+    setAudioError: state.setAudioError,
   })))
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -53,22 +62,33 @@ export function RecordingControls() {
 
     setStartTime(Date.now())
     setStatus('recording')
+    setAudioError(null)
 
     if (isVoiceEnabled) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        mediaRecorderRef.current = new MediaRecorder(stream)
-        audioChunksRef.current = []
+        const permResult = await window.electronAPI.checkMicrophonePermission()
+        if (!permResult.granted) {
+          setAudioError('Microphone permission denied')
+          setAudioStatus('error')
+        } else {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+          mediaRecorderRef.current = new MediaRecorder(stream)
+          audioChunksRef.current = []
 
-        mediaRecorderRef.current.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            audioChunksRef.current.push(e.data)
+          mediaRecorderRef.current.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+              audioChunksRef.current.push(e.data)
+              incrementAudioChunks()
+            }
           }
-        }
 
-        mediaRecorderRef.current.start(1000)
+          mediaRecorderRef.current.start(1000)
+          setAudioStatus('recording')
+        }
       } catch (err) {
         console.error('Failed to start audio recording:', err)
+        setAudioError(err instanceof Error ? err.message : 'Failed to access microphone')
+        setAudioStatus('error')
       }
     }
   }
@@ -87,11 +107,27 @@ export function RecordingControls() {
       await new Promise(resolve => setTimeout(resolve, 500))
       
       if (audioChunksRef.current.length > 0) {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' })
+        setAudioStatus('processing')
+        
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
         const arrayBuffer = await audioBlob.arrayBuffer()
         
-        await window.electronAPI.transcribeAudio(arrayBuffer)
+        const result = await window.electronAPI.transcribeAudio(arrayBuffer)
+        if (result.success && result.segments) {
+          setTranscriptSegments(result.segments)
+          setAudioStatus('complete')
+        } else {
+          setAudioError(result.error || 'Transcription failed')
+          setAudioStatus('error')
+        }
+      } else {
+        setAudioStatus('idle')
       }
+      
+      mediaRecorderRef.current = null
+      audioChunksRef.current = []
+    } else {
+      setAudioStatus('idle')
     }
 
     setStatus('idle')
@@ -143,8 +179,53 @@ export function RecordingControls() {
     setStatus('idle')
   }
 
+  const renderAudioStatus = () => {
+    if (!isVoiceEnabled) return null
+
+    if (status === 'recording' && audioStatus === 'recording') {
+      return (
+        <div className="flex items-center gap-2 text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-md">
+          <Mic className="h-3.5 w-3.5 animate-pulse" />
+          <span>Recording audio</span>
+          <span className="ml-auto font-mono">{audioChunksCount}s</span>
+        </div>
+      )
+    }
+
+    if (audioStatus === 'processing') {
+      return (
+        <div className="flex items-center gap-2 text-xs bg-amber-500/10 text-amber-400 px-3 py-2 rounded-md">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <span>Transcribing audio with Whisper...</span>
+        </div>
+      )
+    }
+
+    if (audioStatus === 'complete' && transcriptSegments.length > 0) {
+      return (
+        <div className="flex items-center gap-2 text-xs bg-emerald-500/10 text-emerald-400 px-3 py-2 rounded-md">
+          <Mic className="h-3.5 w-3.5" />
+          <span>{transcriptSegments.length} voice segment{transcriptSegments.length !== 1 ? 's' : ''} transcribed</span>
+        </div>
+      )
+    }
+
+    if (audioStatus === 'error') {
+      return (
+        <div className="flex items-center gap-2 text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-md">
+          <MicOff className="h-3.5 w-3.5" />
+          <span>{audioError || 'Audio error'}</span>
+        </div>
+      )
+    }
+
+    return null
+  }
+
   return (
     <div className="p-4 border-t border-border space-y-3">
+      {renderAudioStatus()}
+
       {status === 'idle' && actions.length === 0 && (
         <Button
           className="w-full"
@@ -172,7 +253,7 @@ export function RecordingControls() {
       {status === 'processing' && (
         <Button className="w-full" size="lg" disabled>
           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          Processing...
+          {audioStatus === 'processing' ? 'Transcribing...' : 'Processing...'}
         </Button>
       )}
 

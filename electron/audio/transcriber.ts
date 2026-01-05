@@ -3,6 +3,13 @@ import fs from 'fs'
 import { app } from 'electron'
 import { ensureDir, safeUnlink, getTempPath } from '../utils/fs'
 import type { TranscriptSegment } from '../../shared/types'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const ffmpegPath = require('ffmpeg-static') as string
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const ffmpeg = require('fluent-ffmpeg')
+
+console.log('FFmpeg path:', ffmpegPath)
+ffmpeg.setFfmpegPath(ffmpegPath)
 
 interface WhisperResult {
   start: string
@@ -39,8 +46,14 @@ export class Transcriber {
       const tempDir = path.join(app.getPath('temp'), 'dodo-recorder')
       await ensureDir(tempDir)
       
+      const inputPath = getTempPath(tempDir, 'audio-input', '.webm')
       const wavPath = getTempPath(tempDir, 'audio', '.wav')
-      await fs.promises.writeFile(wavPath, audioBuffer)
+      
+      await fs.promises.writeFile(inputPath, audioBuffer)
+      console.log('Converting audio to WAV format...')
+      
+      await this.convertToWav(inputPath, wavPath)
+      await safeUnlink(inputPath)
 
       console.log('Transcribing audio file:', wavPath)
       const segments = await this.runWhisper(wavPath)
@@ -53,6 +66,25 @@ export class Transcriber {
       console.error('Transcription failed:', error)
       return []
     }
+  }
+
+  private convertToWav(inputPath: string, outputPath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      ffmpeg(inputPath)
+        .audioFrequency(16000)
+        .audioChannels(1)
+        .audioCodec('pcm_s16le')
+        .format('wav')
+        .on('end', () => {
+          console.log('Audio conversion complete')
+          resolve()
+        })
+        .on('error', (err: Error) => {
+          console.error('Audio conversion failed:', err)
+          reject(err)
+        })
+        .save(outputPath)
+    })
   }
 
   private parseTimestamp(timestamp: string): number {
@@ -68,7 +100,9 @@ export class Transcriber {
 
   private async runWhisper(audioPath: string): Promise<TranscriptSegment[]> {
     try {
-      const whisper = (await import('whisper-node')).default
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const whisperModule = require('whisper-node')
+      const whisper = whisperModule.whisper || whisperModule.default || whisperModule
       
       const result: WhisperResult[] | null = await whisper(audioPath, {
         modelName: this.modelName,

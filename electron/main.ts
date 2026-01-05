@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, systemPreferences, session } from 'electron'
 import path from 'path'
 import { BrowserRecorder } from './browser/recorder'
 import { SessionWriter } from './session/writer'
@@ -15,7 +15,39 @@ let sessionWriter: SessionWriter | null = null
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 const isMac = process.platform === 'darwin'
 
+async function requestMicrophonePermission(): Promise<boolean> {
+  if (isMac) {
+    const status = systemPreferences.getMediaAccessStatus('microphone')
+    if (status === 'granted') return true
+    if (status === 'denied') {
+      console.error('Microphone access denied. Please enable it in System Preferences > Privacy & Security > Microphone')
+      return false
+    }
+    return await systemPreferences.askForMediaAccess('microphone')
+  }
+  return true
+}
+
+function setupPermissionHandlers() {
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    const allowedPermissions = ['media', 'microphone', 'audioCapture']
+    if (allowedPermissions.includes(permission)) {
+      callback(true)
+    } else {
+      callback(false)
+    }
+  })
+
+  session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+    const allowedPermissions = ['media', 'microphone', 'audioCapture']
+    return allowedPermissions.includes(permission)
+  })
+}
+
 async function createWindow() {
+  setupPermissionHandlers()
+  await requestMicrophonePermission()
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -56,6 +88,17 @@ app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow()
   }
+})
+
+ipcMain.handle('check-microphone-permission', async () => {
+  if (isMac) {
+    const status = systemPreferences.getMediaAccessStatus('microphone')
+    if (status === 'granted') return { granted: true }
+    if (status === 'denied') return { granted: false, denied: true }
+    const granted = await systemPreferences.askForMediaAccess('microphone')
+    return { granted }
+  }
+  return { granted: true }
 })
 
 ipcMain.on('window-minimize', () => mainWindow?.minimize())

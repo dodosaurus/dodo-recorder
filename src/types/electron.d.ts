@@ -6,6 +6,7 @@ export interface ElectronAPI {
   stopRecording: () => Promise<IpcResult<{ actions: RecordedAction[] }>>
   saveSession: (sessionData: SessionBundle) => Promise<IpcResult<{ path: string }>>
   transcribeAudio: (audioBuffer: ArrayBuffer) => Promise<IpcResult<{ segments: TranscriptSegment[] }>>
+  checkMicrophonePermission: () => Promise<{ granted: boolean; denied?: boolean }>
   onActionRecorded: (callback: (action: RecordedAction) => void) => () => void
   minimizeWindow?: () => void
   maximizeWindow?: () => void
