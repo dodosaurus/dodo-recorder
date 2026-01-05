@@ -1,6 +1,8 @@
 import path from 'path'
 import fs from 'fs'
 import { app } from 'electron'
+import { exec } from 'child_process'
+import { promisify } from 'util'
 import { ensureDir, safeUnlink, getTempPath } from '../utils/fs'
 import { logger } from '../utils/logger'
 import type { TranscriptSegment } from '../../shared/types'
@@ -8,6 +10,8 @@ import type { TranscriptSegment } from '../../shared/types'
 const ffmpegPath = require('ffmpeg-static') as string
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ffmpeg = require('fluent-ffmpeg')
+
+const execAsync = promisify(exec)
 
 logger.debug('FFmpeg path:', ffmpegPath)
 ffmpeg.setFfmpegPath(ffmpegPath)
@@ -25,7 +29,7 @@ export class Transcriber {
   private transcriptionTimeoutMs: number
 
   constructor(
-    modelName: string = 'base.en',
+    modelName: string = 'small.en', // Upgraded to small.en for better quality
     transcriptionTimeoutMs: number = 300000,
     modelPath?: string
   ) {
@@ -43,13 +47,24 @@ export class Transcriber {
     // Use custom model path if provided, otherwise use default
     const modelPath = this.modelPath || this.getDefaultModelPath()
     
+    logger.info('='.repeat(60))
+    logger.info('🎤 Whisper Transcriber Initialization')
+    logger.info('='.repeat(60))
+    logger.info(`Model: ${this.modelName}`)
+    logger.info(`Path: ${modelPath}`)
+    
     if (!fs.existsSync(modelPath)) {
-      logger.error('Whisper model not found at:', modelPath)
+      logger.error('❌ Whisper model not found!')
       logger.error('Please run: cd node_modules/whisper-node/lib/whisper.cpp && make')
-      logger.error('Then copy ggml-base.en.bin to the models directory')
+      logger.error(`Then download: ggml-${this.modelName}.bin to the models directory`)
+      logger.error('Download from: https://huggingface.co/ggerganov/whisper.cpp/tree/main')
     } else {
-      logger.info('Whisper model ready:', modelPath)
+      const stats = fs.statSync(modelPath)
+      const sizeMB = (stats.size / (1024 * 1024)).toFixed(2)
+      logger.info(`✅ Model ready (${sizeMB} MB)`)
     }
+    
+    logger.info('='.repeat(60))
     
     this.isInitialized = true
   }
@@ -101,13 +116,23 @@ export class Transcriber {
 
   private convertToWav(inputPath: string, outputPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
+      // Add 1.5 seconds of silence at the beginning to help Whisper detect early speech
+      // This is especially important for external microphones which have initialization delays
+      // Whisper's VAD needs this buffer to properly detect speech at the very beginning
       ffmpeg(inputPath)
         .audioFrequency(16000)
         .audioChannels(1)
         .audioCodec('pcm_s16le')
         .format('wav')
+        // Prepend 1.5s of silence using adelay and apad filters
+        .audioFilters([
+          'apad=pad_dur=1.5',  // Add 1.5s padding at the end
+          'areverse',           // Reverse the audio
+          'apad=pad_dur=1.5',  // Add 1.5s padding (which will be at the beginning after reversing back)
+          'areverse'            // Reverse back to original
+        ])
         .on('end', () => {
-          logger.debug('Audio conversion complete')
+          logger.debug('Audio conversion complete (with 1.5s leading silence)')
           resolve()
         })
         .on('error', (err: Error) => {
@@ -144,60 +169,149 @@ export class Transcriber {
   }
 
   /**
-   * Run Whisper transcription on audio file
+   * Run Whisper transcription on audio file using direct whisper.cpp call
    * @param audioPath - Path to the audio file
    * @returns Promise that resolves with transcript segments
    */
   private async runWhisper(audioPath: string): Promise<TranscriptSegment[]> {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const whisperModule = require('whisper-node')
-      const whisper = whisperModule.whisper || whisperModule.default || whisperModule
+      logger.info('='.repeat(60))
+      logger.info('🎙️  Starting Whisper Transcription (Direct whisper.cpp)')
+      logger.info('='.repeat(60))
+      logger.info(`Audio file: ${audioPath}`)
+      logger.info(`Model: ${this.modelName}`)
       
-      const result: WhisperResult[] | null = await whisper(audioPath, {
-        modelName: this.modelName,
-        whisperOptions: {
-          language: 'en',
-          word_timestamps: false,
-          // Improved settings for better transcription quality
-          translate: false,
-          max_len: 0,  // No length limit
-          split_on_word: true,  // Split on word boundaries
-          best_of: 5,  // Use best of 5 beams for better accuracy
-          beam_size: 5,  // Beam search size
-          temperature: 0.0,  // Deterministic output (no randomness)
-          compression_ratio_threshold: 2.4,
-          logprob_threshold: -1.0,
-          no_speech_threshold: 0.3,  // Lower threshold to catch more speech (was 0.6)
-          // Additional settings to capture beginning
-          initial_prompt: "This is a test recording.",  // Prime the model
-          condition_on_previous_text: true,  // Use context from previous segments
-        }
+      // Get whisper.cpp path
+      const whisperNodeDir = path.dirname(require.resolve('whisper-node/package.json'))
+      const whisperCppDir = path.join(whisperNodeDir, 'lib/whisper.cpp')
+      const whisperMainPath = path.join(whisperCppDir, 'main')
+      const modelPath = this.modelPath || this.getDefaultModelPath()
+      const jsonOutputPath = `${audioPath}.json`
+      
+      // Build command with ALL the parameters we need (whisper-node was ignoring most of them!)
+      const command = [
+        whisperMainPath,
+        '-m', modelPath,
+        '-f', audioPath,
+        '-l', 'en',
+        '-oj',  // Output JSON format
+        '--print-progress',  // Show progress
+        // Critical parameters for early speech detection:
+        '-ml', '0',  // max-len: no length limit
+        '-sow',  // split-on-word: split on word boundaries
+        '-bo', '5',  // best-of: use best of 5 candidates
+        '-bs', '5',  // beam-size: beam search size
+        '-et', '2.0',  // entropy-thold: LOWERED from 2.4 to 2.0 for better early detection
+        '-lpt', '-1.0',  // logprob-thold: log probability threshold
+        '--prompt', '"This is a recording session with browser interactions, clicking, navigation, and voice commentary."'
+      ].join(' ')
+      
+      logger.info('Executing whisper.cpp command:')
+      logger.info(command)
+      
+      // Execute whisper.cpp directly
+      const { stdout, stderr } = await execAsync(command, {
+        cwd: whisperCppDir,
+        maxBuffer: 10 * 1024 * 1024  // 10MB buffer for large outputs
       })
+      
+      if (stderr) {
+        logger.debug('Whisper stderr:', stderr)
+      }
+      
+      // Read the JSON output file created by whisper.cpp
+      logger.info(`Reading JSON output from: ${jsonOutputPath}`)
+      const jsonContent = await fs.promises.readFile(jsonOutputPath, 'utf-8')
+      const jsonData = JSON.parse(jsonContent)
+      
+      // Clean up the JSON file
+      await safeUnlink(jsonOutputPath)
+      
+      // Extract transcription segments from JSON
+      // whisper.cpp JSON format: { "transcription": [ { "timestamps": { "from": "00:00:00,000", "to": "00:00:05,000" }, "offsets": { "from": 0, "to": 5000 }, "text": "..." } ] }
+      const result: WhisperResult[] = []
+      
+      if (jsonData.transcription && Array.isArray(jsonData.transcription)) {
+        for (const segment of jsonData.transcription) {
+          if (segment.timestamps && segment.text) {
+            // Convert comma format to dot format (00:00:00,000 -> 00:00:00.000)
+            const start = segment.timestamps.from.replace(',', '.')
+            const end = segment.timestamps.to.replace(',', '.')
+            result.push({
+              start,
+              end,
+              speech: segment.text.trim()
+            })
+          }
+        }
+      }
+      
+      logger.info(`Parsed ${result.length} segments from JSON output`)
 
+      logger.info('='.repeat(60))
+      logger.info('📊 Raw Whisper Results')
+      logger.info('='.repeat(60))
+      
       if (!result || !Array.isArray(result)) {
-        logger.warn('Whisper returned no results')
+        logger.warn('⚠️  Whisper returned no results')
         return []
       }
+
+      logger.info(`Total segments from Whisper: ${result.length}`)
+      
+      // Log ALL raw segments before filtering
+      result.forEach((segment, index) => {
+        const startMs = this.parseTimestamp(segment.start)
+        const endMs = this.parseTimestamp(segment.end)
+        logger.info(`  [${index + 1}] ${segment.start} -> ${segment.end} (${startMs}ms -> ${endMs}ms)`)
+        logger.info(`      Text: "${segment.speech}"`)
+      })
 
       // Filter out segments that are likely noise or silence
       const validSegments = result.filter(segment => {
         const text = segment.speech.trim()
-        // Filter out common noise patterns
-        return text.length > 0 &&
+        const isValid = text.length > 0 &&
                !text.match(/^\[.*\]$/) &&  // Remove [BLANK_AUDIO], [noise], etc.
                !text.match(/^\(.*\)$/) &&  // Remove (mouse clicking), etc.
                text !== '...' &&
                text !== '.' &&
                text.length > 2  // Minimum 3 characters
+        
+        if (!isValid) {
+          logger.debug(`  ❌ Filtered out: "${text}"`)
+        }
+        return isValid
       })
 
-      return validSegments.map((segment, index) => ({
-        id: `t${index + 1}`,
-        startTime: this.parseTimestamp(segment.start),
-        endTime: this.parseTimestamp(segment.end),
-        text: segment.speech.trim(),
-      }))
+      logger.info('='.repeat(60))
+      logger.info(`✅ Valid segments after filtering: ${validSegments.length}`)
+      logger.info('='.repeat(60))
+
+      // Subtract 1500ms from all timestamps to account for the 1.5s silence padding we added
+      // This padding is critical for external microphones which have initialization delays
+      const PADDING_OFFSET_MS = 1500
+      
+      const segments = validSegments.map((segment, index) => {
+        const startTime = Math.max(0, this.parseTimestamp(segment.start) - PADDING_OFFSET_MS)
+        const endTime = Math.max(0, this.parseTimestamp(segment.end) - PADDING_OFFSET_MS)
+        
+        return {
+          id: `t${index + 1}`,
+          startTime,
+          endTime,
+          text: segment.speech.trim(),
+        }
+      }).filter(segment => segment.endTime > 0) // Remove any segments that are entirely in the padding
+
+      // Log final processed segments
+      logger.info('📝 Final segments (after removing 1500ms padding offset):')
+      segments.forEach(segment => {
+        logger.info(`  [${segment.id}] ${segment.startTime}ms -> ${segment.endTime}ms`)
+        logger.info(`      "${segment.text}"`)
+      })
+      logger.info('='.repeat(60))
+
+      return segments
     } catch (error) {
       logger.error('Whisper processing failed:', error)
       return []

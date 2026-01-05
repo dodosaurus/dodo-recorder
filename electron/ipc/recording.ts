@@ -68,6 +68,10 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
         const settings = getSettingsStore()
         const whisperConfig = settings.getWhisperConfig()
         
+        // Generate session ID for screenshot directory
+        const sessionId = `session-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`
+        const screenshotDir = `${outputPath}/${sessionId}/screenshots`
+        
         browserRecorder = new BrowserRecorder()
         sessionWriter = new SessionWriter(outputPath)
         transcriber = new Transcriber(
@@ -80,7 +84,7 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
           mainWindow?.webContents.send('action-recorded', action)
         })
 
-        await browserRecorder.start(startUrl)
+        await browserRecorder.start(startUrl, screenshotDir)
         await transcriber.initialize()
 
         return {}

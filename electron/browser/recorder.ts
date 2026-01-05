@@ -1,6 +1,7 @@
 import { chromium, Browser, Page } from 'playwright'
 import { EventEmitter } from 'events'
 import { randomUUID } from 'crypto'
+import path from 'path'
 import { logger } from '../utils/logger'
 import type { RecordedAction, ElementTarget } from '../../shared/types'
 
@@ -10,16 +11,21 @@ export class BrowserRecorder extends EventEmitter {
   private actions: RecordedAction[] = []
   private startTime: number = 0
   private frameNavigatedHandler: ((frame: any) => void) | null = null
+  private screenshotDir: string | null = null
+  private initialNavigationComplete: boolean = false
 
   /**
    * Starts recording browser interactions
    * @param url - The URL to navigate to
+   * @param screenshotDir - Optional directory to save screenshots
    * @throws {Error} If browser fails to launch or navigate
    * @returns Promise that resolves when recording has started
    */
-  async start(url: string): Promise<void> {
+  async start(url: string, screenshotDir?: string): Promise<void> {
     this.startTime = Date.now()
     this.actions = []
+    this.screenshotDir = screenshotDir || null
+    this.initialNavigationComplete = false
 
     this.browser = await chromium.launch({
       headless: false,
@@ -39,11 +45,10 @@ export class BrowserRecorder extends EventEmitter {
 
     await this.setupEventListeners()
     
+    // Navigate to URL - the framenavigated event will record this
     await this.page.goto(url)
-    this.recordAction({
-      type: 'navigate',
-      url,
-    })
+    // Mark initial navigation as complete to allow subsequent navigations
+    this.initialNavigationComplete = true
   }
 
   private async setupEventListeners(): Promise<void> {
@@ -55,6 +60,15 @@ export class BrowserRecorder extends EventEmitter {
         this.recordAction(parsed)
       } catch (e) {
         logger.error('Failed to parse action:', e)
+      }
+    })
+
+    await this.page.exposeFunction('__dodoTakeScreenshot', async () => {
+      try {
+        return await this.captureScreenshot()
+      } catch (e) {
+        logger.error('Failed to take screenshot:', e)
+        return null
       }
     })
 
@@ -292,8 +306,10 @@ export class BrowserRecorder extends EventEmitter {
       // Define window interface for type safety
       interface DodoWindow {
         __dodoRecordAction: (data: string) => void
+        __dodoTakeScreenshot: () => Promise<string | null>
       }
       const recordAction = (window as unknown as DodoWindow).__dodoRecordAction
+      const takeScreenshot = (window as unknown as DodoWindow).__dodoTakeScreenshot
 
       document.addEventListener('click', (e) => {
         const target = e.target as Element
@@ -344,15 +360,33 @@ export class BrowserRecorder extends EventEmitter {
           }))
         }
       }, true)
+
+      // Add keyboard shortcut for manual screenshots (F9)
+      document.addEventListener('keydown', async (e) => {
+        if (e.key === 'F9') {
+          e.preventDefault()
+          const screenshotPath = await takeScreenshot()
+          if (screenshotPath) {
+            recordAction(JSON.stringify({
+              type: 'scroll',
+              screenshot: screenshotPath,
+            }))
+          }
+        }
+      }, true)
     })
 
     this.frameNavigatedHandler = (frame: any) => {
       try {
         if (frame === this.page?.mainFrame()) {
-          this.recordAction({
-            type: 'navigate',
-            url: frame.url(),
-          })
+          // Only record navigation if it's not the initial page load
+          // The initial navigation is already recorded by the start() method
+          if (this.initialNavigationComplete) {
+            this.recordAction({
+              type: 'navigate',
+              url: frame.url(),
+            })
+          }
         }
       } catch (error) {
         logger.error('Error handling frame navigation:', error)
@@ -360,6 +394,30 @@ export class BrowserRecorder extends EventEmitter {
     }
     
     this.page.on('framenavigated', this.frameNavigatedHandler)
+  }
+
+  /**
+   * Captures a screenshot and returns the filename
+   */
+  private async captureScreenshot(): Promise<string | null> {
+    if (!this.page || !this.screenshotDir) return null
+
+    try {
+      const timestamp = Date.now() - this.startTime
+      const filename = `screenshot-${timestamp}.png`
+      const filepath = path.join(this.screenshotDir, filename)
+      
+      await this.page.screenshot({ 
+        path: filepath,
+        fullPage: false,
+      })
+      
+      logger.debug('Screenshot captured:', filename)
+      return filename
+    } catch (error) {
+      logger.error('Screenshot capture failed:', error)
+      return null
+    }
   }
 
   private recordAction(partial: Omit<RecordedAction, 'id' | 'timestamp'>): void {

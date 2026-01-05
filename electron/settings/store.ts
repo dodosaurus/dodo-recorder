@@ -33,7 +33,7 @@ export interface AppSettings {
  */
 const DEFAULT_SETTINGS: AppSettings = {
   whisper: {
-    modelName: 'base.en',
+    modelName: 'small.en',
     transcriptionTimeoutMs: 300000, // 5 minutes
   },
   voiceDistribution: {

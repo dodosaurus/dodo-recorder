@@ -56,6 +56,11 @@ export function RecordingControls() {
     sessionIdRef.current = generateSessionId()
     setAudioError(null)
 
+    // Set start time FIRST, before any recording starts
+    // This ensures audio timestamps align with action timestamps
+    const recordingStartTime = Date.now()
+    setStartTime(recordingStartTime)
+
     // Start audio recording FIRST (before browser) to capture everything
     if (isVoiceEnabled) {
       try {
@@ -74,6 +79,7 @@ export function RecordingControls() {
             sampleRate: 16000  // Match Whisper's expected sample rate
           }
         })
+        
         mediaRecorderRef.current = new MediaRecorder(stream, {
           mimeType: 'audio/webm;codecs=opus',
           audioBitsPerSecond: 128000
@@ -89,7 +95,7 @@ export function RecordingControls() {
 
         mediaRecorderRef.current.start(1000)
         setAudioStatus('recording')
-        console.log('Audio recording started')
+        console.log('🎤 Audio recording started at:', recordingStartTime)
       } catch (err) {
         console.error('Failed to start audio recording:', err)
         setAudioError(err instanceof Error ? err.message : 'Failed to access microphone')
@@ -111,7 +117,6 @@ export function RecordingControls() {
       return
     }
 
-    setStartTime(Date.now())
     setStatus('recording')
   }
 
@@ -134,15 +139,30 @@ export function RecordingControls() {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
         const arrayBuffer = await audioBlob.arrayBuffer()
         
+        console.log('='.repeat(60))
+        console.log('🎤 Audio Recording Summary')
+        console.log('='.repeat(60))
+        console.log(`Total audio chunks: ${audioChunksRef.current.length}`)
+        console.log(`Total audio size: ${(arrayBuffer.byteLength / 1024).toFixed(2)} KB`)
+        console.log(`Audio duration (approx): ${audioChunksRef.current.length} seconds`)
+        console.log('='.repeat(60))
+        
         const result = await window.electronAPI.transcribeAudio(arrayBuffer)
         if (result.success && result.segments) {
+          console.log('✅ Transcription successful')
+          console.log(`Segments received: ${result.segments.length}`)
+          result.segments.forEach((seg: any, idx: number) => {
+            console.log(`  [${idx + 1}] ${seg.startTime}ms -> ${seg.endTime}ms: "${seg.text}"`)
+          })
           setTranscriptSegments(result.segments)
           setAudioStatus('complete')
         } else {
+          console.error('❌ Transcription failed:', result)
           setAudioError('success' in result && !result.success ? result.error : 'Transcription failed')
           setAudioStatus('error')
         }
       } else {
+        console.warn('⚠️  No audio chunks recorded')
         setAudioStatus('idle')
       }
       

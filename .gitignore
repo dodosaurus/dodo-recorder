@@ -24,12 +24,10 @@ npm-debug.log*
 .env
 .env.local
 
-# Whisper models (large files)
-models/*.bin
+# Whisper models (large files, not needed - models are in node_modules)
+models/
 
 # Temp files
 *.tmp
 .temp/
-
-test-sessions/
 
