@@ -5,7 +5,8 @@ import { SessionWriter } from './session/writer'
 import { Transcriber } from './audio/transcriber'
 import { handleIpc, ipcError, ipcSuccess } from './utils/ipc'
 import { validateUrl, validateOutputPath, validateAudioBuffer } from './utils/validation'
-import type { SessionBundle } from '../shared/types'
+import { distributeVoiceSegments, generateFullTranscript } from './utils/voiceDistribution'
+import type { SessionBundle, RecordedAction, TranscriptSegment } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 let browserRecorder: BrowserRecorder | null = null
@@ -157,16 +158,23 @@ ipcMain.handle('stop-recording', async () => {
 })
 
 ipcMain.handle('save-session', async (_, sessionData: SessionBundle) => {
+  console.log('[IPC] Saving session...')
+  
   if (!sessionWriter) {
+    console.error('[IPC] Session writer not initialized')
     return ipcError('Session writer not initialized')
   }
 
   if (!sessionData?.metadata?.id) {
+    console.error('[IPC] Invalid session data: missing metadata.id')
     return ipcError('Invalid session data: missing metadata.id')
   }
 
+  console.log(`[IPC] Session has ${sessionData.actions.length} actions, ${sessionData.transcript.length} transcript segments`)
+  
   return handleIpc(async () => {
     const sessionPath = await sessionWriter!.write(sessionData)
+    console.log('[IPC] Session saved to:', sessionPath)
     return { path: sessionPath }
   }, 'Failed to save session')
 })
@@ -185,4 +193,25 @@ ipcMain.handle('transcribe-audio', async (_, audioBuffer: ArrayBuffer) => {
     const segments = await transcriber.transcribe(Buffer.from(audioBuffer))
     return { segments }
   }, 'Failed to transcribe audio')
+})
+
+ipcMain.handle('distribute-voice-segments', async (
+  _,
+  actions: RecordedAction[],
+  segments: TranscriptSegment[],
+  startTime: number
+) => {
+  console.log(`[IPC] Distributing ${segments.length} voice segments across ${actions.length} actions`)
+  return handleIpc(async () => {
+    const actionsWithVoice = distributeVoiceSegments(actions, segments, startTime)
+    console.log(`[IPC] Distribution complete, ${actionsWithVoice.length} actions with voice`)
+    return { actions: actionsWithVoice }
+  }, 'Failed to distribute voice segments')
+})
+
+ipcMain.handle('generate-full-transcript', async (_, segments: TranscriptSegment[]) => {
+  return handleIpc(async () => {
+    const transcript = generateFullTranscript(segments)
+    return { transcript }
+  }, 'Failed to generate transcript')
 })

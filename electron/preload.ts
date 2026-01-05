@@ -9,6 +9,8 @@ export interface ElectronAPI {
   transcribeAudio: (audioBuffer: ArrayBuffer) => Promise<IpcResult<{ segments: TranscriptSegment[] }>>
   checkMicrophonePermission: () => Promise<{ granted: boolean; denied?: boolean }>
   onActionRecorded: (callback: (action: RecordedAction) => void) => () => void
+  distributeVoiceSegments: (actions: RecordedAction[], segments: TranscriptSegment[], startTime: number) => Promise<IpcResult<{ actions: RecordedAction[] }>>
+  generateFullTranscript: (segments: TranscriptSegment[]) => Promise<IpcResult<{ transcript: string }>>
   minimizeWindow: () => void
   maximizeWindow: () => void
   closeWindow: () => void
@@ -17,12 +19,12 @@ export interface ElectronAPI {
 const electronAPI: ElectronAPI = {
   selectOutputFolder: () => ipcRenderer.invoke('select-output-folder'),
   
-  startRecording: (startUrl: string, outputPath: string) => 
+  startRecording: (startUrl: string, outputPath: string) =>
     ipcRenderer.invoke('start-recording', startUrl, outputPath),
   
   stopRecording: () => ipcRenderer.invoke('stop-recording'),
   
-  saveSession: (sessionData: SessionBundle) => 
+  saveSession: (sessionData: SessionBundle) =>
     ipcRenderer.invoke('save-session', sessionData),
   
   transcribeAudio: (audioBuffer: ArrayBuffer) =>
@@ -36,6 +38,12 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('action-recorded', handler)
     return () => ipcRenderer.removeListener('action-recorded', handler)
   },
+
+  distributeVoiceSegments: (actions: RecordedAction[], segments: TranscriptSegment[], startTime: number) =>
+    ipcRenderer.invoke('distribute-voice-segments', actions, segments, startTime),
+
+  generateFullTranscript: (segments: TranscriptSegment[]) =>
+    ipcRenderer.invoke('generate-full-transcript', segments),
 
   minimizeWindow: () => ipcRenderer.send('window-minimize'),
   maximizeWindow: () => ipcRenderer.send('window-maximize'),

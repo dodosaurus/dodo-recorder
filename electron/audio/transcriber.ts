@@ -109,6 +109,19 @@ export class Transcriber {
         whisperOptions: {
           language: 'en',
           word_timestamps: false,
+          // Improved settings for better transcription quality
+          translate: false,
+          max_len: 0,  // No length limit
+          split_on_word: true,  // Split on word boundaries
+          best_of: 5,  // Use best of 5 beams for better accuracy
+          beam_size: 5,  // Beam search size
+          temperature: 0.0,  // Deterministic output (no randomness)
+          compression_ratio_threshold: 2.4,
+          logprob_threshold: -1.0,
+          no_speech_threshold: 0.3,  // Lower threshold to catch more speech (was 0.6)
+          // Additional settings to capture beginning
+          initial_prompt: "This is a test recording.",  // Prime the model
+          condition_on_previous_text: true,  // Use context from previous segments
         }
       })
 
@@ -117,7 +130,19 @@ export class Transcriber {
         return []
       }
 
-      return result.map((segment, index) => ({
+      // Filter out segments that are likely noise or silence
+      const validSegments = result.filter(segment => {
+        const text = segment.speech.trim()
+        // Filter out common noise patterns
+        return text.length > 0 &&
+               !text.match(/^\[.*\]$/) &&  // Remove [BLANK_AUDIO], [noise], etc.
+               !text.match(/^\(.*\)$/) &&  // Remove (mouse clicking), etc.
+               text !== '...' &&
+               text !== '.' &&
+               text.length > 2  // Minimum 3 characters
+      })
+
+      return validSegments.map((segment, index) => ({
         id: `t${index + 1}`,
         startTime: this.parseTimestamp(segment.start),
         endTime: this.parseTimestamp(segment.end),

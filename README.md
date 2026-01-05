@@ -60,9 +60,10 @@ Each recording session produces a folder with:
 
 ```
 session-YYYY-MM-DD-HHMMSS/
-├── actions.json      # All recorded browser interactions with locator info
+├── actions.json      # All recorded browser interactions with locator info + voice segments
 ├── timeline.json     # Unified timeline merging actions + voice segments
-├── transcript.json   # Voice commentary transcription
+├── transcript.json   # Voice commentary transcription (structured segments)
+├── transcript.txt    # Full transcript in readable format with timestamps
 ├── metadata.json     # Session info (URL, duration, timestamps)
 └── notes.md          # Optional user notes
 ```
@@ -83,11 +84,30 @@ session-YYYY-MM-DD-HHMMSS/
         "testId": "submit-btn",
         "xpath": "//button[@data-testid='submit-btn']"
       },
-      "url": "https://example.com"
+      "url": "https://example.com",
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 1200,
+          "endTime": 3400,
+          "text": "Now I'm going to click the submit button to send the form"
+        }
+      ]
     }
   ]
 }
 ```
+
+### Voice Segment Distribution
+
+The app uses a sophisticated algorithm to distribute voice commentary across actions:
+
+- **Pre-action capture**: Voice spoken before the first action is preserved and attached to it
+- **Temporal proximity**: Segments are assigned based on time windows (10s lookback, 5s lookahead)
+- **Overlap handling**: Long segments spanning multiple actions are intelligently distributed
+- **Context preservation**: Maintains natural speech flow for AI interpretation
+
+This ensures that LLMs processing the session have proper context about what the user was thinking/doing at each step.
 
 ## Available Whisper Models
 

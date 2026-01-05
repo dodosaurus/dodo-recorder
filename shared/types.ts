@@ -43,6 +43,7 @@ export interface RecordedAction {
   url?: string
   key?: string
   screenshot?: string
+  voiceSegments?: TranscriptSegment[]
 }
 
 export interface TranscriptSegment {

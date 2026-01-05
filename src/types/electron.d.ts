@@ -8,6 +8,8 @@ export interface ElectronAPI {
   transcribeAudio: (audioBuffer: ArrayBuffer) => Promise<IpcResult<{ segments: TranscriptSegment[] }>>
   checkMicrophonePermission: () => Promise<{ granted: boolean; denied?: boolean }>
   onActionRecorded: (callback: (action: RecordedAction) => void) => () => void
+  distributeVoiceSegments: (actions: RecordedAction[], segments: TranscriptSegment[], startTime: number) => Promise<IpcResult<{ actions: RecordedAction[] }>>
+  generateFullTranscript: (segments: TranscriptSegment[]) => Promise<IpcResult<{ transcript: string }>>
   minimizeWindow?: () => void
   maximizeWindow?: () => void
   closeWindow?: () => void

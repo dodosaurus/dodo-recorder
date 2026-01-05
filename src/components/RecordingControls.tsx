@@ -9,7 +9,7 @@ import type { RecordedAction, SessionBundle, TimelineEntry } from '@/types/sessi
 export function RecordingControls() {
   const {
     status, startUrl, outputPath, actions, transcriptSegments, notes, isVoiceEnabled,
-    audioStatus, audioChunksCount, audioError,
+    audioStatus, audioChunksCount, audioError, startTime,
     setStatus, setStartTime, addAction, setTranscriptSegments, reset,
     setAudioStatus, incrementAudioChunks, setAudioError
   } = useRecordingStore(useShallow((state) => ({
@@ -23,6 +23,7 @@ export function RecordingControls() {
     audioStatus: state.audioStatus,
     audioChunksCount: state.audioChunksCount,
     audioError: state.audioError,
+    startTime: state.startTime,
     setStatus: state.setStatus,
     setStartTime: state.setStartTime,
     addAction: state.addAction,
@@ -53,44 +54,65 @@ export function RecordingControls() {
     if (!canStart || !window.electronAPI) return
 
     sessionIdRef.current = generateSessionId()
-    const result = await window.electronAPI.startRecording(startUrl, outputPath)
-    
-    if (!result.success) {
-      console.error('Failed to start recording:', result.error)
-      return
-    }
-
-    setStartTime(Date.now())
-    setStatus('recording')
     setAudioError(null)
 
+    // Start audio recording FIRST (before browser) to capture everything
     if (isVoiceEnabled) {
       try {
         const permResult = await window.electronAPI.checkMicrophonePermission()
         if (!permResult.granted) {
           setAudioError('Microphone permission denied')
           setAudioStatus('error')
-        } else {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-          mediaRecorderRef.current = new MediaRecorder(stream)
-          audioChunksRef.current = []
-
-          mediaRecorderRef.current.ondataavailable = (e) => {
-            if (e.data.size > 0) {
-              audioChunksRef.current.push(e.data)
-              incrementAudioChunks()
-            }
-          }
-
-          mediaRecorderRef.current.start(1000)
-          setAudioStatus('recording')
+          return
         }
+        
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: 16000  // Match Whisper's expected sample rate
+          }
+        })
+        mediaRecorderRef.current = new MediaRecorder(stream, {
+          mimeType: 'audio/webm;codecs=opus',
+          audioBitsPerSecond: 128000
+        })
+        audioChunksRef.current = []
+
+        mediaRecorderRef.current.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            audioChunksRef.current.push(e.data)
+            incrementAudioChunks()
+          }
+        }
+
+        mediaRecorderRef.current.start(1000)
+        setAudioStatus('recording')
+        console.log('Audio recording started')
       } catch (err) {
         console.error('Failed to start audio recording:', err)
         setAudioError(err instanceof Error ? err.message : 'Failed to access microphone')
         setAudioStatus('error')
+        return
       }
     }
+
+    // Now start browser recording
+    const result = await window.electronAPI.startRecording(startUrl, outputPath)
+    
+    if (!result.success) {
+      console.error('Failed to start recording:', result.error)
+      // Stop audio if browser failed to start
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop()
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
+      }
+      return
+    }
+
+    setStartTime(Date.now())
+    setStatus('recording')
   }
 
   const stopRecording = async () => {
@@ -117,7 +139,7 @@ export function RecordingControls() {
           setTranscriptSegments(result.segments)
           setAudioStatus('complete')
         } else {
-          setAudioError(result.error || 'Transcription failed')
+          setAudioError('success' in result && !result.success ? result.error : 'Transcription failed')
           setAudioStatus('error')
         }
       } else {
@@ -137,9 +159,33 @@ export function RecordingControls() {
     if (!canSave || !window.electronAPI) return
 
     setStatus('saving')
+    console.log('Starting session save...')
 
+    // Distribute voice segments across actions using sophisticated algorithm
+    let actionsWithVoice = actions
+    if (transcriptSegments.length > 0 && startTime) {
+      console.log(`Distributing ${transcriptSegments.length} voice segments across ${actions.length} actions...`)
+      try {
+        const result = await window.electronAPI.distributeVoiceSegments(
+          actions,
+          transcriptSegments,
+          startTime
+        )
+        if (result.success && result.actions) {
+          actionsWithVoice = result.actions
+          console.log('Voice segments distributed successfully')
+        } else if ('success' in result && !result.success) {
+          console.error('Failed to distribute voice segments:', result.error)
+        }
+      } catch (error) {
+        console.error('Exception during voice distribution:', error)
+        // Continue with original actions if distribution fails
+      }
+    }
+
+    console.log('Building timeline...')
     const timeline: TimelineEntry[] = [
-      ...actions.map((a) => ({
+      ...actionsWithVoice.map((a) => ({
         timestamp: a.timestamp,
         type: 'action' as const,
         actionId: a.id,
@@ -154,26 +200,27 @@ export function RecordingControls() {
     ].sort((a, b) => a.timestamp - b.timestamp)
 
     const session: SessionBundle = {
-      actions,
+      actions: actionsWithVoice,
       timeline,
       transcript: transcriptSegments,
       metadata: {
         id: sessionIdRef.current || generateSessionId(),
-        startTime: Date.now(),
+        startTime: startTime || Date.now(),
         startUrl,
-        actionCount: actions.length,
+        actionCount: actionsWithVoice.length,
         transcriptSegmentCount: transcriptSegments.length,
       },
       notes,
     }
 
+    console.log('Saving session bundle...')
     const result = await window.electronAPI.saveSession(session)
     
     if (result.success) {
-      console.log('Session saved to:', result.path)
+      console.log('Session saved successfully to:', result.path)
       reset()
     } else {
-      console.error('Failed to save session:', result.error)
+      console.error('Failed to save session:', 'success' in result ? result.error : 'Unknown error')
     }
 
     setStatus('idle')

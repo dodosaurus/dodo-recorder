@@ -1,10 +1,10 @@
 import { useRecordingStore } from '@/stores/recordingStore'
 import { formatTimestamp, cn } from '@/lib/utils'
-import { MousePointer2, Type, Navigation, Keyboard, ListChecks, Trash2, Target, ChevronDown, ChevronUp } from 'lucide-react'
+import { MousePointer2, Type, Navigation, Keyboard, ListChecks, Trash2, Target, ChevronDown, ChevronUp, Mic } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useShallow } from 'zustand/react/shallow'
 import { useState } from 'react'
-import type { RecordedAction, ActionType, Locator } from '@/types/session'
+import type { RecordedAction, ActionType, Locator, TranscriptSegment } from '@/types/session'
 
 const actionIcons: Record<ActionType, typeof MousePointer2> = {
   click: MousePointer2,
@@ -78,6 +78,23 @@ function LocatorBadge({ locator }: { locator: Locator }) {
   )
 }
 
+function VoiceSegmentBadge({ segment }: { segment: TranscriptSegment }) {
+  const duration = Math.round((segment.endTime - segment.startTime) / 1000)
+  return (
+    <div className="flex items-start gap-2 text-xs bg-purple-500/10 border border-purple-500/20 rounded p-2">
+      <Mic className="w-3.5 h-3.5 text-purple-400 flex-shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 text-purple-400 mb-1">
+          <span className="font-mono">{formatTimestamp(segment.startTime)}</span>
+          <span className="text-purple-500/60">•</span>
+          <span className="text-purple-500/80">{duration}s</span>
+        </div>
+        <p className="text-foreground/90 leading-relaxed">{segment.text}</p>
+      </div>
+    </div>
+  )
+}
+
 export function ActionsList() {
   const { actions, removeAction, status } = useRecordingStore(useShallow((state) => ({
     actions: state.actions,
@@ -125,6 +142,7 @@ export function ActionsList() {
           const colorClass = actionColors[action.type] || 'text-muted-foreground'
           const description = getActionDescription(action)
           const hasLocators = action.target?.locators && action.target.locators.length > 0
+          const hasVoiceSegments = action.voiceSegments && action.voiceSegments.length > 0
           const isExpanded = expandedActions.has(action.id)
 
           return (
@@ -144,7 +162,7 @@ export function ActionsList() {
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                       {action.type}
                     </span>
@@ -156,18 +174,26 @@ export function ActionsList() {
                         assertion
                       </span>
                     )}
+                    {hasVoiceSegments && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 flex items-center gap-1">
+                        <Mic className="w-3 h-3" />
+                        {action.voiceSegments!.length}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-foreground mt-0.5 truncate" title={description}>
                     {description}
                   </p>
                   
-                  {hasLocators && (
+                  {(hasLocators || hasVoiceSegments) && (
                     <button
                       onClick={() => toggleExpand(action.id)}
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-1.5 transition-colors"
                     >
                       {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                      {action.target!.locators!.length} locator{action.target!.locators!.length > 1 ? 's' : ''}
+                      {hasLocators && `${action.target!.locators!.length} locator${action.target!.locators!.length > 1 ? 's' : ''}`}
+                      {hasLocators && hasVoiceSegments && ' • '}
+                      {hasVoiceSegments && `${action.voiceSegments!.length} voice segment${action.voiceSegments!.length > 1 ? 's' : ''}`}
                     </button>
                   )}
                 </div>
@@ -184,15 +210,35 @@ export function ActionsList() {
                 )}
               </div>
               
-              {hasLocators && isExpanded && (
-                <div className="mt-2 ml-[52px] space-y-1.5 pb-1">
-                  {action.target!.locators!.map((locator, i) => (
-                    <LocatorBadge key={i} locator={locator} />
-                  ))}
-                  {action.type === 'assert' && action.target?.innerText && (
-                    <div className="text-xs text-muted-foreground mt-2 p-2 bg-secondary/50 rounded">
-                      <span className="text-muted-foreground">Content: </span>
-                      <span className="text-foreground">"{action.target.innerText.slice(0, 100)}"</span>
+              {isExpanded && (
+                <div className="mt-2 ml-[52px] space-y-2 pb-1">
+                  {hasVoiceSegments && (
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium text-purple-400 uppercase tracking-wider">
+                        Voice Commentary
+                      </div>
+                      {action.voiceSegments!.map((segment) => (
+                        <VoiceSegmentBadge key={segment.id} segment={segment} />
+                      ))}
+                    </div>
+                  )}
+                  
+                  {hasLocators && (
+                    <div className="space-y-1.5">
+                      {hasVoiceSegments && (
+                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-3">
+                          Locators
+                        </div>
+                      )}
+                      {action.target!.locators!.map((locator, i) => (
+                        <LocatorBadge key={i} locator={locator} />
+                      ))}
+                      {action.type === 'assert' && action.target?.innerText && (
+                        <div className="text-xs text-muted-foreground mt-2 p-2 bg-secondary/50 rounded">
+                          <span className="text-muted-foreground">Content: </span>
+                          <span className="text-foreground">"{action.target.innerText.slice(0, 100)}"</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
