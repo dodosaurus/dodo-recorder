@@ -1,3 +1,6 @@
+import path from 'path'
+import os from 'os'
+
 const ALLOWED_PROTOCOLS = ['http:', 'https:']
 const SESSION_ID_REGEX = /^[a-zA-Z0-9_-]+$/
 const MAX_AUDIO_SIZE = 50 * 1024 * 1024 // 50MB limit
@@ -43,13 +46,30 @@ export function validateAudioBuffer(buffer: ArrayBuffer): { valid: boolean; erro
   return { valid: true }
 }
 
-export function validateOutputPath(path: string): { valid: boolean; error?: string } {
-  if (!path || typeof path !== 'string') {
+export function validateOutputPath(outputPath: string): { valid: boolean; error?: string } {
+  if (!outputPath || typeof outputPath !== 'string') {
     return { valid: false, error: 'Output path is required' }
   }
-  if (path.includes('..')) {
+  
+  const resolved = path.resolve(outputPath)
+  const normalized = path.normalize(outputPath)
+  
+  // Check for path traversal attempts
+  if (normalized.includes('..')) {
     return { valid: false, error: 'Path traversal not allowed' }
   }
+  
+  // Check for URL-encoded path traversal attempts
+  if (outputPath.includes('%2e') || outputPath.includes('%2E')) {
+    return { valid: false, error: 'Path traversal not allowed' }
+  }
+  
+  // Ensure path is within user directories
+  const homeDir = os.homedir()
+  if (!resolved.startsWith(homeDir)) {
+    return { valid: false, error: 'Path must be within user directory' }
+  }
+  
   return { valid: true }
 }
 

@@ -1,6 +1,7 @@
 import { chromium, Browser, Page } from 'playwright'
 import { EventEmitter } from 'events'
 import { randomUUID } from 'crypto'
+import { logger } from '../utils/logger'
 import type { RecordedAction, ElementTarget } from '../../shared/types'
 
 export class BrowserRecorder extends EventEmitter {
@@ -15,7 +16,12 @@ export class BrowserRecorder extends EventEmitter {
 
     this.browser = await chromium.launch({
       headless: false,
-      args: ['--start-maximized'],
+      args: [
+        '--start-maximized',
+        '--disable-dev-shm-usage',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-features=IsolateOrigins,site-per-process',
+      ],
     })
 
     const context = await this.browser.newContext({
@@ -41,13 +47,20 @@ export class BrowserRecorder extends EventEmitter {
         const parsed = JSON.parse(data)
         this.recordAction(parsed)
       } catch (e) {
-        console.error('Failed to parse action:', e)
+        logger.error('Failed to parse action:', e)
       }
     })
 
     await this.page.addInitScript(() => {
-      const escapeQuotes = (str: string): string => {
-        return str.replace(/"/g, '\\"').replace(/'/g, "\\'")
+      const escapeForJson = (str: string): string => {
+        return str
+          .replace(/\\/g, '\\\\')
+          .replace(/"/g, '\\"')
+          .replace(/\n/g, '\\n')
+          .replace(/\r/g, '\\r')
+          .replace(/\t/g, '\\t')
+          .replace(/\f/g, '\\f')
+          .replace(/\b/g, '\\b')
       }
 
       const getTestId = (el: Element): string | null =>
@@ -137,7 +150,7 @@ export class BrowserRecorder extends EventEmitter {
         if (testId) {
           locators.push({
             strategy: 'testId',
-            value: `[data-testid="${escapeQuotes(testId)}"]`,
+            value: `[data-testid="${escapeForJson(testId)}"]`,
             confidence: 'high'
           })
         }
@@ -155,13 +168,13 @@ export class BrowserRecorder extends EventEmitter {
         if (role && ariaLabel) {
           locators.push({
             strategy: 'role',
-            value: `getByRole('${role}', { name: '${escapeQuotes(ariaLabel)}' })`,
+            value: `getByRole('${role}', { name: '${escapeForJson(ariaLabel)}' })`,
             confidence: 'high'
           })
         } else if (ariaLabel) {
           locators.push({
             strategy: 'role',
-            value: `getByLabel('${escapeQuotes(ariaLabel)}')`,
+            value: `getByLabel('${escapeForJson(ariaLabel)}')`,
             confidence: 'medium'
           })
         }
@@ -170,7 +183,7 @@ export class BrowserRecorder extends EventEmitter {
         if (placeholder && ['input', 'textarea'].includes(tagName)) {
           locators.push({
             strategy: 'placeholder',
-            value: `getByPlaceholder('${escapeQuotes(placeholder)}')`,
+            value: `getByPlaceholder('${escapeForJson(placeholder)}')`,
             confidence: 'medium'
           })
         }
@@ -179,7 +192,7 @@ export class BrowserRecorder extends EventEmitter {
         if (text && text.length > 0 && text.length < 50 && ['button', 'a', 'span', 'label', 'h1', 'h2', 'h3', 'h4', 'p'].includes(tagName)) {
           locators.push({
             strategy: 'text',
-            value: `getByText('${escapeQuotes(truncateText(text, 40))}')`,
+            value: `getByText('${escapeForJson(truncateText(text, 40))}')`,
             confidence: text.length < 20 ? 'medium' : 'low'
           })
         }
@@ -300,11 +313,15 @@ export class BrowserRecorder extends EventEmitter {
     })
 
     this.page.on('framenavigated', (frame) => {
-      if (frame === this.page?.mainFrame()) {
-        this.recordAction({
-          type: 'navigate',
-          url: frame.url(),
-        })
+      try {
+        if (frame === this.page?.mainFrame()) {
+          this.recordAction({
+            type: 'navigate',
+            url: frame.url(),
+          })
+        }
+      } catch (error) {
+        logger.error('Error handling frame navigation:', error)
       }
     })
   }

@@ -2,13 +2,14 @@ import path from 'path'
 import fs from 'fs'
 import { app } from 'electron'
 import { ensureDir, safeUnlink, getTempPath } from '../utils/fs'
+import { logger } from '../utils/logger'
 import type { TranscriptSegment } from '../../shared/types'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ffmpegPath = require('ffmpeg-static') as string
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ffmpeg = require('fluent-ffmpeg')
 
-console.log('FFmpeg path:', ffmpegPath)
+logger.debug('FFmpeg path:', ffmpegPath)
 ffmpeg.setFfmpegPath(ffmpegPath)
 
 interface WhisperResult {
@@ -27,11 +28,11 @@ export class Transcriber {
     const modelPath = path.join(whisperModelsDir, `ggml-${this.modelName}.bin`)
     
     if (!fs.existsSync(modelPath)) {
-      console.error('Whisper model not found at:', modelPath)
-      console.error('Please run: cd node_modules/whisper-node/lib/whisper.cpp && make')
-      console.error('Then copy ggml-base.en.bin to:', whisperModelsDir)
+      logger.error('Whisper model not found at:', modelPath)
+      logger.error('Please run: cd node_modules/whisper-node/lib/whisper.cpp && make')
+      logger.error('Then copy ggml-base.en.bin to:', whisperModelsDir)
     } else {
-      console.log('Whisper model ready:', modelPath)
+      logger.info('Whisper model ready:', modelPath)
     }
     
     this.isInitialized = true
@@ -50,20 +51,20 @@ export class Transcriber {
       const wavPath = getTempPath(tempDir, 'audio', '.wav')
       
       await fs.promises.writeFile(inputPath, audioBuffer)
-      console.log('Converting audio to WAV format...')
+      logger.info('Converting audio to WAV format...')
       
       await this.convertToWav(inputPath, wavPath)
       await safeUnlink(inputPath)
 
-      console.log('Transcribing audio file:', wavPath)
+      logger.info('Transcribing audio file:', wavPath)
       const segments = await this.runWhisper(wavPath)
-      console.log('Transcription complete, segments:', segments.length)
+      logger.info('Transcription complete, segments:', segments.length)
       
       await safeUnlink(wavPath)
       
       return segments
     } catch (error) {
-      console.error('Transcription failed:', error)
+      logger.error('Transcription failed:', error)
       return []
     }
   }
@@ -76,11 +77,11 @@ export class Transcriber {
         .audioCodec('pcm_s16le')
         .format('wav')
         .on('end', () => {
-          console.log('Audio conversion complete')
+          logger.debug('Audio conversion complete')
           resolve()
         })
         .on('error', (err: Error) => {
-          console.error('Audio conversion failed:', err)
+          logger.error('Audio conversion failed:', err)
           reject(err)
         })
         .save(outputPath)
@@ -126,7 +127,7 @@ export class Transcriber {
       })
 
       if (!result || !Array.isArray(result)) {
-        console.log('Whisper returned no results')
+        logger.warn('Whisper returned no results')
         return []
       }
 
@@ -149,7 +150,7 @@ export class Transcriber {
         text: segment.speech.trim(),
       }))
     } catch (error) {
-      console.error('Whisper processing failed:', error)
+      logger.error('Whisper processing failed:', error)
       return []
     }
   }

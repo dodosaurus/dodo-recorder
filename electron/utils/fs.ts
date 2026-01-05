@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { logger } from './logger'
 
 export async function ensureDir(dirPath: string): Promise<void> {
   await fs.promises.mkdir(dirPath, { recursive: true })
@@ -17,8 +18,8 @@ export async function writeText(filePath: string, content: string): Promise<void
 export async function safeUnlink(filePath: string): Promise<void> {
   try {
     await fs.promises.unlink(filePath)
-  } catch {
-    // Ignore deletion errors
+  } catch (error) {
+    logger.warn(`Failed to delete file ${filePath}:`, error)
   }
 }
 
