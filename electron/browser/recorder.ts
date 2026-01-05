@@ -50,6 +50,16 @@ export class BrowserRecorder extends EventEmitter {
         return str.replace(/"/g, '\\"').replace(/'/g, "\\'")
       }
 
+      const getTestId = (el: Element): string | null =>
+        el.getAttribute('data-testid') ||
+        el.getAttribute('data-test-id') ||
+        el.getAttribute('data-test')
+
+      const VALID_ID_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
+
+      const truncateText = (text: string, maxLength: number): string =>
+        text.slice(0, maxLength)
+
       type LocatorStrategy = 'testId' | 'id' | 'role' | 'placeholder' | 'text' | 'css' | 'xpath'
       interface Locator {
         strategy: LocatorStrategy
@@ -58,7 +68,7 @@ export class BrowserRecorder extends EventEmitter {
       }
 
       const generateXPath = (el: Element): string => {
-        if (el.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(el.id)) {
+        if (el.id && VALID_ID_PATTERN.test(el.id)) {
           return `//*[@id="${el.id}"]`
         }
         
@@ -89,7 +99,7 @@ export class BrowserRecorder extends EventEmitter {
         while (current && current.nodeType === Node.ELEMENT_NODE && parts.length < 4) {
           let selector = current.tagName.toLowerCase()
           
-          if (current.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(current.id)) {
+          if (current.id && VALID_ID_PATTERN.test(current.id)) {
             parts.unshift(`#${current.id}`)
             break
           }
@@ -123,9 +133,7 @@ export class BrowserRecorder extends EventEmitter {
         const locators: Locator[] = []
         const tagName = element.tagName.toLowerCase()
         
-        const testId = element.getAttribute('data-testid') || 
-                       element.getAttribute('data-test-id') ||
-                       element.getAttribute('data-test')
+        const testId = getTestId(element)
         if (testId) {
           locators.push({
             strategy: 'testId',
@@ -134,7 +142,7 @@ export class BrowserRecorder extends EventEmitter {
           })
         }
         
-        if (element.id && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(element.id)) {
+        if (element.id && VALID_ID_PATTERN.test(element.id)) {
           locators.push({
             strategy: 'id',
             value: `#${element.id}`,
@@ -171,7 +179,7 @@ export class BrowserRecorder extends EventEmitter {
         if (text && text.length > 0 && text.length < 50 && ['button', 'a', 'span', 'label', 'h1', 'h2', 'h3', 'h4', 'p'].includes(tagName)) {
           locators.push({
             strategy: 'text',
-            value: `getByText('${escapeQuotes(text.slice(0, 40))}')`,
+            value: `getByText('${escapeQuotes(truncateText(text, 40))}')`,
             confidence: text.length < 20 ? 'medium' : 'low'
           })
         }
@@ -201,13 +209,11 @@ export class BrowserRecorder extends EventEmitter {
         const rect = element.getBoundingClientRect()
         const tagName = element.tagName.toLowerCase()
 
-        const testId = element.getAttribute('data-testid') || 
-                       element.getAttribute('data-test-id') ||
-                       element.getAttribute('data-test')
+        const testId = getTestId(element)
 
         const ariaLabel = element.getAttribute('aria-label')
         const role = element.getAttribute('role') || tagName
-        const text = (element.textContent || '').trim().slice(0, 100)
+        const text = truncateText((element.textContent || '').trim(), 100)
         const placeholder = element.getAttribute('placeholder')
         
         const locators = buildLocators(element)
@@ -217,21 +223,21 @@ export class BrowserRecorder extends EventEmitter {
         for (let i = 0; i < element.attributes.length; i++) {
           const attr = element.attributes[i]
           if (['class', 'style', 'onclick', 'onmouseover'].includes(attr.name)) continue
-          attrs[attr.name] = attr.value.slice(0, 100)
+          attrs[attr.name] = truncateText(attr.value, 100)
         }
 
         return {
           selector,
           locators,
           role,
-          name: ariaLabel || text.slice(0, 50),
+          name: ariaLabel || truncateText(text, 50),
           testId,
           xpath: generateXPath(element),
           css: generateCssSelector(element),
-          text: text.slice(0, 100),
+          text: truncateText(text, 100),
           placeholder,
           tagName,
-          innerText: text.slice(0, 200),
+          innerText: truncateText(text, 200),
           attributes: Object.keys(attrs).length > 0 ? attrs : undefined,
           boundingBox: {
             x: Math.round(rect.x),

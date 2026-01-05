@@ -15,6 +15,7 @@ let sessionWriter: SessionWriter | null = null
 
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 const isMac = process.platform === 'darwin'
+const ALLOWED_PERMISSIONS = ['media', 'microphone', 'audioCapture'] as const
 
 async function requestMicrophonePermission(): Promise<boolean> {
   if (isMac) {
@@ -31,8 +32,7 @@ async function requestMicrophonePermission(): Promise<boolean> {
 
 function setupPermissionHandlers() {
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    const allowedPermissions = ['media', 'microphone', 'audioCapture']
-    if (allowedPermissions.includes(permission)) {
+    if (ALLOWED_PERMISSIONS.includes(permission as any)) {
       callback(true)
     } else {
       callback(false)
@@ -40,8 +40,7 @@ function setupPermissionHandlers() {
   })
 
   session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
-    const allowedPermissions = ['media', 'microphone', 'audioCapture']
-    return allowedPermissions.includes(permission)
+    return ALLOWED_PERMISSIONS.includes(permission as any)
   })
 }
 

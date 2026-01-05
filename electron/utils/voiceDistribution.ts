@@ -40,17 +40,24 @@ export function distributeVoiceSegments(
 }
 
 /**
+ * Helper: Generic sort function by numeric property
+ */
+function sortByProperty<T>(items: T[], prop: keyof T): T[] {
+  return [...items].sort((a, b) => (a[prop] as number) - (b[prop] as number))
+}
+
+/**
  * Helper: Sort actions by timestamp
  */
 function sortByTimestamp(actions: RecordedAction[]): RecordedAction[] {
-  return [...actions].sort((a, b) => a.timestamp - b.timestamp)
+  return sortByProperty(actions, 'timestamp')
 }
 
 /**
  * Helper: Sort segments by start time
  */
 function sortByStartTime(segments: TranscriptSegment[]): TranscriptSegment[] {
-  return [...segments].sort((a, b) => a.startTime - b.startTime)
+  return sortByProperty(segments, 'startTime')
 }
 
 /**
@@ -154,7 +161,7 @@ function findBestActionForSegment(
   const relevantActions = findRelevantActions(segment, actions)
 
   if (relevantActions.length === 0) {
-    return { type: 'single', actionId: findNearestAction(segmentMidpoint, actions).id }
+    return { type: 'single', actionId: findClosestAction(segmentMidpoint, actions).id }
   }
 
   if (relevantActions.length === 1) {
@@ -224,12 +231,6 @@ function findClosestAction(
   })
 }
 
-/**
- * Finds the action nearest to a given timestamp
- */
-function findNearestAction(timestamp: number, actions: RecordedAction[]): RecordedAction {
-  return findClosestAction(timestamp, actions)
-}
 
 /**
  * Generates a full transcript text from segments
