@@ -1,0 +1,881 @@
+{
+  "actions": [
+    {
+      "id": "fbbda42d-10b2-44ee-ab4d-11671e66281f",
+      "timestamp": 3410,
+      "type": "click",
+      "target": {
+        "selector": "getByText('\\bProjects\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bProjects\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "nav.flex.fixed > ul.flex.w-[22rem] > li.h-3/4.flex:nth-of-type(3) > a.flex.w-full",
+            "confidence": "low"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/header/nav/ul/li[3]/a",
+            "confidence": "low"
+          }
+        ],
+        "role": "a",
+        "name": "Projects",
+        "testId": null,
+        "xpath": "/html/body/header/nav/ul/li[3]/a",
+        "css": "nav.flex.fixed > ul.flex.w-[22rem] > li.h-3/4.flex:nth-of-type(3) > a.flex.w-full",
+        "text": "Projects",
+        "placeholder": null,
+        "tagName": "a",
+        "innerText": "Projects",
+        "attributes": {
+          "href": "#projects"
+        },
+        "boundingBox": {
+          "x": 1392,
+          "y": 27,
+          "width": 80,
+          "height": 46
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        }
+      ]
+    },
+    {
+      "id": "4ae56e8a-938e-48eb-987f-9ef73a8b3390",
+      "timestamp": 3441,
+      "type": "navigate",
+      "url": "https://www.jkovac.eu/#projects",
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        }
+      ]
+    },
+    {
+      "id": "8bd62ff5-4f05-409e-a472-910837a6027e",
+      "timestamp": 3871,
+      "type": "click",
+      "target": {
+        "selector": "getByText('\\bSkills\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bSkills\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "nav.flex.fixed > ul.flex.w-[22rem] > li.h-3/4.flex:nth-of-type(4) > a.flex.w-full",
+            "confidence": "low"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/header/nav/ul/li[4]/a",
+            "confidence": "low"
+          }
+        ],
+        "role": "a",
+        "name": "Skills",
+        "testId": null,
+        "xpath": "/html/body/header/nav/ul/li[4]/a",
+        "css": "nav.flex.fixed > ul.flex.w-[22rem] > li.h-3/4.flex:nth-of-type(4) > a.flex.w-full",
+        "text": "Skills",
+        "placeholder": null,
+        "tagName": "a",
+        "innerText": "Skills",
+        "attributes": {
+          "href": "#skills"
+        },
+        "boundingBox": {
+          "x": 1492,
+          "y": 27,
+          "width": 60,
+          "height": 46
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        }
+      ]
+    },
+    {
+      "id": "ac450095-f1d5-4d9a-99f2-34da8c9aa5ff",
+      "timestamp": 3902,
+      "type": "navigate",
+      "url": "https://www.jkovac.eu/#skills",
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        }
+      ]
+    },
+    {
+      "id": "af27df1c-881c-4418-a206-2654e6499e25",
+      "timestamp": 4382,
+      "type": "click",
+      "target": {
+        "selector": "getByText('\\bExperience\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bExperience\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "nav.flex.fixed > ul.flex.w-[22rem] > li.h-3/4.flex:nth-of-type(5) > a.flex.w-full",
+            "confidence": "low"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/header/nav/ul/li[5]/a",
+            "confidence": "low"
+          }
+        ],
+        "role": "a",
+        "name": "Experience",
+        "testId": null,
+        "xpath": "/html/body/header/nav/ul/li[5]/a",
+        "css": "nav.flex.fixed > ul.flex.w-[22rem] > li.h-3/4.flex:nth-of-type(5) > a.flex.w-full",
+        "text": "Experience",
+        "placeholder": null,
+        "tagName": "a",
+        "innerText": "Experience",
+        "attributes": {
+          "href": "#experience"
+        },
+        "boundingBox": {
+          "x": 1572,
+          "y": 27,
+          "width": 101,
+          "height": 46
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        }
+      ]
+    },
+    {
+      "id": "4ec20b10-30b2-40a6-a793-1dcaa2644236",
+      "timestamp": 4407,
+      "type": "navigate",
+      "url": "https://www.jkovac.eu/#experience",
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        }
+      ]
+    },
+    {
+      "id": "e35bad4f-09ca-4319-ada5-e6007054cf9f",
+      "timestamp": 4969,
+      "type": "click",
+      "target": {
+        "selector": "getByText('\\bContact\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bContact\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "nav.flex.fixed > ul.flex.w-[22rem] > li.h-3/4.flex:nth-of-type(6) > a.flex.w-full",
+            "confidence": "low"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/header/nav/ul/li[6]/a",
+            "confidence": "low"
+          }
+        ],
+        "role": "a",
+        "name": "Contact",
+        "testId": null,
+        "xpath": "/html/body/header/nav/ul/li[6]/a",
+        "css": "nav.flex.fixed > ul.flex.w-[22rem] > li.h-3/4.flex:nth-of-type(6) > a.flex.w-full",
+        "text": "Contact",
+        "placeholder": null,
+        "tagName": "a",
+        "innerText": "Contact",
+        "attributes": {
+          "href": "#contact"
+        },
+        "boundingBox": {
+          "x": 1693,
+          "y": 27,
+          "width": 78,
+          "height": 46
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        }
+      ]
+    },
+    {
+      "id": "4d6645ea-5f95-42d9-81a9-c02a89056fc5",
+      "timestamp": 5010,
+      "type": "navigate",
+      "url": "https://www.jkovac.eu/#contact",
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        }
+      ]
+    },
+    {
+      "id": "14e7e6b6-60cc-451a-b5c2-cb8cd9efd013",
+      "timestamp": 9937,
+      "type": "assert",
+      "target": {
+        "selector": "getByText('\\bContact\\b \\bme\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bContact\\b \\bme\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "#contact > h2.text-3xl.font-medium",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/main/section[6]/h2",
+            "confidence": "low"
+          }
+        ],
+        "role": "h2",
+        "name": "Contact me",
+        "testId": null,
+        "xpath": "/html/body/main/section[6]/h2",
+        "css": "#contact > h2.text-3xl.font-medium",
+        "text": "Contact me",
+        "placeholder": null,
+        "tagName": "h2",
+        "innerText": "Contact me",
+        "boundingBox": {
+          "x": 1193,
+          "y": 906,
+          "width": 608,
+          "height": 36
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        }
+      ]
+    },
+    {
+      "id": "2ff3a49e-1f06-4a2c-ae57-3ffafe733a70",
+      "timestamp": 11119,
+      "type": "assert",
+      "target": {
+        "selector": "getByText('\\bTest\\b \\bAutomation\\b \\bEngineer\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bTest\\b \\bAutomation\\b \\bEngineer\\b')",
+            "confidence": "low"
+          },
+          {
+            "strategy": "css",
+            "value": "div.vertical-timeline > div.vertical-timeline-element:nth-of-type(6) > div.bounce-in > h3.font-semibold.capitalize",
+            "confidence": "low"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/main/section[5]/div/div[6]/div/h3",
+            "confidence": "low"
+          }
+        ],
+        "role": "h3",
+        "name": "Test Automation Engineer",
+        "testId": null,
+        "xpath": "/html/body/main/section[5]/div/div[6]/div/h3",
+        "css": "div.vertical-timeline > div.vertical-timeline-element:nth-of-type(6) > div.bounce-in > h3.font-semibold.capitalize",
+        "text": "Test Automation Engineer",
+        "placeholder": null,
+        "tagName": "h3",
+        "innerText": "Test Automation Engineer",
+        "boundingBox": {
+          "x": 1593,
+          "y": 584,
+          "width": 397,
+          "height": 24
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        },
+        {
+          "id": "t3",
+          "startTime": 15700,
+          "endTime": 22240,
+          "text": "And yeah, I'm scrolling out, inserting something."
+        }
+      ]
+    },
+    {
+      "id": "4fc212ed-e708-4808-b149-8e0e6a416d35",
+      "timestamp": 11817,
+      "type": "assert",
+      "target": {
+        "selector": "getByText('\\bSubmit\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bSubmit\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "#contact > form.mt-10.flex > button.group.flex",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/main/section[6]/form/button",
+            "confidence": "low"
+          }
+        ],
+        "role": "button",
+        "name": "Submit",
+        "testId": null,
+        "xpath": "/html/body/main/section[6]/form/button",
+        "css": "#contact > form.mt-10.flex > button.group.flex",
+        "text": "Submit",
+        "placeholder": null,
+        "tagName": "button",
+        "innerText": "Submit",
+        "attributes": {
+          "type": "submit"
+        },
+        "boundingBox": {
+          "x": 1189,
+          "y": 1305,
+          "width": 134,
+          "height": 50
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        },
+        {
+          "id": "t3",
+          "startTime": 15700,
+          "endTime": 22240,
+          "text": "And yeah, I'm scrolling out, inserting something."
+        }
+      ]
+    },
+    {
+      "id": "cbc4ac35-13fe-47be-a3b0-f6ab3ed8cccc",
+      "timestamp": 12380,
+      "type": "assert",
+      "target": {
+        "selector": "getByPlaceholder('\\bYour\\b \\bmessage\\b')",
+        "locators": [
+          {
+            "strategy": "placeholder",
+            "value": "getByPlaceholder('\\bYour\\b \\bmessage\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "#contact > form.mt-10.flex > textarea.h-52.my-3",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/main/section[6]/form/textarea",
+            "confidence": "low"
+          }
+        ],
+        "role": "textarea",
+        "name": "",
+        "testId": null,
+        "xpath": "/html/body/main/section[6]/form/textarea",
+        "css": "#contact > form.mt-10.flex > textarea.h-52.my-3",
+        "text": "",
+        "placeholder": "Your message",
+        "tagName": "textarea",
+        "innerText": "",
+        "attributes": {
+          "name": "message",
+          "placeholder": "Your message",
+          "required": "",
+          "maxlength": "5000"
+        },
+        "boundingBox": {
+          "x": 1193,
+          "y": 1086,
+          "width": 608,
+          "height": 208
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        },
+        {
+          "id": "t3",
+          "startTime": 15700,
+          "endTime": 22240,
+          "text": "And yeah, I'm scrolling out, inserting something."
+        }
+      ]
+    },
+    {
+      "id": "b562b3c2-8bac-4bf0-9ae1-bbf0f403fe43",
+      "timestamp": 14613,
+      "type": "assert",
+      "target": {
+        "selector": "getByText('\\bMy\\b \\bTech\\b \\bSkills\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bMy\\b \\bTech\\b \\bSkills\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "#skills > h2.text-3xl.font-medium",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/main/section[4]/h2",
+            "confidence": "low"
+          }
+        ],
+        "role": "h2",
+        "name": "My Tech Skills",
+        "testId": null,
+        "xpath": "/html/body/main/section[4]/h2",
+        "css": "#skills > h2.text-3xl.font-medium",
+        "text": "My Tech Skills",
+        "placeholder": null,
+        "tagName": "h2",
+        "innerText": "My Tech Skills",
+        "boundingBox": {
+          "x": 1073,
+          "y": 1478,
+          "width": 848,
+          "height": 36
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t1",
+          "startTime": 0,
+          "endTime": 6420,
+          "text": "So this is testing recording, now I'm clicking on some things on the page, and I'm talking"
+        },
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        },
+        {
+          "id": "t3",
+          "startTime": 15700,
+          "endTime": 22240,
+          "text": "And yeah, I'm scrolling out, inserting something."
+        }
+      ]
+    },
+    {
+      "id": "4076bf03-c81b-4d82-b059-e3c3ef517e45",
+      "timestamp": 16761,
+      "type": "assert",
+      "target": {
+        "selector": "getByText('\\bHobby\\b \\bprojects\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bHobby\\b \\bprojects\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "#projects > h2.text-3xl.font-medium",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/main/section[3]/h2",
+            "confidence": "low"
+          }
+        ],
+        "role": "h2",
+        "name": "Hobby projects",
+        "testId": null,
+        "xpath": "/html/body/main/section[3]/h2",
+        "css": "#projects > h2.text-3xl.font-medium",
+        "text": "Hobby projects",
+        "placeholder": null,
+        "tagName": "h2",
+        "innerText": "Hobby projects",
+        "boundingBox": {
+          "x": 1161,
+          "y": 938,
+          "width": 672,
+          "height": 36
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        },
+        {
+          "id": "t3",
+          "startTime": 15700,
+          "endTime": 22240,
+          "text": "And yeah, I'm scrolling out, inserting something."
+        }
+      ]
+    },
+    {
+      "id": "89caf89e-8e76-4770-987d-781b28f0d662",
+      "timestamp": 18220,
+      "type": "assert",
+      "target": {
+        "selector": "getByText('\\bAbout\\b \\bme\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bAbout\\b \\bme\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "#about > h2.text-3xl.font-medium",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/main/section[2]/h2",
+            "confidence": "low"
+          }
+        ],
+        "role": "h2",
+        "name": "About me",
+        "testId": null,
+        "xpath": "/html/body/main/section[2]/h2",
+        "css": "#about > h2.text-3xl.font-medium",
+        "text": "About me",
+        "placeholder": null,
+        "tagName": "h2",
+        "innerText": "About me",
+        "boundingBox": {
+          "x": 1137,
+          "y": 1012,
+          "width": 720,
+          "height": 36
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        },
+        {
+          "id": "t3",
+          "startTime": 15700,
+          "endTime": 22240,
+          "text": "And yeah, I'm scrolling out, inserting something."
+        },
+        {
+          "id": "t4",
+          "startTime": 22240,
+          "endTime": 25300,
+          "text": "And now this is the end of the recording."
+        }
+      ]
+    },
+    {
+      "id": "8d80e0df-8abd-40b5-8176-74bc84a93f9d",
+      "timestamp": 19689,
+      "type": "assert",
+      "target": {
+        "selector": "getByText('\\bContact\\b \\bme\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bContact\\b \\bme\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "#home > div.flex.flex-col:nth-of-type(2) > a.group.bg-gray-900:nth-of-type(1)",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/main/section/div[2]/a",
+            "confidence": "low"
+          }
+        ],
+        "role": "a",
+        "name": "Contact me",
+        "testId": null,
+        "xpath": "/html/body/main/section/div[2]/a",
+        "css": "#home > div.flex.flex-col:nth-of-type(2) > a.group.bg-gray-900:nth-of-type(1)",
+        "text": "Contact me",
+        "placeholder": null,
+        "tagName": "a",
+        "innerText": "Contact me",
+        "attributes": {
+          "href": "#contact"
+        },
+        "boundingBox": {
+          "x": 1335,
+          "y": 684,
+          "width": 191,
+          "height": 55
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        },
+        {
+          "id": "t3",
+          "startTime": 15700,
+          "endTime": 22240,
+          "text": "And yeah, I'm scrolling out, inserting something."
+        },
+        {
+          "id": "t4",
+          "startTime": 22240,
+          "endTime": 25300,
+          "text": "And now this is the end of the recording."
+        }
+      ]
+    },
+    {
+      "id": "e7b944b8-07e6-432a-ad29-b96c888a49f7",
+      "timestamp": 21342,
+      "type": "click",
+      "target": {
+        "selector": "getByText('\\bExperience\\b')",
+        "locators": [
+          {
+            "strategy": "text",
+            "value": "getByText('\\bExperience\\b')",
+            "confidence": "medium"
+          },
+          {
+            "strategy": "css",
+            "value": "nav.flex.fixed > ul.flex.w-[22rem] > li.h-3/4.flex:nth-of-type(5) > a.flex.w-full",
+            "confidence": "low"
+          },
+          {
+            "strategy": "xpath",
+            "value": "/html/body/header/nav/ul/li[5]/a",
+            "confidence": "low"
+          }
+        ],
+        "role": "a",
+        "name": "Experience",
+        "testId": null,
+        "xpath": "/html/body/header/nav/ul/li[5]/a",
+        "css": "nav.flex.fixed > ul.flex.w-[22rem] > li.h-3/4.flex:nth-of-type(5) > a.flex.w-full",
+        "text": "Experience",
+        "placeholder": null,
+        "tagName": "a",
+        "innerText": "Experience",
+        "attributes": {
+          "href": "#experience"
+        },
+        "boundingBox": {
+          "x": 1572,
+          "y": 27,
+          "width": 101,
+          "height": 46
+        }
+      },
+      "voiceSegments": [
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        },
+        {
+          "id": "t3",
+          "startTime": 15700,
+          "endTime": 22240,
+          "text": "And yeah, I'm scrolling out, inserting something."
+        },
+        {
+          "id": "t4",
+          "startTime": 22240,
+          "endTime": 25300,
+          "text": "And now this is the end of the recording."
+        }
+      ]
+    },
+    {
+      "id": "2e0a6384-ffe8-4cf3-a031-11e6f6d2dc53",
+      "timestamp": 21370,
+      "type": "navigate",
+      "url": "https://www.jkovac.eu/#experience",
+      "voiceSegments": [
+        {
+          "id": "t2",
+          "startTime": 6420,
+          "endTime": 15700,
+          "text": "about something about water and the watch that is on my table, so I'm doing some assertions."
+        },
+        {
+          "id": "t3",
+          "startTime": 15700,
+          "endTime": 22240,
+          "text": "And yeah, I'm scrolling out, inserting something."
+        },
+        {
+          "id": "t4",
+          "startTime": 22240,
+          "endTime": 25300,
+          "text": "And now this is the end of the recording."
+        }
+      ]
+    }
+  ]
+}

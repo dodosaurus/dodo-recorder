@@ -20,7 +20,7 @@ Dodo Recorder uses OpenAI's Whisper model (running locally via whisper.cpp) to t
 - **Privacy**: 100% local processing, no cloud services
 - **Quality**: Uses `small.en` model by default for better accuracy
 
-For detailed information about the voice transcription system, see [`docs/voice-transcription.md`](docs/voice-transcription.md).
+For detailed information about the voice transcription system, see [`docs/voice_transcription.md`](docs/voice_transcription.md).
 
 ## Keyboard Shortcuts
 

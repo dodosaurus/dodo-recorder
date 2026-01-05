@@ -71,11 +71,15 @@ export class Transcriber {
 
   /**
    * Get the default model path based on model name
+   * Uses models folder in the project root instead of whisper-node package
    */
   private getDefaultModelPath(): string {
-    const whisperNodeDir = path.dirname(require.resolve('whisper-node/package.json'))
-    const whisperModelsDir = path.join(whisperNodeDir, 'lib/whisper.cpp/models')
-    return path.join(whisperModelsDir, `ggml-${this.modelName}.bin`)
+    // Use models folder in project root
+    const appPath = app.isPackaged
+      ? path.dirname(app.getPath('exe'))
+      : app.getAppPath()
+    const modelsDir = path.join(appPath, 'models')
+    return path.join(modelsDir, `ggml-${this.modelName}.bin`)
   }
 
   /**

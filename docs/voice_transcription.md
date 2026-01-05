@@ -97,7 +97,7 @@ Then subtract 1500ms from all Whisper timestamps to realign with actual recordin
 ### Default: small.en (Recommended)
 
 ```bash
-npm run whisper:download  # Downloads small.en (466 MB)
+npm run whisper:download  # Downloads small.en (466 MB) to models/ folder
 ```
 
 **Characteristics:**
@@ -108,12 +108,27 @@ npm run whisper:download  # Downloads small.en (466 MB)
 
 ### Alternative Models
 
-| Model | Size | RAM | Quality | Speed | Use Case |
-|-------|------|-----|---------|-------|----------|
-| tiny.en | 75 MB | ~390 MB | Basic | Fastest | Quick tests only |
-| base.en | 142 MB | ~500 MB | Good | Fast | Previous default |
-| **small.en** | **466 MB** | **~1.0 GB** | **Better** | **Medium** | **Current default** ✓ |
-| medium.en | 1.5 GB | ~2.6 GB | Best | Slower | Maximum accuracy needed |
+| Model | Size | RAM | Quality | Speed | Use Case | Download Command |
+|-------|------|-----|---------|-------|----------|------------------|
+| tiny.en | 75 MB | ~390 MB | Basic | Fastest | Quick tests only | `npm run whisper:download:tiny` |
+| base.en | 142 MB | ~500 MB | Good | Fast | Previous default | `npm run whisper:download:base` |
+| **small.en** | **466 MB** | **~1.0 GB** | **Better** | **Medium** | **Current default** ✓ | `npm run whisper:download` |
+| medium.en | 1.5 GB | ~2.6 GB | Best | Slower | Maximum accuracy needed | `npm run whisper:download:medium` |
+
+### Model Location
+
+Models are stored in the `models/` folder in the project root:
+```
+dodo-recorder/
+├── models/
+│   ├── ggml-small.en.bin    # Default model
+│   ├── ggml-base.en.bin     # Optional
+│   └── ggml-tiny.en.bin     # Optional
+├── node_modules/
+│   └── whisper-node/
+│       └── lib/whisper.cpp/  # Only the executable, not models
+└── ...
+```
 
 ### Changing Models
 
@@ -192,10 +207,11 @@ Includes narrative + action reference table for easy lookup.
 ### Issue: No Transcription Output
 
 **Check**:
-1. Model file exists: `node_modules/whisper-node/lib/whisper.cpp/models/ggml-small.en.bin`
-2. FFmpeg is working: Check logs for conversion errors
-3. Microphone permissions granted
-4. Audio chunks were recorded (check console logs)
+1. Model file exists: `models/ggml-small.en.bin` (in project root)
+2. If model is missing, run: `npm run whisper:download`
+3. FFmpeg is working: Check logs for conversion errors
+4. Microphone permissions granted
+5. Audio chunks were recorded (check console logs)
 
 ## Performance Characteristics
 
