@@ -1,6 +1,22 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { RecordedAction, SessionBundle, TranscriptSegment, IpcResult } from '../shared/types'
 
+/**
+ * Validates that data conforms to RecordedAction interface
+ */
+function isValidRecordedAction(data: unknown): data is RecordedAction {
+  if (!data || typeof data !== 'object') return false
+  
+  const action = data as Partial<RecordedAction>
+  
+  return (
+    typeof action.id === 'string' &&
+    typeof action.timestamp === 'number' &&
+    typeof action.type === 'string' &&
+    ['click', 'fill', 'navigate', 'keypress', 'select', 'check', 'scroll', 'assert'].includes(action.type)
+  )
+}
+
 export interface ElectronAPI {
   selectOutputFolder: () => Promise<string | null>
   startRecording: (startUrl: string, outputPath: string) => Promise<IpcResult>
@@ -34,7 +50,13 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.invoke('check-microphone-permission'),
   
   onActionRecorded: (callback: (action: RecordedAction) => void) => {
-    const handler = (_: unknown, action: RecordedAction) => callback(action)
+    const handler = (_: unknown, data: unknown) => {
+      if (isValidRecordedAction(data)) {
+        callback(data)
+      } else {
+        console.error('Invalid action data received from IPC:', data)
+      }
+    }
     ipcRenderer.on('action-recorded', handler)
     return () => ipcRenderer.removeListener('action-recorded', handler)
   },

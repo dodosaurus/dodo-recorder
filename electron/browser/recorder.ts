@@ -57,11 +57,6 @@ export class BrowserRecorder extends EventEmitter {
       // Skip injection in iframes to reduce overhead
       if (window !== window.top) return
 
-      // Define window interface for type safety
-      interface DodoWindow extends Window {
-        __dodoRecordAction: (data: string) => void
-      }
-
       // ===== Utility Functions Module =====
       const utils = {
         escapeForJson: (str: string): string => {
@@ -277,6 +272,10 @@ export class BrowserRecorder extends EventEmitter {
       }
 
       // ===== Event Listeners Setup =====
+      // Define window interface for type safety
+      interface DodoWindow {
+        __dodoRecordAction: (data: string) => void
+      }
       const recordAction = (window as unknown as DodoWindow).__dodoRecordAction
 
       document.addEventListener('click', (e) => {
