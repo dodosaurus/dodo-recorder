@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Folder, Mic } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
+import { useEffect } from 'react'
 
 export function SettingsPanel() {
   const {
@@ -21,11 +22,54 @@ export function SettingsPanel() {
 
   const isDisabled = status === 'recording' || status === 'processing'
 
+  // Load saved preferences on mount
+  useEffect(() => {
+    const loadPreferences = async () => {
+      if (!window.electronAPI) {
+        console.log('[SettingsPanel] electronAPI not available')
+        return
+      }
+      
+      console.log('[SettingsPanel] Loading user preferences...')
+      const result = await window.electronAPI.getUserPreferences()
+      console.log('[SettingsPanel] getUserPreferences result:', result)
+      
+      // The result structure is: { success: true, preferences: { startUrl, outputPath } }
+      if (result.success && (result as any).preferences) {
+        const preferences = (result as any).preferences
+        console.log('[SettingsPanel] Loaded preferences:', preferences)
+        
+        if (preferences.startUrl) {
+          console.log('[SettingsPanel] Setting startUrl:', preferences.startUrl)
+          setStartUrl(preferences.startUrl)
+        }
+        if (preferences.outputPath) {
+          console.log('[SettingsPanel] Setting outputPath:', preferences.outputPath)
+          setOutputPath(preferences.outputPath)
+        }
+      } else {
+        console.log('[SettingsPanel] Failed to load preferences or no data')
+      }
+    }
+    
+    loadPreferences()
+  }, [setStartUrl, setOutputPath])
+
+  // Save startUrl when it changes
+  const handleStartUrlChange = async (url: string) => {
+    setStartUrl(url)
+    if (window.electronAPI) {
+      await window.electronAPI.updateUserPreferences({ startUrl: url })
+    }
+  }
+
   const handleSelectFolder = async () => {
     if (!window.electronAPI) return
     const path = await window.electronAPI.selectOutputFolder()
     if (path) {
       setOutputPath(path)
+      // Save the selected path to preferences
+      await window.electronAPI.updateUserPreferences({ outputPath: path })
     }
   }
 
@@ -38,7 +82,7 @@ export function SettingsPanel() {
         <Input
           placeholder="https://example.com"
           value={startUrl}
-          onChange={(e) => setStartUrl(e.target.value)}
+          onChange={(e) => handleStartUrlChange(e.target.value)}
           disabled={isDisabled}
           className="bg-background"
         />

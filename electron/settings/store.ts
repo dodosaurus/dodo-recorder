@@ -22,6 +22,10 @@ export interface AppSettings {
     includeScreenshots: boolean
     prettyPrintJson: boolean
   }
+  userPreferences: {
+    startUrl: string
+    outputPath: string
+  }
 }
 
 /**
@@ -40,6 +44,10 @@ const DEFAULT_SETTINGS: AppSettings = {
   output: {
     includeScreenshots: false,
     prettyPrintJson: true,
+  },
+  userPreferences: {
+    startUrl: '',
+    outputPath: '',
   },
 }
 
@@ -91,6 +99,10 @@ export class SettingsStore {
       output: {
         ...DEFAULT_SETTINGS.output,
         ...loaded.output,
+      },
+      userPreferences: {
+        ...DEFAULT_SETTINGS.userPreferences,
+        ...loaded.userPreferences,
       },
     }
   }
@@ -161,6 +173,24 @@ export class SettingsStore {
     longSegmentThresholdMs: number
   } {
     return { ...this.settings.voiceDistribution }
+  }
+
+  /**
+   * Get user preferences (startUrl, outputPath)
+   */
+  getUserPreferences(): { startUrl: string; outputPath: string } {
+    return { ...this.settings.userPreferences }
+  }
+
+  /**
+   * Update user preferences
+   */
+  updateUserPreferences(preferences: Partial<{ startUrl: string; outputPath: string }>): void {
+    this.settings.userPreferences = {
+      ...this.settings.userPreferences,
+      ...preferences,
+    }
+    this.saveSettings()
   }
 }
 

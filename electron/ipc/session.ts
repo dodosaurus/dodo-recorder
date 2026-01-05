@@ -108,4 +108,19 @@ export function registerSettingsHandlers() {
       return { settings: settings.getAll() }
     }, 'Failed to reset settings')
   })
+
+  ipcMain.handle('user-preferences-get', async () => {
+    return handleIpc(async () => {
+      const settings = getSettingsStore()
+      return { preferences: settings.getUserPreferences() }
+    }, 'Failed to get user preferences')
+  })
+
+  ipcMain.handle('user-preferences-update', async (_, preferences: unknown) => {
+    return handleIpc(async () => {
+      const settings = getSettingsStore()
+      settings.updateUserPreferences(preferences as any)
+      return { preferences: settings.getUserPreferences() }
+    }, 'Failed to update user preferences')
+  })
 }
