@@ -3,16 +3,17 @@ import path from 'path'
 import { BrowserRecorder } from './browser/recorder'
 import { SessionWriter } from './session/writer'
 import { Transcriber } from './audio/transcriber'
-import { handleIpc, ipcError, ipcSuccess } from './utils/ipc'
+import { handleIpc, ipcError } from './utils/ipc'
 import { validateUrl, validateOutputPath, validateAudioBuffer } from './utils/validation'
 import { distributeVoiceSegments, generateFullTranscript } from './utils/voiceDistribution'
 import { logger } from './utils/logger'
-import type { SessionBundle, RecordedAction, TranscriptSegment, TimelineEntry } from '../shared/types'
+import type { SessionBundle, RecordedAction, TranscriptSegment } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 let browserRecorder: BrowserRecorder | null = null
 let transcriber: Transcriber | null = null
 let sessionWriter: SessionWriter | null = null
+let isRecording = false
 
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 const isMac = process.platform === 'darwin'
@@ -189,6 +190,11 @@ ipcMain.handle('select-output-folder', async () => {
 })
 
 ipcMain.handle('start-recording', async (_, startUrl: string, outputPath: string) => {
+  // Check if already recording
+  if (isRecording) {
+    return ipcError('Recording already in progress')
+  }
+
   const urlValidation = validateUrl(startUrl)
   if (!urlValidation.valid) {
     return ipcError(urlValidation.error, 'URL validation failed')
@@ -200,26 +206,43 @@ ipcMain.handle('start-recording', async (_, startUrl: string, outputPath: string
   }
 
   return handleIpc(async () => {
-    browserRecorder = new BrowserRecorder()
-    sessionWriter = new SessionWriter(outputPath)
-    transcriber = new Transcriber()
+    isRecording = true
+    
+    try {
+      browserRecorder = new BrowserRecorder()
+      sessionWriter = new SessionWriter(outputPath)
+      transcriber = new Transcriber()
 
-    browserRecorder.on('action', (action) => {
-      mainWindow?.webContents.send('action-recorded', action)
-    })
+      browserRecorder.on('action', (action) => {
+        mainWindow?.webContents.send('action-recorded', action)
+      })
 
-    await browserRecorder.start(startUrl)
-    await transcriber.initialize()
+      await browserRecorder.start(startUrl)
+      await transcriber.initialize()
 
-    return {}
+      return {}
+    } catch (error) {
+      // Cleanup on failure
+      await browserRecorder?.stop()
+      browserRecorder = null
+      sessionWriter = null
+      transcriber = null
+      isRecording = false
+      throw error
+    }
   }, 'Failed to start recording')
 })
 
 ipcMain.handle('stop-recording', async () => {
+  if (!isRecording) {
+    return ipcError('No recording in progress')
+  }
+
   return handleIpc(async () => {
     const actions = browserRecorder?.getActions() || []
     await browserRecorder?.stop()
     browserRecorder = null
+    isRecording = false
     return { actions }
   }, 'Failed to stop recording')
 })
