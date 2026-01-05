@@ -4,6 +4,7 @@ import { SettingsPanel } from '@/components/SettingsPanel'
 import { StatusBar } from '@/components/StatusBar'
 import { TitleBar } from '@/components/TitleBar'
 import { useRecordingStore } from '@/stores/recordingStore'
+import saurusIcon from '@/assets/saurus.png'
 
 export default function App() {
   const status = useRecordingStore((state) => state.status)
@@ -15,13 +16,8 @@ export default function App() {
       <header className="flex-shrink-0 border-b border-border bg-card px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <span className="text-white font-bold text-sm">D</span>
-            </div>
-            <div>
-              <h1 className="text-sm font-semibold text-foreground">Dodo Recorder</h1>
-              <p className="text-xs text-muted-foreground">Browser action recorder</p>
-            </div>
+            <img src={saurusIcon} alt="Dodo Recorder" className="w-8 h-8 rounded-lg" />
+            <h1 className="text-sm font-semibold text-foreground">Dodo Recorder</h1>
           </div>
           <StatusBar />
         </div>
