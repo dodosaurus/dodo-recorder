@@ -16,6 +16,14 @@ const TIME_WINDOWS = {
  * 2. Temporal windows: Segments are assigned based on time proximity
  * 3. Overlap handling: Segments spanning multiple actions are intelligently split
  * 4. Context preservation: Maintains natural speech flow for LLM interpretation
+ *
+ * Performance note: This function sorts both actions and segments by timestamp.
+ * If inputs are already sorted, the sorting check will skip redundant operations.
+ *
+ * @param actions - Array of recorded actions (will be sorted by timestamp)
+ * @param segments - Array of transcript segments (will be sorted by startTime)
+ * @param sessionStartTime - Session start timestamp (currently unused but reserved for future use)
+ * @returns Array of actions with voice segments attached
  */
 export function distributeVoiceSegments(
   actions: RecordedAction[],
@@ -25,6 +33,8 @@ export function distributeVoiceSegments(
   if (segments.length === 0) return actions
   if (actions.length === 0) return []
 
+  // Sort inputs to ensure correct temporal ordering
+  // Note: Checks if already sorted to avoid redundant operations
   const sortedActions = sortByTimestamp(actions)
   const sortedSegments = sortByStartTime(segments)
   const actionVoiceMap = initializeActionVoiceMap(sortedActions)
@@ -40,6 +50,19 @@ export function distributeVoiceSegments(
 }
 
 /**
+ * Helper: Check if array is sorted by a numeric property
+ * Used to optimize sorting operations when inputs are already sorted
+ */
+function isSorted<T>(arr: T[], key: keyof T): boolean {
+  for (let i = 1; i < arr.length; i++) {
+    if ((arr[i][key] as number) < (arr[i - 1][key] as number)) {
+      return false
+    }
+  }
+  return true
+}
+
+/**
  * Helper: Generic sort function by numeric property
  */
 function sortByProperty<T>(items: T[], prop: keyof T): T[] {
@@ -47,16 +70,22 @@ function sortByProperty<T>(items: T[], prop: keyof T): T[] {
 }
 
 /**
- * Helper: Sort actions by timestamp
+ * Helper: Sort actions by timestamp (only if not already sorted)
  */
 function sortByTimestamp(actions: RecordedAction[]): RecordedAction[] {
+  if (isSorted(actions, 'timestamp')) {
+    return actions
+  }
   return sortByProperty(actions, 'timestamp')
 }
 
 /**
- * Helper: Sort segments by start time
+ * Helper: Sort segments by start time (only if not already sorted)
  */
 function sortByStartTime(segments: TranscriptSegment[]): TranscriptSegment[] {
+  if (isSorted(segments, 'startTime')) {
+    return segments
+  }
   return sortByProperty(segments, 'startTime')
 }
 
@@ -119,8 +148,12 @@ function assignSegmentToActions(
     : assignment.actionIds
 
   actionIds.forEach(actionId => {
-    const existing = voiceMap.get(actionId) || []
-    voiceMap.set(actionId, [...existing, segment])
+    const existing = voiceMap.get(actionId)
+    if (existing) {
+      existing.push(segment)
+    } else {
+      voiceMap.set(actionId, [segment])
+    }
   })
 }
 

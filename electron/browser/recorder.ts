@@ -51,28 +51,42 @@ export class BrowserRecorder extends EventEmitter {
       }
     })
 
+    // Inject the recording script into the page
+    // Note: This script is optimized to be as small as possible while maintaining functionality
     await this.page.addInitScript(() => {
-      const escapeForJson = (str: string): string => {
-        return str
-          .replace(/\\/g, '\\\\')
-          .replace(/"/g, '\\"')
-          .replace(/\n/g, '\\n')
-          .replace(/\r/g, '\\r')
-          .replace(/\t/g, '\\t')
-          .replace(/\f/g, '\\f')
-          .replace(/\b/g, '\\b')
+      // Skip injection in iframes to reduce overhead
+      if (window !== window.top) return
+
+      // Define window interface for type safety
+      interface DodoWindow extends Window {
+        __dodoRecordAction: (data: string) => void
       }
 
-      const getTestId = (el: Element): string | null =>
-        el.getAttribute('data-testid') ||
-        el.getAttribute('data-test-id') ||
-        el.getAttribute('data-test')
+      // ===== Utility Functions Module =====
+      const utils = {
+        escapeForJson: (str: string): string => {
+          return str
+            .replace(/\\/g, '\\\\')
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\r')
+            .replace(/\t/g, '\\t')
+            .replace(/\f/g, '\\f')
+            .replace(/\b/g, '\\b')
+        },
 
-      const VALID_ID_PATTERN = /^[a-zA-Z][a-zA-Z0-9_-]*$/
+        getTestId: (el: Element): string | null =>
+          el.getAttribute('data-testid') ||
+          el.getAttribute('data-test-id') ||
+          el.getAttribute('data-test'),
 
-      const truncateText = (text: string, maxLength: number): string =>
-        text.slice(0, maxLength)
+        truncateText: (text: string, maxLength: number): string =>
+          text.slice(0, maxLength),
 
+        VALID_ID_PATTERN: /^[a-zA-Z][a-zA-Z0-9_-]*$/,
+      }
+
+      // ===== Locator Generation Module =====
       type LocatorStrategy = 'testId' | 'id' | 'role' | 'placeholder' | 'text' | 'css' | 'xpath'
       interface Locator {
         strategy: LocatorStrategy
@@ -80,177 +94,178 @@ export class BrowserRecorder extends EventEmitter {
         confidence: 'high' | 'medium' | 'low'
       }
 
-      const generateXPath = (el: Element): string => {
-        if (el.id && VALID_ID_PATTERN.test(el.id)) {
-          return `//*[@id="${el.id}"]`
-        }
-        
-        const parts: string[] = []
-        let current: Element | null = el
-        
-        while (current && current.nodeType === Node.ELEMENT_NODE) {
-          let index = 1
-          let sibling = current.previousElementSibling
-          
-          while (sibling) {
-            if (sibling.tagName === current.tagName) index++
-            sibling = sibling.previousElementSibling
+      const locatorGenerator = {
+        generateXPath: (el: Element): string => {
+          if (el.id && utils.VALID_ID_PATTERN.test(el.id)) {
+            return `//*[@id="${el.id}"]`
           }
           
-          const tagName = current.tagName.toLowerCase()
-          parts.unshift(index > 1 ? `${tagName}[${index}]` : tagName)
-          current = current.parentElement
-        }
-        
-        return '/' + parts.join('/')
-      }
-
-      const generateCssSelector = (el: Element): string => {
-        const parts: string[] = []
-        let current: Element | null = el
-        
-        while (current && current.nodeType === Node.ELEMENT_NODE && parts.length < 4) {
-          let selector = current.tagName.toLowerCase()
+          const parts: string[] = []
+          let current: Element | null = el
           
-          if (current.id && VALID_ID_PATTERN.test(current.id)) {
-            parts.unshift(`#${current.id}`)
-            break
-          }
-          
-          if (current.className && typeof current.className === 'string') {
-            const classes = current.className.trim().split(/\s+/).filter(c => 
-              c && !/^(ng-|js-|is-|has-)/.test(c) && c.length < 30
-            ).slice(0, 2)
-            if (classes.length) {
-              selector += '.' + classes.join('.')
+          while (current && current.nodeType === Node.ELEMENT_NODE) {
+            let index = 1
+            let sibling = current.previousElementSibling
+            
+            while (sibling) {
+              if (sibling.tagName === current.tagName) index++
+              sibling = sibling.previousElementSibling
             }
+            
+            const tagName = current.tagName.toLowerCase()
+            parts.unshift(index > 1 ? `${tagName}[${index}]` : tagName)
+            current = current.parentElement
           }
           
-          const parent = current.parentElement
-          if (parent) {
-            const siblings = Array.from(parent.children).filter(c => c.tagName === current!.tagName)
-            if (siblings.length > 1) {
-              const index = siblings.indexOf(current) + 1
-              selector += `:nth-of-type(${index})`
+          return '/' + parts.join('/')
+        },
+
+        generateCssSelector: (el: Element): string => {
+          const parts: string[] = []
+          let current: Element | null = el
+          
+          while (current && current.nodeType === Node.ELEMENT_NODE && parts.length < 4) {
+            let selector = current.tagName.toLowerCase()
+            
+            if (current.id && utils.VALID_ID_PATTERN.test(current.id)) {
+              parts.unshift(`#${current.id}`)
+              break
             }
+            
+            if (current.className && typeof current.className === 'string') {
+              const classes = current.className.trim().split(/\s+/).filter(c =>
+                c && !/^(ng-|js-|is-|has-)/.test(c) && c.length < 30
+              ).slice(0, 2)
+              if (classes.length) {
+                selector += '.' + classes.join('.')
+              }
+            }
+            
+            const parent = current.parentElement
+            if (parent) {
+              const siblings = Array.from(parent.children).filter(c => c.tagName === current!.tagName)
+              if (siblings.length > 1) {
+                const index = siblings.indexOf(current) + 1
+                selector += `:nth-of-type(${index})`
+              }
+            }
+            
+            parts.unshift(selector)
+            current = current.parentElement
           }
           
-          parts.unshift(selector)
-          current = current.parentElement
-        }
-        
-        return parts.join(' > ')
+          return parts.join(' > ')
+        },
+
+        buildLocators: (element: Element): Locator[] => {
+          const locators: Locator[] = []
+          const tagName = element.tagName.toLowerCase()
+          
+          const testId = utils.getTestId(element)
+          if (testId) {
+            locators.push({
+              strategy: 'testId',
+              value: `[data-testid="${utils.escapeForJson(testId)}"]`,
+              confidence: 'high'
+            })
+          }
+          
+          if (element.id && utils.VALID_ID_PATTERN.test(element.id)) {
+            locators.push({
+              strategy: 'id',
+              value: `#${element.id}`,
+              confidence: 'high'
+            })
+          }
+          
+          const role = element.getAttribute('role')
+          const ariaLabel = element.getAttribute('aria-label')
+          if (role && ariaLabel) {
+            locators.push({
+              strategy: 'role',
+              value: `getByRole('${role}', { name: '${utils.escapeForJson(ariaLabel)}' })`,
+              confidence: 'high'
+            })
+          } else if (ariaLabel) {
+            locators.push({
+              strategy: 'role',
+              value: `getByLabel('${utils.escapeForJson(ariaLabel)}')`,
+              confidence: 'medium'
+            })
+          }
+          
+          const placeholder = element.getAttribute('placeholder')
+          if (placeholder && ['input', 'textarea'].includes(tagName)) {
+            locators.push({
+              strategy: 'placeholder',
+              value: `getByPlaceholder('${utils.escapeForJson(placeholder)}')`,
+              confidence: 'medium'
+            })
+          }
+          
+          const text = (element.textContent || '').trim()
+          if (text && text.length > 0 && text.length < 50 && ['button', 'a', 'span', 'label', 'h1', 'h2', 'h3', 'h4', 'p'].includes(tagName)) {
+            locators.push({
+              strategy: 'text',
+              value: `getByText('${utils.escapeForJson(utils.truncateText(text, 40))}')`,
+              confidence: text.length < 20 ? 'medium' : 'low'
+            })
+          }
+          
+          const cssSelector = locatorGenerator.generateCssSelector(element)
+          if (cssSelector) {
+            locators.push({
+              strategy: 'css',
+              value: cssSelector,
+              confidence: cssSelector.includes('#') ? 'medium' : 'low'
+            })
+          }
+          
+          locators.push({
+            strategy: 'xpath',
+            value: locatorGenerator.generateXPath(element),
+            confidence: 'low'
+          })
+          
+          const priorityOrder: LocatorStrategy[] = ['testId', 'id', 'role', 'placeholder', 'text', 'css', 'xpath']
+          locators.sort((a, b) => priorityOrder.indexOf(a.strategy) - priorityOrder.indexOf(b.strategy))
+          
+          return locators.slice(0, 3)
+        },
       }
 
-      const buildLocators = (element: Element): Locator[] => {
-        const locators: Locator[] = []
-        const tagName = element.tagName.toLowerCase()
-        
-        const testId = getTestId(element)
-        if (testId) {
-          locators.push({
-            strategy: 'testId',
-            value: `[data-testid="${escapeForJson(testId)}"]`,
-            confidence: 'high'
-          })
-        }
-        
-        if (element.id && VALID_ID_PATTERN.test(element.id)) {
-          locators.push({
-            strategy: 'id',
-            value: `#${element.id}`,
-            confidence: 'high'
-          })
-        }
-        
-        const role = element.getAttribute('role')
-        const ariaLabel = element.getAttribute('aria-label')
-        if (role && ariaLabel) {
-          locators.push({
-            strategy: 'role',
-            value: `getByRole('${role}', { name: '${escapeForJson(ariaLabel)}' })`,
-            confidence: 'high'
-          })
-        } else if (ariaLabel) {
-          locators.push({
-            strategy: 'role',
-            value: `getByLabel('${escapeForJson(ariaLabel)}')`,
-            confidence: 'medium'
-          })
-        }
-        
-        const placeholder = element.getAttribute('placeholder')
-        if (placeholder && ['input', 'textarea'].includes(tagName)) {
-          locators.push({
-            strategy: 'placeholder',
-            value: `getByPlaceholder('${escapeForJson(placeholder)}')`,
-            confidence: 'medium'
-          })
-        }
-        
-        const text = (element.textContent || '').trim()
-        if (text && text.length > 0 && text.length < 50 && ['button', 'a', 'span', 'label', 'h1', 'h2', 'h3', 'h4', 'p'].includes(tagName)) {
-          locators.push({
-            strategy: 'text',
-            value: `getByText('${escapeForJson(truncateText(text, 40))}')`,
-            confidence: text.length < 20 ? 'medium' : 'low'
-          })
-        }
-        
-        const cssSelector = generateCssSelector(element)
-        if (cssSelector) {
-          locators.push({
-            strategy: 'css',
-            value: cssSelector,
-            confidence: cssSelector.includes('#') ? 'medium' : 'low'
-          })
-        }
-        
-        locators.push({
-          strategy: 'xpath',
-          value: generateXPath(element),
-          confidence: 'low'
-        })
-        
-        const priorityOrder: LocatorStrategy[] = ['testId', 'id', 'role', 'placeholder', 'text', 'css', 'xpath']
-        locators.sort((a, b) => priorityOrder.indexOf(a.strategy) - priorityOrder.indexOf(b.strategy))
-        
-        return locators.slice(0, 3)
-      }
-
+      // ===== Element Info Extraction Module =====
       const getElementInfo = (element: Element): object => {
         const rect = element.getBoundingClientRect()
         const tagName = element.tagName.toLowerCase()
-
-        const testId = getTestId(element)
-
+        const testId = utils.getTestId(element)
         const ariaLabel = element.getAttribute('aria-label')
         const role = element.getAttribute('role') || tagName
-        const text = truncateText((element.textContent || '').trim(), 100)
+        const text = utils.truncateText((element.textContent || '').trim(), 100)
         const placeholder = element.getAttribute('placeholder')
         
-        const locators = buildLocators(element)
+        const locators = locatorGenerator.buildLocators(element)
         const selector = locators.length > 0 ? locators[0].value : tagName
 
         const attrs: Record<string, string> = {}
         for (let i = 0; i < element.attributes.length; i++) {
           const attr = element.attributes[i]
           if (['class', 'style', 'onclick', 'onmouseover'].includes(attr.name)) continue
-          attrs[attr.name] = truncateText(attr.value, 100)
+          attrs[attr.name] = utils.truncateText(attr.value, 100)
         }
 
         return {
           selector,
           locators,
           role,
-          name: ariaLabel || truncateText(text, 50),
+          name: ariaLabel || utils.truncateText(text, 50),
           testId,
-          xpath: generateXPath(element),
-          css: generateCssSelector(element),
-          text: truncateText(text, 100),
+          xpath: locatorGenerator.generateXPath(element),
+          css: locatorGenerator.generateCssSelector(element),
+          text: utils.truncateText(text, 100),
           placeholder,
           tagName,
-          innerText: truncateText(text, 200),
+          innerText: utils.truncateText(text, 200),
           attributes: Object.keys(attrs).length > 0 ? attrs : undefined,
           boundingBox: {
             x: Math.round(rect.x),
@@ -261,13 +276,16 @@ export class BrowserRecorder extends EventEmitter {
         }
       }
 
+      // ===== Event Listeners Setup =====
+      const recordAction = (window as unknown as DodoWindow).__dodoRecordAction
+
       document.addEventListener('click', (e) => {
         const target = e.target as Element
         if (!target) return
         
         const assertMode = e.altKey === true || e.metaKey === true
         
-        ;(window as unknown as { __dodoRecordAction: (data: string) => void }).__dodoRecordAction(JSON.stringify({
+        recordAction(JSON.stringify({
           type: assertMode ? 'assert' : 'click',
           target: getElementInfo(target),
         }))
@@ -282,7 +300,7 @@ export class BrowserRecorder extends EventEmitter {
         const target = e.target as HTMLInputElement | HTMLTextAreaElement
         if (!target) return
         
-        (window as unknown as { __dodoRecordAction: (data: string) => void }).__dodoRecordAction(JSON.stringify({
+        recordAction(JSON.stringify({
           type: 'fill',
           target: getElementInfo(target),
           value: target.value,
@@ -292,7 +310,7 @@ export class BrowserRecorder extends EventEmitter {
       document.addEventListener('change', (e) => {
         const target = e.target as HTMLSelectElement
         if (target.tagName === 'SELECT') {
-          (window as unknown as { __dodoRecordAction: (data: string) => void }).__dodoRecordAction(JSON.stringify({
+          recordAction(JSON.stringify({
             type: 'select',
             target: getElementInfo(target),
             value: target.value,
@@ -303,7 +321,7 @@ export class BrowserRecorder extends EventEmitter {
       document.addEventListener('keydown', (e) => {
         if (['Enter', 'Tab', 'Escape'].includes(e.key)) {
           const target = e.target as Element
-          (window as unknown as { __dodoRecordAction: (data: string) => void }).__dodoRecordAction(JSON.stringify({
+          recordAction(JSON.stringify({
             type: 'keypress',
             target: target ? getElementInfo(target) : undefined,
             key: e.key,
