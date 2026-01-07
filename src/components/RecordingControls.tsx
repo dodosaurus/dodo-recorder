@@ -1,6 +1,6 @@
 import { useRecordingStore } from '@/stores/recordingStore'
 import { Button } from '@/components/ui/button'
-import { Play, Square, Save, Loader2, Mic, MicOff } from 'lucide-react'
+import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { RecordedAction, SessionBundle } from '@/types/session'
@@ -234,6 +234,26 @@ export function RecordingControls() {
     setStatus('idle')
   }
 
+  const resetSession = async () => {
+    if (!window.electronAPI) return
+
+    // Reload user preferences before resetting to restore URL and output path
+    const prefsResult = await window.electronAPI.getUserPreferences()
+    
+    reset()
+    
+    // Restore the saved preferences after reset
+    if (prefsResult.success && (prefsResult as any).preferences) {
+      const preferences = (prefsResult as any).preferences
+      if (preferences.startUrl) {
+        useRecordingStore.getState().setStartUrl(preferences.startUrl)
+      }
+      if (preferences.outputPath) {
+        useRecordingStore.getState().setOutputPath(preferences.outputPath)
+      }
+    }
+  }
+
   const renderAudioStatus = () => {
     if (!isVoiceEnabled) return null
 
@@ -334,11 +354,10 @@ export function RecordingControls() {
             className="w-full"
             size="lg"
             variant="outline"
-            onClick={startRecording}
-            disabled={!canStart}
+            onClick={resetSession}
           >
-            <Play className="h-4 w-4 mr-2" />
-            New Recording
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Reset
           </Button>
         </div>
       )}
