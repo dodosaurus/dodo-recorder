@@ -217,7 +217,7 @@ export function ActionsList() {
                       <div className="text-xs font-medium text-purple-400 uppercase tracking-wider">
                         Voice Commentary
                       </div>
-                      {action.voiceSegments!.map((segment) => (
+                      {action.voiceSegments!.map((segment: TranscriptSegment) => (
                         <VoiceSegmentBadge key={segment.id} segment={segment} />
                       ))}
                     </div>
@@ -230,7 +230,7 @@ export function ActionsList() {
                           Locators
                         </div>
                       )}
-                      {action.target!.locators!.map((locator, i) => (
+                      {action.target!.locators!.map((locator: Locator, i: number) => (
                         <LocatorBadge key={i} locator={locator} />
                       ))}
                       {action.type === 'assert' && action.target?.innerText && (

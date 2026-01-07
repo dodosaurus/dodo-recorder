@@ -70,15 +70,20 @@ The final output is a **standard Playwright repository**:
 
 **Output: Session Bundle**
 ```
-session-YYYY-MM-DD/
-├── actions.json
-├── timeline.json
-├── transcript.json
-├── metadata.json
-└── notes.md
+session-YYYY-MM-DD-HHMMSS/
+├── actions.json      # All recorded actions (clean, with unique IDs)
+├── transcript.txt    # Voice commentary with embedded action/screenshot references
+└── screenshots/      # Screenshots captured during session
 ```
 
 This bundle contains **facts only**, no interpretation.
+
+**Key design decisions:**
+- Minimal file output for simplicity
+- All actions have unique IDs
+- Voice commentary integrated into transcript.txt with inline references
+- Format optimized for both LLM consumption and human readability
+- All actions and screenshots are referenced in the transcript
 
 ---
 

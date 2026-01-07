@@ -140,38 +140,43 @@ Update in settings file or app UI:
 }
 ```
 
-## Output Formats
+## Output Format
 
-### 1. transcript.json (Structured)
-```json
-{
-  "segments": [
-    {
-      "id": "t1",
-      "startTime": 1200,
-      "endTime": 3400,
-      "text": "Now I'm clicking the submit button"
-    }
-  ]
-}
-```
+### transcript.txt (Primary Output)
 
-### 2. transcript.txt (Human-Readable)
-```
-# Voice Commentary Transcript
+This is the main transcript file that combines voice commentary with embedded action and screenshot references. It's optimized for both LLM consumption (for generating Playwright tests) and human readability.
 
-[00:01] Now I'm clicking the submit button
-[00:05] Verifying the form was submitted successfully
-```
+**Format:**
+- Natural voice transcription flow
+- Action references: `[action:SHORT_ID:TYPE]`
+- Screenshot references: `[screenshot:FILENAME]`
+- ALL actions and screenshots are referenced
+- Includes an action reference table at the end
 
-### 3. transcript-enhanced.txt (LLM-Optimized)
+**Example:**
 ```
-Now I'm clicking the submit button [action:c5922be3:click] and verifying 
-the form was submitted [action:72e42724:assert] successfully.
-```
+# Recording Session Transcript
 
-### 4. transcript-detailed.md (Comprehensive)
-Includes narrative + action reference table for easy lookup.
+This transcript combines voice commentary with action and screenshot references.
+Format: [action:ID:TYPE] for actions, [screenshot:FILENAME] for screenshots.
+
+## Narrative
+
+So, this is the test session. The browser just opened and the URL was visited
+[action:e6c3069a:navigate] [screenshot:screenshot-001.png]. Now I'm clicking on
+some top menu items [action:c5922be3:click] [screenshot:screenshot-002.png]
+[action:72e42724:click] to assert them, to assert my name [action:2e185707:assert].
+In the hero section, to assert the button is here [action:3ea1708c:assert],
+LinkedIn button [action:ef955889:click] [screenshot:screenshot-003.png]...
+
+## Action Reference
+
+| Action ID | Type | Timestamp | Target | Screenshot |
+|-----------|------|-----------|--------|------------|
+| e6c3069a | navigate | 00:00 | https://example.com | screenshot-001.png |
+| c5922be3 | click | 00:03 | Home | screenshot-002.png |
+...
+```
 
 ## Troubleshooting
 

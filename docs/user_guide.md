@@ -47,31 +47,26 @@ During browser recording, use these keyboard shortcuts to control your session:
 
 ## Session Output Format
 
-Each recording session produces a folder with:
+Each recording session produces a streamlined folder with three essential components:
 
 ```
 session-YYYY-MM-DD-HHMMSS/
-├── actions.json                # All recorded browser interactions with locator info + voice segments
-├── timeline.json               # Unified timeline merging actions + voice segments
-├── transcript.json             # Voice commentary transcription (structured segments)
-├── transcript.txt              # Full transcript in readable format with timestamps
-├── transcript-enhanced.txt     # Enhanced narrative with embedded action IDs
-├── transcript-detailed.md      # Detailed transcript with action reference table
-├── metadata.json               # Session info (URL, duration, timestamps)
-├── notes.md                    # Optional user notes
+├── actions.json                # All recorded browser interactions (clean, no voice data)
+├── transcript.txt              # Voice commentary with embedded action/screenshot references
 └── screenshots/                # Screenshots captured during session
     ├── screenshot-14227.png
     ├── screenshot-21725.png
     └── ...
 ```
 
-### actions.json Structure
+### File Details
 
+**actions.json** - Contains all recorded actions with unique IDs:
 ```json
 {
   "actions": [
     {
-      "id": "uuid",
+      "id": "e6c3069a-1b2c-4d5e-6f7g-8h9i0j1k2l3m",
       "timestamp": 1234,
       "type": "click",
       "target": {
@@ -82,18 +77,23 @@ session-YYYY-MM-DD-HHMMSS/
         "xpath": "//button[@data-testid='submit-btn']"
       },
       "url": "https://example.com",
-      "voiceSegments": [
-        {
-          "id": "t1",
-          "startTime": 1200,
-          "endTime": 3400,
-          "text": "Now I'm going to click the submit button to send the form"
-        }
-      ]
+      "screenshot": "screenshot-14227.png"
     }
   ]
 }
 ```
+
+**transcript.txt** - Narrative transcript optimized for LLM and human consumption:
+- Natural voice transcription flow
+- Embedded action references: `[action:e6c3069a:click]`
+- Embedded screenshot references: `[screenshot:screenshot-14227.png]`
+- ALL actions and screenshots are referenced in the narrative
+- Includes an action reference table at the end
+
+This format is designed for:
+1. **LLM consumption**: Easy parsing to generate Playwright tests
+2. **Human readability**: Test automation engineers can quickly understand the session
+3. **Complete coverage**: Every action and screenshot is documented
 
 ## Voice Transcription Settings
 
