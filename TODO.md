@@ -1,3 +1,5 @@
+- [ ] refactor the transcript table - still assumes maybe it is also somewhere else in project, that on assertion we are doing screenshot automatically, but we do not do that, we need to remove all mentions of that from everywhere 
+- [ ] check if our doc is in sync with what project looks like
 - [ ] add some panel in browser for assertion mode/taking screenshot, so we are not dependent on hotkeys (similar to Playwright Codegen)
 - [ ] add assertion mode where elements will on hover will be highlighted like with Playwright Codgene/dev tools insepcting elements
 - [ ] when writing in input a lot of events are recorded
