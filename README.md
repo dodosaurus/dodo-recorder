@@ -2,9 +2,11 @@
   <img src="src/assets/saurus.png" alt="Dodo Recorder Icon" width="128" height="128">
 </p>
 
-# Dodo Recorder
+<h1 align="center">Dodo Recorder</h1>
 
-A desktop application for recording browser interactions and voice commentary, producing session bundles for AI-assisted Playwright test generation.
+<p align="center">
+  A desktop application for recording browser interactions and voice commentary, producing session bundles for AI-assisted Playwright test generation.
+</p>
 
 For detailed usage instructions, features, and keyboard shortcuts, see [`docs/user_guide.md`](docs/user_guide.md).
 
