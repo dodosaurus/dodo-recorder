@@ -1,9 +1,0 @@
-# Voice Commentary Transcript
-
-[00:00] So this is testing recording, now I'm clicking on some things on the page, and I'm talking
-
-[00:06] about something about water and the watch that is on my table, so I'm doing some assertions.
-
-[00:15] And yeah, I'm scrolling out, inserting something.
-
-[00:22] And now this is the end of the recording.

@@ -32,3 +32,5 @@ vendor/
 *.tmp
 .temp/
 
+test-sessions/
+
