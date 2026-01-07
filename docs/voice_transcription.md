@@ -144,13 +144,13 @@ Update in settings file or app UI:
 
 ### transcript.txt (Primary Output)
 
-This is the main transcript file that combines voice commentary with embedded action and screenshot references. It's optimized for both LLM consumption (for generating Playwright tests) and human readability.
+This is the main transcript file that combines voice commentary with embedded action references. It's optimized for both LLM consumption (for generating Playwright tests) and human readability.
 
 **Format:**
 - Natural voice transcription flow
 - Action references: `[action:SHORT_ID:TYPE]`
-- Screenshot references: `[screenshot:FILENAME]`
-- ALL actions and screenshots are referenced
+- Screenshot references for screenshot actions: `[screenshot:FILENAME]`
+- ALL actions are referenced in the transcript
 - Includes an action reference table at the end
 
 **Example:**
@@ -163,18 +163,24 @@ Format: [action:ID:TYPE] for actions, [screenshot:FILENAME] for screenshots.
 ## Narrative
 
 So, this is the test session. The browser just opened and the URL was visited
-[action:e6c3069a:navigate] [screenshot:screenshot-001.png]. Now I'm clicking on
-some top menu items [action:c5922be3:click] [screenshot:screenshot-002.png]
-[action:72e42724:click] to assert them, to assert my name [action:2e185707:assert].
-In the hero section, to assert the button is here [action:3ea1708c:assert],
-LinkedIn button [action:ef955889:click] [screenshot:screenshot-003.png]...
+[action:e6c3069a:navigate]. Now I'm clicking on some top menu items
+[action:c5922be3:click] [action:72e42724:click] to assert them, to assert my
+name [action:2e185707:assert]. In the hero section, to assert the button is
+here [action:3ea1708c:assert]. Taking a screenshot now
+[action:4a62c1b8:screenshot] [screenshot:screenshot-001.png]. Clicking the
+LinkedIn button [action:ef955889:click]...
 
 ## Action Reference
 
-| Action ID | Type | Timestamp | Target | Screenshot |
-|-----------|------|-----------|--------|------------|
-| e6c3069a | navigate | 00:00 | https://example.com | screenshot-001.png |
-| c5922be3 | click | 00:03 | Home | screenshot-002.png |
+| Action ID | Type | Timestamp | Target |
+|-----------|------|-----------|--------|
+| e6c3069a | navigate | 00:00 | https://example.com |
+| c5922be3 | click | 00:03 | Home |
+| 72e42724 | click | 00:04 | Projects |
+| 2e185707 | assert | 00:05 | John Doe |
+| 3ea1708c | assert | 00:06 | Submit |
+| 4a62c1b8 | screenshot | 00:08 | - |
+| ef955889 | click | 00:09 | LinkedIn |
 ...
 ```
 

@@ -2,30 +2,30 @@ import type { RecordedAction, TranscriptSegment } from '../../shared/types'
 
 /**
  * Generates the primary transcript.txt file for LLM consumption and human readability.
- * This is the main output file that combines voice commentary with action and screenshot references.
+ * This is the main output file that combines voice commentary with action references.
  *
  * Format:
  * - Voice transcription text flows naturally
  * - Action references embedded inline: [action:ID:TYPE]
- * - Screenshot references embedded inline: [screenshot:FILENAME]
- * - ALL actions and screenshots are referenced in the transcript
+ * - Screenshot references embedded inline for screenshot actions: [screenshot:FILENAME]
+ * - ALL actions are referenced in the transcript
  * - References appear at estimated location during commentary
  *
  * Example output:
  * "So, this is the test session. The browser just opened and the URL was visited
- * [action:e6c3069a:navigate] [screenshot:screenshot-001.png]. Now I'm clicking on
- * some top menu items [action:c5922be3:click] [screenshot:screenshot-002.png]
- * [action:72e42724:click] to assert them, to assert my name [action:2e185707:assert].
- * In the hero section, to assert the button is here [action:3ea1708c:assert],
- * LinkedIn button [action:ef955889:click] [screenshot:screenshot-003.png]..."
+ * [action:e6c3069a:navigate]. Now I'm clicking on some top menu items
+ * [action:c5922be3:click] [action:72e42724:click] to assert them, to assert my name
+ * [action:2e185707:assert]. In the hero section, to assert the button is here
+ * [action:3ea1708c:assert], LinkedIn button [action:ef955889:click]. Taking a
+ * screenshot now [action:4a62c1b8:screenshot] [screenshot:screenshot-3655.png]..."
  *
  * Purpose: Primary handover format for LLM to create Playwright tests, also readable
  * by test automation engineers to understand what happened during the session.
  */
 
 /**
- * Generates the main transcript.txt file with embedded action and screenshot references.
- * This ensures ALL actions and screenshots are referenced in the output, even if there's
+ * Generates the main transcript.txt file with embedded action references.
+ * This ensures ALL actions are referenced in the output, even if there's
  * no voice commentary for some actions.
  */
 export function generateTranscriptWithReferences(actions: RecordedAction[]): string {
@@ -55,7 +55,8 @@ export function generateTranscriptWithReferences(actions: RecordedAction[]): str
       if (actionsWithoutVoice.length > 0) {
         for (const silentAction of actionsWithoutVoice) {
           narrativeText += formatActionReference(silentAction)
-          if (silentAction.screenshot) {
+          // Only add screenshot reference for screenshot actions
+          if (silentAction.type === 'screenshot' && silentAction.screenshot) {
             narrativeText += ' ' + formatScreenshotReference(silentAction.screenshot)
           }
           narrativeText += ' '
@@ -77,7 +78,8 @@ export function generateTranscriptWithReferences(actions: RecordedAction[]): str
 
       // Add action reference after the voice commentary
       narrativeText += ' ' + formatActionReference(action)
-      if (action.screenshot) {
+      // Only add screenshot reference for screenshot actions
+      if (action.type === 'screenshot' && action.screenshot) {
         narrativeText += ' ' + formatScreenshotReference(action.screenshot)
       }
     } else {
@@ -90,7 +92,8 @@ export function generateTranscriptWithReferences(actions: RecordedAction[]): str
   if (actionsWithoutVoice.length > 0) {
     for (const silentAction of actionsWithoutVoice) {
       narrativeText += ' ' + formatActionReference(silentAction)
-      if (silentAction.screenshot) {
+      // Only add screenshot reference for screenshot actions
+      if (silentAction.type === 'screenshot' && silentAction.screenshot) {
         narrativeText += ' ' + formatScreenshotReference(silentAction.screenshot)
       }
     }
@@ -101,16 +104,15 @@ export function generateTranscriptWithReferences(actions: RecordedAction[]): str
 
   // Add a reference section for easy lookup
   lines.push('\n## Action Reference\n')
-  lines.push('| Action ID | Type | Timestamp | Target | Screenshot |')
-  lines.push('|-----------|------|-----------|--------|------------|')
+  lines.push('| Action ID | Type | Timestamp | Target |')
+  lines.push('|-----------|------|-----------|--------|')
   
   for (const action of sortedActions) {
     const shortId = action.id.substring(0, 8)
     const timestamp = formatTimestamp(action.timestamp)
     const target = getActionTarget(action)
-    const screenshot = action.screenshot || '-'
     
-    lines.push(`| ${shortId} | ${action.type} | ${timestamp} | ${target} | ${screenshot} |`)
+    lines.push(`| ${shortId} | ${action.type} | ${timestamp} | ${target} |`)
   }
 
   return lines.join('\n')

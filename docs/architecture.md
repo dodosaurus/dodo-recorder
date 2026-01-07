@@ -157,7 +157,7 @@ Saves everything to disk in a streamlined, LLM-optimized format:
 ```
 session-2026-01-05-095500/
 ├── actions.json       # All browser actions with locators (clean, no voice data)
-├── transcript.txt     # Voice commentary with embedded action/screenshot references
+├── transcript.txt     # Voice commentary with embedded action references
 └── screenshots/       # Screenshots captured during session
     ├── screenshot-14227.png
     └── ...
@@ -166,7 +166,7 @@ session-2026-01-05-095500/
 **Design rationale:**
 - **Minimal output**: Only 3 essential components for clarity
 - **Clean actions.json**: Actions without embedded voice data, each with unique ID
-- **Integrated transcript.txt**: Voice commentary with embedded references to actions and screenshots
+- **Integrated transcript.txt**: Voice commentary with embedded references to actions (and screenshot filenames for screenshot actions)
 - **LLM-optimized**: Format designed for AI consumption to generate Playwright tests
 - **Human-readable**: Test automation engineers can quickly understand the session
 

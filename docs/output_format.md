@@ -80,13 +80,13 @@ session-YYYY-MM-DD-HHMMSS/
 ```
 
 #### 2. `transcript.txt`
-**Purpose**: Primary narrative that combines voice commentary with action/screenshot references.
+**Purpose**: Primary narrative that combines voice commentary with action references.
 
 **Format features:**
 - Natural voice transcription flow
 - Inline action references: `[action:SHORT_ID:TYPE]`
-- Inline screenshot references: `[screenshot:FILENAME]`
-- ALL actions and screenshots are referenced
+- Inline screenshot references for screenshot actions: `[screenshot:FILENAME]`
+- ALL actions are referenced in the transcript
 - Action reference table at the end for quick lookup
 
 **Example:**
@@ -98,17 +98,19 @@ Format: [action:ID:TYPE] for actions, [screenshot:FILENAME] for screenshots.
 
 ## Narrative
 
-So, this is the test session. The browser just opened and the URL was visited 
-[action:e6c3069a:navigate] [screenshot:screenshot-001.png]. Now I'm clicking on 
-some top menu items [action:c5922be3:click] [screenshot:screenshot-002.png] 
-[action:72e42724:click] to assert them...
+So, this is the test session. The browser just opened and the URL was visited
+[action:e6c3069a:navigate]. Now I'm clicking on some top menu items
+[action:c5922be3:click] [action:72e42724:click] to assert them. Taking a
+screenshot now [action:4a62c1b8:screenshot] [screenshot:screenshot-001.png]...
 
 ## Action Reference
 
-| Action ID | Type | Timestamp | Target | Screenshot |
-|-----------|------|-----------|--------|------------|
-| e6c3069a | navigate | 00:00 | https://example.com | screenshot-001.png |
-| c5922be3 | click | 00:03 | Home | screenshot-002.png |
+| Action ID | Type | Timestamp | Target |
+|-----------|------|-----------|--------|
+| e6c3069a | navigate | 00:00 | https://example.com |
+| c5922be3 | click | 00:03 | Home |
+| 72e42724 | click | 00:04 | Projects |
+| 4a62c1b8 | screenshot | 00:08 | - |
 ...
 ```
 
@@ -172,7 +174,7 @@ await Promise.all([
 **Algorithm:**
 1. Sort actions by timestamp
 2. For each action:
-   - If has voice: Add voice text + action reference + screenshot reference
+   - If has voice: Add voice text + action reference + screenshot reference (if action is screenshot type)
    - If no voice: Accumulate action, flush batch with references
 3. Generate action reference table with metadata
 
@@ -190,7 +192,8 @@ export function generateTranscriptWithReferences(actions: RecordedAction[]): str
       if (actionsWithoutVoice.length > 0) {
         for (const silentAction of actionsWithoutVoice) {
           narrativeText += formatActionReference(silentAction)
-          if (silentAction.screenshot) {
+          // Only add screenshot reference for screenshot actions
+          if (silentAction.type === 'screenshot' && silentAction.screenshot) {
             narrativeText += ' ' + formatScreenshotReference(silentAction.screenshot)
           }
         }
@@ -200,7 +203,8 @@ export function generateTranscriptWithReferences(actions: RecordedAction[]): str
       // Add voice + references
       narrativeText += action.voiceSegments.map(s => s.text).join(' ')
       narrativeText += ' ' + formatActionReference(action)
-      if (action.screenshot) {
+      // Only add screenshot reference for screenshot actions
+      if (action.type === 'screenshot' && action.screenshot) {
         narrativeText += ' ' + formatScreenshotReference(action.screenshot)
       }
     } else {

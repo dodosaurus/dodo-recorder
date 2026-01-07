@@ -86,14 +86,14 @@ session-YYYY-MM-DD-HHMMSS/
 **transcript.txt** - Narrative transcript optimized for LLM and human consumption:
 - Natural voice transcription flow
 - Embedded action references: `[action:e6c3069a:click]`
-- Embedded screenshot references: `[screenshot:screenshot-14227.png]`
-- ALL actions and screenshots are referenced in the narrative
+- Embedded screenshot references for screenshot actions: `[screenshot:screenshot-14227.png]`
+- ALL actions are referenced in the narrative
 - Includes an action reference table at the end
 
 This format is designed for:
 1. **LLM consumption**: Easy parsing to generate Playwright tests
 2. **Human readability**: Test automation engineers can quickly understand the session
-3. **Complete coverage**: Every action and screenshot is documented
+3. **Complete coverage**: Every action is documented
 
 ## Voice Transcription Settings
 
