@@ -7,7 +7,7 @@ export interface UserPreferences {
 
 export interface ElectronAPI {
   selectOutputFolder: () => Promise<string | null>
-  startRecording: (startUrl: string, outputPath: string) => Promise<IpcResult>
+  startRecording: (startUrl: string, outputPath: string, startTime: number) => Promise<IpcResult>
   stopRecording: () => Promise<IpcResult<{ actions: RecordedAction[] }>>
   saveSession: (sessionData: SessionBundle) => Promise<IpcResult<{ path: string }>>
   transcribeAudio: (audioBuffer: ArrayBuffer) => Promise<IpcResult<{ segments: TranscriptSegment[] }>>

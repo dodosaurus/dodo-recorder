@@ -363,14 +363,34 @@ export class BrowserRecorder extends EventEmitter {
 
       // Add keyboard shortcut for manual screenshots (Cmd+Shift+S / Ctrl+Shift+S)
       document.addEventListener('keydown', async (e) => {
+        // Log all Cmd/Ctrl+Shift key presses for debugging
+        if ((e.metaKey || e.ctrlKey) && e.shiftKey) {
+          console.log('[Dodo Recorder] Cmd/Ctrl+Shift pressed, key:', e.key)
+        }
+        
         if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+          console.log('[Dodo Recorder] Screenshot shortcut detected')
           e.preventDefault()
-          const screenshotPath = await takeScreenshot()
-          if (screenshotPath) {
-            recordAction(JSON.stringify({
-              type: 'scroll',
-              screenshot: screenshotPath,
-            }))
+          e.stopPropagation()
+          
+          try {
+            console.log('[Dodo Recorder] Calling takeScreenshot...')
+            const screenshotPath = await takeScreenshot()
+            console.log('[Dodo Recorder] takeScreenshot returned:', screenshotPath)
+            
+            if (screenshotPath) {
+              const actionData = JSON.stringify({
+                type: 'screenshot',
+                screenshot: screenshotPath,
+              })
+              console.log('[Dodo Recorder] Recording action:', actionData)
+              recordAction(actionData)
+              console.log('[Dodo Recorder] ✅ Screenshot action recorded successfully')
+            } else {
+              console.error('[Dodo Recorder] ❌ Screenshot capture returned null')
+            }
+          } catch (error) {
+            console.error('[Dodo Recorder] ❌ Screenshot capture failed:', error)
           }
         }
       }, true)

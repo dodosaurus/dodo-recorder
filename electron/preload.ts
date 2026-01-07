@@ -18,13 +18,13 @@ function isValidRecordedAction(data: unknown): data is RecordedAction {
     typeof action.id === 'string' &&
     typeof action.timestamp === 'number' &&
     typeof action.type === 'string' &&
-    ['click', 'fill', 'navigate', 'keypress', 'select', 'check', 'scroll', 'assert'].includes(action.type)
+    ['click', 'fill', 'navigate', 'keypress', 'select', 'check', 'scroll', 'assert', 'screenshot'].includes(action.type)
   )
 }
 
 export interface ElectronAPI {
   selectOutputFolder: () => Promise<string | null>
-  startRecording: (startUrl: string, outputPath: string) => Promise<IpcResult>
+  startRecording: (startUrl: string, outputPath: string, startTime: number) => Promise<IpcResult>
   stopRecording: () => Promise<IpcResult<{ actions: RecordedAction[] }>>
   saveSession: (sessionData: SessionBundle) => Promise<IpcResult<{ path: string }>>
   transcribeAudio: (audioBuffer: ArrayBuffer) => Promise<IpcResult<{ segments: TranscriptSegment[] }>>
@@ -42,8 +42,8 @@ export interface ElectronAPI {
 const electronAPI: ElectronAPI = {
   selectOutputFolder: () => ipcRenderer.invoke('select-output-folder'),
   
-  startRecording: (startUrl: string, outputPath: string) =>
-    ipcRenderer.invoke('start-recording', startUrl, outputPath),
+  startRecording: (startUrl: string, outputPath: string, startTime: number) =>
+    ipcRenderer.invoke('start-recording', startUrl, outputPath, startTime),
   
   stopRecording: () => ipcRenderer.invoke('stop-recording'),
   

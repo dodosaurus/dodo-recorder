@@ -2,6 +2,7 @@
 - [ ] do not clean user preferences (URL and path) after I save recording
 - [ ] add some panel in browser for assertion mode/taking screenshot, so we are not dependent on hotkeys (similar to Playwright Codegen)
 - [ ] add assertion mode where elements will on hover will be highlighted like with Playwright Codgene/dev tools insepcting elements
+- [ ] when writing in input a lot of events are recorded
 - [ ] after some change is made, Electron app running in dev mode, pops on top of all windows in my MacOS - maybe some live change watch is enabled and app is reloaded and jumps on top? I want live reload, but app should not pops on top of all my MacOS env
 
 - [x] screenshot taking needs new hotkey, F9 does not work on MacOS (changed to Cmd+Shift+S / Ctrl+Shift+S)

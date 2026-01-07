@@ -37,7 +37,7 @@ export interface ElementTarget {
 export interface RecordedAction {
   id: string
   timestamp: number
-  type: 'click' | 'fill' | 'navigate' | 'keypress' | 'select' | 'check' | 'scroll' | 'assert'
+  type: 'click' | 'fill' | 'navigate' | 'keypress' | 'select' | 'check' | 'scroll' | 'assert' | 'screenshot'
   target?: ElementTarget
   value?: string
   url?: string

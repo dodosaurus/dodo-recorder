@@ -101,8 +101,8 @@ export function RecordingControls() {
       }
     }
 
-    // Now start browser recording
-    const result = await window.electronAPI.startRecording(startUrl, outputPath)
+    // Now start browser recording - pass the startTime so backend uses the same timestamp
+    const result = await window.electronAPI.startRecording(startUrl, outputPath, recordingStartTime)
     
     if (!result.success) {
       console.error('Failed to start recording:', result.error)

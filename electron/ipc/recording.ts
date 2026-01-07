@@ -45,7 +45,7 @@ function validateTranscriptSegmentsArray(data: unknown): data is TranscriptSegme
  * Register recording-related IPC handlers
  */
 export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
-  ipcMain.handle('start-recording', async (_, startUrl: string, outputPath: string) => {
+  ipcMain.handle('start-recording', async (_, startUrl: string, outputPath: string, startTime: number) => {
     // Check if already recording
     if (isRecording) {
       return ipcError('Recording already in progress')
@@ -68,8 +68,9 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
         const settings = getSettingsStore()
         const whisperConfig = settings.getWhisperConfig()
         
-        // Generate session ID for screenshot directory (must match format in writer.ts)
-        const date = new Date()
+        // Generate session ID for screenshot directory using the startTime from frontend
+        // This ensures the screenshot directory matches the session directory created during save
+        const date = new Date(startTime)
         const sessionId = date.toISOString()
           .replace(/T/, '-')
           .replace(/:/g, '')

@@ -1,6 +1,6 @@
 import { useRecordingStore } from '@/stores/recordingStore'
 import { formatTimestamp, cn } from '@/lib/utils'
-import { MousePointer2, Type, Navigation, Keyboard, ListChecks, Trash2, Target, ChevronDown, ChevronUp, Mic } from 'lucide-react'
+import { MousePointer2, Type, Navigation, Keyboard, ListChecks, Trash2, Target, ChevronDown, ChevronUp, Mic, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useShallow } from 'zustand/react/shallow'
 import { useState } from 'react'
@@ -15,6 +15,7 @@ const actionIcons: Record<ActionType, typeof MousePointer2> = {
   check: ListChecks,
   scroll: MousePointer2,
   assert: Target,
+  screenshot: Camera,
 }
 
 const actionColors: Record<ActionType, string> = {
@@ -26,6 +27,7 @@ const actionColors: Record<ActionType, string> = {
   check: 'text-orange-400',
   scroll: 'text-cyan-400',
   assert: 'text-pink-400',
+  screenshot: 'text-indigo-400',
 }
 
 const strategyLabels: Record<string, string> = {
@@ -61,6 +63,8 @@ function getActionDescription(action: RecordedAction): string {
       return `${action.target?.name || 'Select'} → ${action.value}`
     case 'assert':
       return action.target?.innerText?.slice(0, 50) || action.target?.name || action.target?.tagName || 'Element'
+    case 'screenshot':
+      return action.screenshot || 'Screenshot captured'
     default:
       return action.target?.selector || ''
   }
@@ -172,6 +176,16 @@ export function ActionsList() {
                     {action.type === 'assert' && (
                       <span className="text-xs px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-400">
                         assertion
+                      </span>
+                    )}
+                    {action.type === 'screenshot' && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400">
+                        screenshot
+                      </span>
+                    )}
+                    {action.type !== 'assert' && action.type !== 'screenshot' && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                        action
                       </span>
                     )}
                     {hasVoiceSegments && (
