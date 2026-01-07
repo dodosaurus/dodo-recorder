@@ -12,7 +12,14 @@ export class SessionWriter {
   }
 
   async write(session: SessionBundle): Promise<string> {
-    const safeId = sanitizeSessionId(session.metadata.id)
+    // Generate session directory name from startTime
+    const date = new Date(session.startTime)
+    const sessionId = date.toISOString()
+      .replace(/T/, '-')
+      .replace(/:/g, '')
+      .split('.')[0] // Remove milliseconds
+    const safeId = sanitizeSessionId(`session-${sessionId}`)
+    
     const sessionDir = path.join(this.outputDir, safeId)
     const screenshotsDir = path.join(sessionDir, 'screenshots')
 

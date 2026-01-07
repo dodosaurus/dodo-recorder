@@ -2,9 +2,8 @@ import { useRecordingStore } from '@/stores/recordingStore'
 import { Button } from '@/components/ui/button'
 import { Play, Square, Save, Loader2, Mic, MicOff } from 'lucide-react'
 import { useEffect, useRef } from 'react'
-import { generateSessionId } from '@/lib/utils'
 import { useShallow } from 'zustand/react/shallow'
-import type { RecordedAction, SessionBundle, TimelineEntry } from '@/types/session'
+import type { RecordedAction, SessionBundle } from '@/types/session'
 
 export function RecordingControls() {
   const {
@@ -36,7 +35,6 @@ export function RecordingControls() {
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
-  const sessionIdRef = useRef<string>('')
 
   useEffect(() => {
     if (!window.electronAPI) return
@@ -53,7 +51,6 @@ export function RecordingControls() {
   const startRecording = async () => {
     if (!canStart || !window.electronAPI) return
 
-    sessionIdRef.current = generateSessionId()
     setAudioError(null)
 
     // Set start time FIRST, before any recording starts
@@ -203,34 +200,10 @@ export function RecordingControls() {
       }
     }
 
-    console.log('Building timeline...')
-    const timeline: TimelineEntry[] = [
-      ...actionsWithVoice.map((a) => ({
-        timestamp: a.timestamp,
-        type: 'action' as const,
-        actionId: a.id,
-        summary: `${a.type}: ${a.target?.selector || a.url || a.key || ''}`,
-      })),
-      ...transcriptSegments.map((t) => ({
-        timestamp: t.startTime,
-        type: 'speech' as const,
-        transcriptId: t.id,
-        summary: t.text.slice(0, 100),
-      })),
-    ].sort((a, b) => a.timestamp - b.timestamp)
-
+    // Create simplified session bundle with just actions and startTime
     const session: SessionBundle = {
       actions: actionsWithVoice,
-      timeline,
-      transcript: transcriptSegments,
-      metadata: {
-        id: sessionIdRef.current || generateSessionId(),
-        startTime: startTime || Date.now(),
-        startUrl,
-        actionCount: actionsWithVoice.length,
-        transcriptSegmentCount: transcriptSegments.length,
-      },
-      notes,
+      startTime: startTime || Date.now(),
     }
 
     console.log('Saving session bundle...')

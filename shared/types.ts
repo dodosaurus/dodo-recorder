@@ -53,30 +53,13 @@ export interface TranscriptSegment {
   text: string
 }
 
-export interface TimelineEntry {
-  timestamp: number
-  type: 'action' | 'speech'
-  actionId?: string
-  transcriptId?: string
-  summary: string
-}
-
-export interface SessionMetadata {
-  id: string
-  startTime: number
-  endTime?: number
-  startUrl: string
-  duration?: number
-  actionCount: number
-  transcriptSegmentCount: number
-}
-
+/**
+ * Simplified session bundle for saving recordings.
+ * Only contains the actions array and start time - everything else is derived.
+ */
 export interface SessionBundle {
   actions: RecordedAction[]
-  timeline: TimelineEntry[]
-  transcript: TranscriptSegment[]
-  metadata: SessionMetadata
-  notes: string
+  startTime: number
 }
 
 export type RecordingStatus = 'idle' | 'recording' | 'paused' | 'processing' | 'saving'

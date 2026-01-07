@@ -13,11 +13,7 @@ function validateSessionBundle(data: unknown): data is SessionBundle {
   
   // Validate required fields exist and have correct types
   if (!Array.isArray(bundle.actions)) return false
-  if (!Array.isArray(bundle.timeline)) return false
-  if (!Array.isArray(bundle.transcript)) return false
-  if (!bundle.metadata || typeof bundle.metadata !== 'object') return false
-  if (typeof bundle.metadata.id !== 'string') return false
-  if (typeof bundle.notes !== 'string') return false
+  if (typeof bundle.startTime !== 'number') return false
   
   // Validate actions array structure
   for (const action of bundle.actions) {
@@ -25,22 +21,6 @@ function validateSessionBundle(data: unknown): data is SessionBundle {
     if (typeof action.id !== 'string') return false
     if (typeof action.timestamp !== 'number') return false
     if (typeof action.type !== 'string') return false
-  }
-  
-  // Validate timeline array structure
-  for (const entry of bundle.timeline) {
-    if (!entry || typeof entry !== 'object') return false
-    if (typeof entry.timestamp !== 'number') return false
-    if (typeof entry.type !== 'string') return false
-  }
-  
-  // Validate transcript array structure
-  for (const segment of bundle.transcript) {
-    if (!segment || typeof segment !== 'object') return false
-    if (typeof segment.id !== 'string') return false
-    if (typeof segment.startTime !== 'number') return false
-    if (typeof segment.endTime !== 'number') return false
-    if (typeof segment.text !== 'string') return false
   }
   
   return true
@@ -64,7 +44,7 @@ export function registerSessionHandlers() {
       return ipcError('Invalid session data structure')
     }
 
-    logger.info(`[IPC] Session has ${sessionData.actions.length} actions, ${sessionData.transcript.length} transcript segments`)
+    logger.info(`[IPC] Session has ${sessionData.actions.length} actions`)
     
     return handleIpc(async () => {
       const sessionPath = await sessionWriter!.write(sessionData)
