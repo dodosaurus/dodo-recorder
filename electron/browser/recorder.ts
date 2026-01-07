@@ -311,6 +311,10 @@ export class BrowserRecorder extends EventEmitter {
       const recordAction = (window as unknown as DodoWindow).__dodoRecordAction
       const takeScreenshot = (window as unknown as DodoWindow).__dodoTakeScreenshot
 
+      // Debounce mechanism for input events
+      const inputDebounceMap = new WeakMap<Element, ReturnType<typeof setTimeout>>()
+      const INPUT_DEBOUNCE_MS = 1000 // Wait 1 second after last keystroke
+
       document.addEventListener('click', (e) => {
         const target = e.target as Element
         if (!target) return
@@ -332,11 +336,40 @@ export class BrowserRecorder extends EventEmitter {
         const target = e.target as HTMLInputElement | HTMLTextAreaElement
         if (!target) return
         
-        recordAction(JSON.stringify({
-          type: 'fill',
-          target: getElementInfo(target),
-          value: target.value,
-        }))
+        // Clear existing debounce timer for this element
+        const existingTimer = inputDebounceMap.get(target)
+        if (existingTimer) {
+          clearTimeout(existingTimer)
+        }
+        
+        // Set new debounce timer
+        const timerId = setTimeout(() => {
+          recordAction(JSON.stringify({
+            type: 'fill',
+            target: getElementInfo(target),
+            value: target.value,
+          }))
+          inputDebounceMap.delete(target)
+        }, INPUT_DEBOUNCE_MS)
+        
+        inputDebounceMap.set(target, timerId)
+      }, true)
+
+      // Record immediately on blur (user clicks away) to capture partial inputs
+      document.addEventListener('blur', (e) => {
+        const target = e.target as HTMLInputElement | HTMLTextAreaElement
+        if (!target || !['INPUT', 'TEXTAREA'].includes(target.tagName)) return
+        
+        const existingTimer = inputDebounceMap.get(target)
+        if (existingTimer) {
+          clearTimeout(existingTimer)
+          recordAction(JSON.stringify({
+            type: 'fill',
+            target: getElementInfo(target),
+            value: target.value,
+          }))
+          inputDebounceMap.delete(target)
+        }
       }, true)
 
       document.addEventListener('change', (e) => {

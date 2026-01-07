@@ -211,7 +211,22 @@ export function RecordingControls() {
     
     if (result.success) {
       console.log('Session saved successfully to:', result.path)
+      
+      // Reload user preferences before resetting to restore URL and output path
+      const prefsResult = await window.electronAPI.getUserPreferences()
+      
       reset()
+      
+      // Restore the saved preferences after reset
+      if (prefsResult.success && (prefsResult as any).preferences) {
+        const preferences = (prefsResult as any).preferences
+        if (preferences.startUrl) {
+          useRecordingStore.getState().setStartUrl(preferences.startUrl)
+        }
+        if (preferences.outputPath) {
+          useRecordingStore.getState().setOutputPath(preferences.outputPath)
+        }
+      }
     } else {
       console.error('Failed to save session:', 'success' in result ? result.error : 'Unknown error')
     }
