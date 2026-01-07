@@ -24,7 +24,7 @@ export default function App() {
       </header>
       
       <main className="flex-1 flex overflow-hidden">
-        <aside className="w-80 border-r border-border bg-card flex flex-col">
+        <aside className="w-96 border-r border-border bg-card flex flex-col">
           <SettingsPanel />
           <RecordingControls />
         </aside>

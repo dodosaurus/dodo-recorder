@@ -109,11 +109,6 @@ export function SettingsPanel() {
             <Folder className="h-4 w-4" />
           </Button>
         </div>
-        {outputPath && (
-          <p className="text-xs text-muted-foreground truncate" title={outputPath}>
-            {outputPath}
-          </p>
-        )}
       </div>
 
       <div className="flex items-center justify-between py-2">
@@ -129,7 +124,7 @@ export function SettingsPanel() {
       </div>
 
       {isVoiceEnabled && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground text-center">
           Speak your observations during recording. Audio will be transcribed locally using Whisper.
         </p>
       )}
