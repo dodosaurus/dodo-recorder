@@ -94,27 +94,3 @@ This format is designed for:
 1. **LLM consumption**: Easy parsing to generate Playwright tests
 2. **Human readability**: Test automation engineers can quickly understand the session
 3. **Complete coverage**: Every action is documented
-
-## Voice Transcription Settings
-
-Dodo Recorder uses OpenAI's Whisper model (running locally via whisper.cpp).
-
-### Available Models
-
-| Model     | Size   | RAM     | Quality | Speed | Use Case |
-|-----------|--------|---------|---------|-------|----------|
-| tiny.en   |  75 MB | ~390 MB | Basic   | Fastest | Quick tests, may miss words |
-| base.en   | 142 MB | ~500 MB | Good    | Fast | Previous default, good balance |
-| **small.en** | **466 MB** | **~1.0 GB** | **Better** | **Medium** | **Current default** ✓ |
-| medium.en | 1.5 GB | ~2.6 GB | Best    | Slower | Maximum accuracy |
-
-### Changing Models
-
-To use a different model, download it and update settings in the app UI, or manually edit:
-```
-~/Library/Application Support/dodo-recorder/settings.json  # macOS
-%APPDATA%/dodo-recorder/settings.json                      # Windows
-~/.config/dodo-recorder/settings.json                      # Linux
-```
-
-Change `whisper.modelName` to: `"tiny.en"`, `"base.en"`, `"small.en"`, or `"medium.en"`

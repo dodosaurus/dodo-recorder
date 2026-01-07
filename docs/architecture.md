@@ -1,9 +1,5 @@
 # Dodo Recorder - Architecture Documentation
 
-## What This Project Does
-
-**Dodo Recorder** is a desktop application that records browser interactions (clicks, typing, navigation) while simultaneously capturing voice commentary. It produces structured JSON files that AI models can use to automatically generate Playwright test scripts. Think of it as a "screen recorder" but instead of video, it captures actionable test data.
-
 ## Architecture Overview (Electron Parallels to React/Next.js)
 
 ### **Two-Process Architecture**
