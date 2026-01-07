@@ -62,8 +62,10 @@ npm run electron:build
 ## Documentation
 
 - **[User Guide](docs/user_guide.md)**: Features, usage, keyboard shortcuts, and output formats.
-- **[Architecture](docs/architecture.md)**: System design, data flow, and technical details.
+- **[Architecture](docs/architecture.md)**: System design, data flow, technical details, and project structure.
 - **[Voice Transcription](docs/voice_transcription.md)**: Deep dive into the local voice transcription system.
+- **[Output Format](docs/output_format.md)**: Detailed explanation of the session output format refactoring.
+- **[Initial Vision](docs/initial_vision.md)**: Original project vision and design principles.
 
 ## License
 

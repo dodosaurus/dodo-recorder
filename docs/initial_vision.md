@@ -96,6 +96,7 @@ This bundle contains **facts only**, no interpretation.
   - `context.md`
   - `memory.md`
 - Engineer feeds session bundle(s) to AI via IDE, CLI, or scripted workflow
+- AI interprets the session (actions.json + transcript.txt)
 - AI proposes code changes
 - Engineer reviews and commits
 

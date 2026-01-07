@@ -263,26 +263,35 @@ Then restart the app. It will create a new settings file with `small.en` as the 
 ### File Structure
 ```
 electron/audio/
-├── transcriber.ts          # Main transcription logic
+├── transcriber.ts             # Main transcription logic
 electron/utils/
-├── voiceDistribution.ts    # Algorithm for associating voice with actions
-├── enhancedTranscript.ts   # Enhanced transcript generation
+├── voiceDistribution.ts       # Algorithm for associating voice with actions
+├── enhancedTranscript.ts      # Transcript generation with embedded references
 src/components/
-├── RecordingControls.tsx   # Audio capture in renderer
+├── RecordingControls.tsx      # Audio capture in renderer
+electron/ipc/
+├── recording.ts               # IPC handlers for recording and transcription
+└── session.ts                 # IPC handlers for session saving
 ```
 
 ### Key Classes
 
-**Transcriber** (`electron/audio/transcriber.ts`)
+**Transcriber** ([`electron/audio/transcriber.ts`](../electron/audio/transcriber.ts))
 - Initializes Whisper model
 - Converts audio formats (WebM → WAV)
 - Executes whisper.cpp with optimized parameters
 - Parses JSON output and adjusts timestamps
 
-**Voice Distribution** (`electron/utils/voiceDistribution.ts`)
+**Voice Distribution** ([`electron/utils/voiceDistribution.ts`](../electron/utils/voiceDistribution.ts))
 - Temporal proximity algorithm
 - Handles overlapping segments
 - Preserves pre-action commentary
+- Configurable time windows via settings
+
+**Enhanced Transcript Generator** ([`electron/utils/enhancedTranscript.ts`](../electron/utils/enhancedTranscript.ts))
+- Generates transcript.txt with embedded action references
+- Handles actions with and without voice commentary
+- Creates action reference table for quick lookup
 
 ## Privacy & Security
 
@@ -308,8 +317,11 @@ Potential improvements:
 - [Whisper Model Cards](https://github.com/openai/whisper/blob/main/model-card.md)
 - [GGML Format Documentation](https://github.com/ggerganov/ggml)
 
-## Files Modified
+## Key Files
 
 - [`electron/audio/transcriber.ts`](../electron/audio/transcriber.ts) - Core transcription with direct whisper.cpp calls
 - [`electron/utils/voiceDistribution.ts`](../electron/utils/voiceDistribution.ts) - Voice-to-action association
-- [`src/components/RecordingControls.tsx`](../src/components/RecordingControls.tsx) - Audio capture
+- [`electron/utils/enhancedTranscript.ts`](../electron/utils/enhancedTranscript.ts) - Transcript generation with embedded references
+- [`electron/ipc/recording.ts`](../electron/ipc/recording.ts) - IPC handlers for transcription
+- [`electron/settings/store.ts`](../electron/settings/store.ts) - Whisper model configuration
+- [`src/components/RecordingControls.tsx`](../src/components/RecordingControls.tsx) - Audio capture in renderer

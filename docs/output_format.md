@@ -127,6 +127,8 @@ screenshot now [action:4a62c1b8:screenshot] [screenshot:screenshot-001.png]...
 
 #### 1. SessionWriter ([`electron/session/writer.ts`](../electron/session/writer.ts))
 
+**Implementation location:** [`electron/session/writer.ts`](../electron/session/writer.ts)
+
 **Before:**
 ```typescript
 await Promise.all([
@@ -293,16 +295,16 @@ All documentation updated to reflect new format:
 ### For Existing Code
 
 **If your code reads session files:**
-1. Update to read `transcript.txt` instead of `transcript-enhanced.txt`
-2. Parse action references: `\[action:([a-f0-9]+):([a-z]+)\]`
+1. Update to read `transcript.txt` (consolidated format)
+2. Parse action references: `\[action:([a-f0-9]{8}):([a-z]+)\]`
 3. Parse screenshot references: `\[screenshot:([^\]]+)\]`
-4. Read `actions.json` for detailed action metadata
+4. Read `actions.json` for detailed action metadata (without voiceSegments)
 
 **If your code generates Playwright tests:**
-1. Read `transcript.txt` for narrative context
-2. Cross-reference action IDs with `actions.json`
-3. Use locators from `actions.json` for element selection
-4. Use screenshots for visual validation
+1. Read `transcript.txt` for narrative context with embedded action references
+2. Cross-reference action IDs (8-char prefix) with full IDs in `actions.json`
+3. Use locators array from `actions.json` for element selection strategies
+4. Use screenshots from `screenshots/` folder for visual validation
 
 ### For Users
 
@@ -355,11 +357,11 @@ After completing the output format refactoring, internal data structures still c
    - `TimelineEntry` interface
    - `SessionMetadata` interface
 
-3. **RecordingControls.tsx** built timeline and metadata objects that were never used
+3. **RecordingControls.tsx** ([`src/components/RecordingControls.tsx`](../src/components/RecordingControls.tsx)) built timeline and metadata objects that were never used
 
-4. **Session validation** checked for fields that no longer existed
+4. **Session validation** in [`electron/ipc/session.ts`](../electron/ipc/session.ts) checked for fields that no longer existed
 
-5. **Legacy functions** in [`enhancedTranscript.ts`](../electron/utils/enhancedTranscript.ts) were kept "for backward compatibility" but never called
+5. **Legacy functions** in [`electron/utils/enhancedTranscript.ts`](../electron/utils/enhancedTranscript.ts) were kept "for backward compatibility" but never called
 
 ### Internal Cleanup Changes
 
@@ -641,6 +643,8 @@ Potential improvements to consider:
 - Voice distribution algorithm: [`electron/utils/voiceDistribution.ts`](../electron/utils/voiceDistribution.ts)
 - Transcript generation: [`electron/utils/enhancedTranscript.ts`](../electron/utils/enhancedTranscript.ts)
 - Session writing: [`electron/session/writer.ts`](../electron/session/writer.ts)
+- IPC handlers: [`electron/ipc/recording.ts`](../electron/ipc/recording.ts), [`electron/ipc/session.ts`](../electron/ipc/session.ts)
+- Type definitions: [`shared/types.ts`](../shared/types.ts)
 
 ## Summary
 

@@ -37,24 +37,51 @@ The [`preload.ts`](electron/preload.ts:1) file acts as a secure bridge, exposing
 ### 1. **Main Process** ([`electron/main.ts`](electron/main.ts:1))
 The "backend server" that orchestrates everything:
 
-```typescript
-// Creates the app window
-createWindow() // Lines 48-78
-
-// IPC handlers (like API endpoints)
-ipcMain.handle('start-recording', ...) // Line 124
-ipcMain.handle('stop-recording', ...) // Line 151
-ipcMain.handle('transcribe-audio', ...) // Line 182
-```
-
 **Key responsibilities:**
 - Creates the BrowserWindow (the app UI)
-- Manages three main subsystems:
-  - [`BrowserRecorder`](electron/browser/recorder.ts:6) - Records browser interactions
-  - [`Transcriber`](electron/audio/transcriber.ts:20) - Converts voice to text
-  - [`SessionWriter`](electron/session/writer.ts:7) - Saves session data to disk
+- Initializes application settings
+- Requests microphone permissions
+- Registers IPC handlers via [`registerAllHandlers()`](electron/ipc/handlers.ts:12)
+- Cleans up temporary files on startup
+- Handles window controls (minimize, maximize, close)
+- Provides simple IPC handlers (file dialogs, permission checks)
 
-### 2. **Browser Recorder** ([`electron/browser/recorder.ts`](electron/browser/recorder.ts:1))
+**Architecture note:** The main process delegates most IPC handling to specialized modules rather than implementing everything directly.
+
+### 2. **IPC Handler Organization** ([`electron/ipc/`](electron/ipc/))
+IPC handlers are organized into separate modules for better maintainability:
+
+**[`handlers.ts`](electron/ipc/handlers.ts:1)** - Central registration point:
+```typescript
+export function registerAllHandlers(mainWindow: BrowserWindow | null) {
+  registerRecordingHandlers(mainWindow)
+  registerSessionHandlers()
+  registerSettingsHandlers()
+}
+```
+
+**[`recording.ts`](electron/ipc/recording.ts:1)** - Recording-related IPC handlers:
+- `start-recording` - Initializes BrowserRecorder, Transcriber, and SessionWriter
+- `stop-recording` - Stops browser recording and returns actions
+- `transcribe-audio` - Transcribes audio buffer using Whisper
+- `distribute-voice-segments` - Associates voice commentary with actions
+- `generate-full-transcript` - Generates timestamped transcript text
+
+**[`session.ts`](electron/ipc/session.ts:1)** - Session and settings IPC handlers:
+- `save-session` - Saves session bundle to disk
+- `settings-get-all` - Retrieves all application settings
+- `settings-update` - Updates settings (partial updates supported)
+- `settings-reset` - Resets settings to defaults
+- `user-preferences-get` - Retrieves user preferences (startUrl, outputPath)
+- `user-preferences-update` - Updates user preferences
+
+**Design benefits:**
+- Clear separation of concerns
+- Easier testing and maintenance
+- Prevents duplicate registration on hot reload
+- Better code organization for complex IPC logic
+
+### 3. **Browser Recorder** ([`electron/browser/recorder.ts`](electron/browser/recorder.ts:1))
 The most complex component - launches a Chromium browser and captures user actions:
 
 **How it works:**
@@ -96,7 +123,7 @@ The most complex component - launches a Chromium browser and captures user actio
 }
 ```
 
-### 3. **Audio Transcriber** ([`electron/audio/transcriber.ts`](electron/audio/transcriber.ts:1))
+### 4. **Audio Transcriber** ([`electron/audio/transcriber.ts`](electron/audio/transcriber.ts:1))
 Converts voice recordings to text using **Whisper.cpp** (OpenAI's speech recognition model running locally):
 
 **Process flow:**
@@ -113,7 +140,7 @@ Converts voice recordings to text using **Whisper.cpp** (OpenAI's speech recogni
 
 **Why local processing?** Privacy and speed - no data sent to cloud services.
 
-### 4. **Voice Distribution Algorithm** ([`electron/utils/voiceDistribution.ts`](electron/utils/voiceDistribution.ts:1))
+### 5. **Voice Distribution Algorithm** ([`electron/utils/voiceDistribution.ts`](electron/utils/voiceDistribution.ts:1))
 Intelligently associates voice commentary with browser actions:
 
 **The challenge:** User might say "Now I'll click the submit button" 2 seconds before actually clicking. The algorithm:
@@ -124,7 +151,71 @@ Intelligently associates voice commentary with browser actions:
 
 This ensures AI models understand the user's intent for each action.
 
-### 5. **React UI** ([`src/App.tsx`](src/App.tsx:1))
+### 6. **Settings System** ([`electron/settings/store.ts`](electron/settings/store.ts:1))
+Persistent settings management with JSON file storage:
+
+**SettingsStore class features:**
+- Persists settings to user data directory (`~/Library/Application Support/dodo-recorder/settings.json` on macOS)
+- Automatically merges with defaults for missing fields
+- Provides type-safe access to settings
+
+**Settings structure:**
+```typescript
+interface AppSettings {
+  whisper: {
+    modelName: 'tiny.en' | 'base.en' | 'small.en' | 'medium.en'
+    modelPath?: string
+    transcriptionTimeoutMs: number
+  }
+  voiceDistribution: {
+    lookbackMs: number        // 10 seconds default
+    lookaheadMs: number        // 5 seconds default
+    longSegmentThresholdMs: number  // 3 seconds default
+  }
+  output: {
+    includeScreenshots: boolean
+    prettyPrintJson: boolean
+  }
+  userPreferences: {
+    startUrl: string
+    outputPath: string
+  }
+}
+```
+
+**Usage:**
+- Settings loaded on app startup
+- Voice distribution windows updated dynamically when settings change
+- User preferences remembered between sessions
+- Default: `small.en` model (previous versions used `base.en`)
+
+### 7. **Utility Modules** ([`electron/utils/`](electron/utils/))
+Shared utility functions for common operations:
+
+**[`fs.ts`](electron/utils/fs.ts:1)** - File system helpers:
+- `ensureDir()` - Creates directories recursively
+- `writeJson()` - Writes formatted JSON files
+- `writeText()` - Writes text files
+- `cleanupOldTempFiles()` - Removes temporary files older than specified age
+
+**[`ipc.ts`](electron/utils/ipc.ts:1)** - IPC response helpers:
+- `handleIpc()` - Wraps async operations with error handling
+- `ipcSuccess()` - Creates success response
+- `ipcError()` - Creates error response
+
+**[`logger.ts`](electron/utils/logger.ts:1)** - Environment-aware logging:
+- Sanitizes sensitive data (paths, tokens) in production
+- Supports debug, info, warn, error levels
+- Timestamp formatting
+- Development mode shows full output
+
+**[`validation.ts`](electron/utils/validation.ts:1)** - Input validation:
+- `validateUrl()` - Ensures valid HTTP/HTTPS URLs
+- `validateOutputPath()` - Prevents path traversal attacks
+- `validateAudioBuffer()` - Checks buffer size and format
+- `sanitizeSessionId()` - Cleans session identifiers
+
+### 8. **React UI** ([`src/App.tsx`](src/App.tsx:1))
 Standard React application with Tailwind CSS:
 
 **Component structure:**
@@ -150,7 +241,7 @@ const useRecordingStore = create((set) => ({
 }))
 ```
 
-### 6. **Session Writer** ([`electron/session/writer.ts`](electron/session/writer.ts:1))
+### 9. **Session Writer** ([`electron/session/writer.ts`](electron/session/writer.ts:1))
 Saves everything to disk in a streamlined, LLM-optimized format:
 
 **Output structure:**
@@ -177,24 +268,89 @@ session-2026-01-05-095500/
 Here's what happens when you record a session:
 
 1. **User clicks "Start Recording"** in React UI
-2. React calls `window.electron.startRecording(url, outputPath)`
-3. **IPC message** sent to main process
-4. Main process creates:
-   - [`BrowserRecorder`](electron/browser/recorder.ts:6) → launches Chromium
-   - [`Transcriber`](electron/audio/transcriber.ts:20) → initializes Whisper
-5. **User interacts with browser:**
+   - React calls `window.electron.startRecording(url, outputPath, startTime)`
+   
+2. **IPC message** sent to main process
+   - Handled by [`recording.ts:start-recording`](electron/ipc/recording.ts:48)
+   
+3. **Recording handler initializes subsystems:**
+   - Gets settings from [`SettingsStore`](electron/settings/store.ts:58)
+   - Creates [`BrowserRecorder`](electron/browser/recorder.ts:6) → launches Chromium
+   - Creates [`SessionWriter`](electron/session/writer.ts:7) → prepares output directory
+   - Creates [`Transcriber`](electron/audio/transcriber.ts:20) → initializes Whisper model
+   - Sets up event listener to forward actions to React
+   
+4. **User interacts with browser:**
    - Injected script captures click → sends to recorder
-   - Recorder emits 'action' event → main process forwards to React
-   - React updates UI with new action
-6. **User speaks into microphone:**
+   - Recorder emits 'action' event → forwarded to React via IPC
+   - React updates UI with new action in real-time
+   
+5. **User speaks into microphone:**
    - React captures audio chunks via Web Audio API
-   - Sends chunks to main process via IPC
-   - Main process queues for transcription
-7. **User clicks "Stop Recording":**
+   - Audio accumulated in renderer process memory
+   - No streaming to main process (sent all at once at end)
+   
+6. **User clicks "Stop Recording":**
+   - React calls `window.electron.stopRecording()`
    - Browser closes, actions collected
-   - Audio transcribed to text segments
-   - Voice segments distributed across actions
-   - Everything saved to disk via [`SessionWriter`](electron/session/writer.ts:7)
+   - React sends complete audio buffer via `window.electron.transcribeAudio()`
+   - Transcriber converts audio and returns timestamped segments
+   - React calls `window.electron.distributeVoiceSegments()` to associate voice with actions
+   - React calls `window.electron.saveSession()` with complete SessionBundle
+   - [`SessionWriter`](electron/session/writer.ts:7) saves to disk:
+     - Strips voiceSegments from actions.json
+     - Generates transcript.txt with embedded references
+     - Screenshots already saved to screenshots/ folder
+
+---
+
+## Project Structure
+
+```
+dodo-recorder/
+├── electron/                    # Main process (Node.js backend)
+│   ├── main.ts                 # App entry point, window creation
+│   ├── preload.ts              # IPC bridge (secure API exposure)
+│   ├── audio/
+│   │   └── transcriber.ts      # Whisper.cpp integration
+│   ├── browser/
+│   │   └── recorder.ts         # Playwright browser recording
+│   ├── ipc/                    # ⚡ IPC handlers organized by domain
+│   │   ├── handlers.ts         # Central registration
+│   │   ├── recording.ts        # Recording-related handlers
+│   │   └── session.ts          # Session & settings handlers
+│   ├── session/
+│   │   └── writer.ts           # Session output to disk
+│   ├── settings/               # ⚡ Settings persistence
+│   │   └── store.ts            # Settings store with JSON file
+│   └── utils/                  # ⚡ Shared utilities
+│       ├── enhancedTranscript.ts # Transcript generation
+│       ├── voiceDistribution.ts  # Voice-to-action association
+│       ├── fs.ts               # File system helpers
+│       ├── ipc.ts              # IPC response helpers
+│       ├── logger.ts           # Environment-aware logging
+│       └── validation.ts       # Input validation & sanitization
+├── src/                        # Renderer process (React frontend)
+│   ├── App.tsx                 # Main React app
+│   ├── components/             # React components
+│   │   ├── RecordingControls.tsx
+│   │   ├── ActionsList.tsx
+│   │   ├── SettingsPanel.tsx
+│   │   └── ...
+│   ├── stores/
+│   │   └── recordingStore.ts   # Zustand state management
+│   └── types/
+│       ├── electron.d.ts       # Electron API types
+│       └── session.ts          # Type re-exports
+├── shared/                     # ⚡ Types shared between main & renderer
+│   └── types.ts                # RecordedAction, SessionBundle, etc.
+├── docs/                       # Documentation
+├── models/                     # Whisper models (ggml-*.bin)
+└── vendor/                     # External dependencies
+    └── whisper.cpp/            # Bundled whisper.cpp
+
+⚡ = Added/reorganized since initial architecture
+```
 
 ---
 
@@ -304,15 +460,16 @@ The `.bin` files you see (like `ggml-base.en.bin`) are:
 
 ```
 tiny.en   (75 MB)  → Fast but basic accuracy
-base.en   (142 MB) → Good balance ✓ (default choice)
-small.en  (466 MB) → Better accuracy, slower
+base.en   (142 MB) → Good balance (previous default)
+small.en  (466 MB) → Better accuracy ✓ (current default)
 medium.en (1.5 GB) → Best accuracy, much slower
 ```
 
-The project defaults to `base.en` because it offers the best balance of:
-- Accuracy (good enough for voice commentary)
-- Speed (transcribes in reasonable time)
-- Size (doesn't bloat the app download)
+The project now defaults to `small.en` (changed from `base.en`) because:
+- Better accuracy for technical terms (LinkedIn, GitHub, etc.)
+- Better early speech detection with optimized parameters
+- Reasonable speed for most use cases (~2-3x real-time)
+- Worth the extra 324MB for improved transcription quality
 
 ### Alternative Approaches (Not Used)
 
