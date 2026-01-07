@@ -5,7 +5,7 @@ import { useShallow } from 'zustand/react/shallow'
 import type { RecordingStatus } from '@/types/session'
 
 const statusConfig: Record<RecordingStatus, { label: string; color: string }> = {
-  idle: { label: 'Ready', color: 'bg-muted-foreground' },
+  idle: { label: 'Ready', color: 'bg-green-500' },
   recording: { label: 'Recording', color: 'bg-destructive animate-pulse-recording' },
   paused: { label: 'Paused', color: 'bg-yellow-500' },
   processing: { label: 'Processing', color: 'bg-primary' },
