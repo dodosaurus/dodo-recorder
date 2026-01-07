@@ -24,8 +24,9 @@ npm-debug.log*
 .env
 .env.local
 
-# Whisper models (large files, not needed - models are in node_modules)
+# Whisper models
 models/
+vendor/
 
 # Temp files
 *.tmp
