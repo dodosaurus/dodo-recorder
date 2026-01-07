@@ -8,6 +8,7 @@
   A desktop application for recording browser interactions and voice commentary, producing session bundles for AI-assisted Playwright test generation.
 </p>
 
+
 For detailed usage instructions, features, and keyboard shortcuts, see [`docs/user_guide.md`](docs/user_guide.md).
 
 ## Quick Usage
