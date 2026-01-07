@@ -5,7 +5,7 @@
 - **Browser Recording**: Launch and record interactions in a controlled Chromium browser
 - **Rich Locator Extraction**: Captures multiple selector strategies (testId, role, text, CSS, XPath)
 - **Voice Transcription**: Local speech-to-text using Whisper.cpp with optimized early speech detection
-- **Screenshot Capture**: Manual screenshot capture via keyboard shortcut (F9)
+- **Screenshot Capture**: Manual screenshot capture via keyboard shortcut (Cmd+Shift+S / Ctrl+Shift+S)
 - **Enhanced Transcripts**: AI-friendly narrative format with embedded action IDs
 - **Smart Voice Distribution**: Intelligently associates voice commentary with browser actions
 - **Session Export**: Generates structured JSON bundles ready for AI consumption
@@ -18,7 +18,7 @@ During browser recording, use these keyboard shortcuts to control your session:
 |----------|--------|-------------|
 | **Alt + Click** (Windows/Linux)<br>**⌥ Option + Click** (Mac) | **Assertion Mode** | Records an assertion instead of a click. Use this to verify element presence without triggering the click action. |
 | **Cmd + Click** (Mac)<br>**Ctrl + Click** (Windows/Linux) | **Assertion Mode** | Alternative shortcut for assertion mode. |
-| **F9** | **Take Screenshot** | Captures a screenshot of the current browser state. The screenshot is saved to the session's `screenshots/` folder and referenced in the enhanced transcript. |
+| **Cmd+Shift+S** (Mac)<br>**Ctrl+Shift+S** (Windows/Linux) | **Take Screenshot** | Captures a screenshot of the current browser state. The screenshot is saved to the session's `screenshots/` folder and referenced in the enhanced transcript. |
 
 ### Usage Examples
 
@@ -32,7 +32,7 @@ During browser recording, use these keyboard shortcuts to control your session:
 
 **Capturing Screenshots:**
 ```
-1. Press F9 at any point during recording
+1. Press Cmd+Shift+S (Mac) or Ctrl+Shift+S (Windows/Linux) at any point during recording
 2. Screenshot is captured with timestamp
 3. Reference appears in enhanced transcript as [screenshot:screenshot-TIMESTAMP.png]
 ```
@@ -41,7 +41,7 @@ During browser recording, use these keyboard shortcuts to control your session:
 ```
 1. Click normally to interact with the page
 2. Alt+Click on elements you want to verify (assertions)
-3. Press F9 to capture important visual states
+3. Press Cmd+Shift+S (Mac) or Ctrl+Shift+S (Windows/Linux) to capture important visual states
 4. Speak your commentary to explain what you're testing
 ```
 

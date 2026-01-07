@@ -361,9 +361,9 @@ export class BrowserRecorder extends EventEmitter {
         }
       }, true)
 
-      // Add keyboard shortcut for manual screenshots (F9)
+      // Add keyboard shortcut for manual screenshots (Cmd+Shift+S / Ctrl+Shift+S)
       document.addEventListener('keydown', async (e) => {
-        if (e.key === 'F9') {
+        if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 's') {
           e.preventDefault()
           const screenshotPath = await takeScreenshot()
           if (screenshotPath) {

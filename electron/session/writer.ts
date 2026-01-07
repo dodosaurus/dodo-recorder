@@ -12,38 +12,43 @@ export class SessionWriter {
   }
 
   async write(session: SessionBundle): Promise<string> {
-    // Generate session directory name from startTime
-    const date = new Date(session.startTime)
-    const sessionId = date.toISOString()
-      .replace(/T/, '-')
-      .replace(/:/g, '')
-      .split('.')[0] // Remove milliseconds
-    const safeId = sanitizeSessionId(`session-${sessionId}`)
-    
-    const sessionDir = path.join(this.outputDir, safeId)
-    const screenshotsDir = path.join(sessionDir, 'screenshots')
+    try {
+      // Generate session directory name from startTime
+      const date = new Date(session.startTime)
+      const sessionId = date.toISOString()
+        .replace(/T/, '-')
+        .replace(/:/g, '')
+        .split('.')[0] // Remove milliseconds
+      const safeId = sanitizeSessionId(`session-${sessionId}`)
+      
+      const sessionDir = path.join(this.outputDir, safeId)
+      const screenshotsDir = path.join(sessionDir, 'screenshots')
 
-    await ensureDir(sessionDir)
-    await ensureDir(screenshotsDir)
+      await ensureDir(sessionDir)
+      await ensureDir(screenshotsDir)
 
-    // Prepare actions without voiceSegments for clean JSON output
-    const actionsWithoutVoice = session.actions.map(action => {
-      const { voiceSegments, ...actionWithoutVoice } = action
-      return actionWithoutVoice
-    })
+      // Prepare actions without voiceSegments for clean JSON output
+      const actionsWithoutVoice = session.actions.map(action => {
+        const { voiceSegments, ...actionWithoutVoice } = action
+        return actionWithoutVoice
+      })
 
-    // Generate transcript.txt with embedded action and screenshot references
-    const transcriptText = generateTranscriptWithReferences(session.actions)
+      // Generate transcript.txt with embedded action and screenshot references
+      const transcriptText = generateTranscriptWithReferences(session.actions)
 
-    // Write only the 3 essential files:
-    // 1. actions.json - all actions without voiceSegments, each with unique ID
-    // 2. screenshots/ - folder already created, screenshots saved during recording
-    // 3. transcript.txt - narrative with action/screenshot references
-    await Promise.all([
-      writeJson(path.join(sessionDir, 'actions.json'), { actions: actionsWithoutVoice }),
-      writeText(path.join(sessionDir, 'transcript.txt'), transcriptText),
-    ])
+      // Write only the 3 essential files:
+      // 1. actions.json - all actions without voiceSegments, each with unique ID
+      // 2. screenshots/ - folder already created, screenshots saved during recording
+      // 3. transcript.txt - narrative with action/screenshot references
+      await Promise.all([
+        writeJson(path.join(sessionDir, 'actions.json'), { actions: actionsWithoutVoice }),
+        writeText(path.join(sessionDir, 'transcript.txt'), transcriptText),
+      ])
 
-    return sessionDir
+      return sessionDir
+    } catch (error) {
+      console.error('[SessionWriter] Failed to write session:', error)
+      throw error
+    }
   }
 }

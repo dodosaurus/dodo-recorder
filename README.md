@@ -8,7 +8,7 @@ For detailed usage instructions, features, and keyboard shortcuts, see [`docs/us
 
 | Key | Action |
 |-----|--------|
-| **F9** | Take Screenshot |
+| **Cmd+Shift+S** (Mac)<br>**Ctrl+Shift+S** (Windows/Linux) | Take Screenshot |
 | **Alt/Option + Click** | Record Assertion (verify element exists) |
 
 > **Tip**: Speak your commentary while recording. The app automatically syncs your voice with your actions.

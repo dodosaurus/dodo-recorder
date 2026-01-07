@@ -68,9 +68,13 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
         const settings = getSettingsStore()
         const whisperConfig = settings.getWhisperConfig()
         
-        // Generate session ID for screenshot directory
-        const sessionId = `session-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)}`
-        const screenshotDir = `${outputPath}/${sessionId}/screenshots`
+        // Generate session ID for screenshot directory (must match format in writer.ts)
+        const date = new Date()
+        const sessionId = date.toISOString()
+          .replace(/T/, '-')
+          .replace(/:/g, '')
+          .split('.')[0] // Remove milliseconds
+        const screenshotDir = `${outputPath}/session-${sessionId}/screenshots`
         
         browserRecorder = new BrowserRecorder()
         sessionWriter = new SessionWriter(outputPath)
