@@ -10,5 +10,5 @@
     "declaration": true,
     "declarationMap": true
   },
-  "include": ["vite.config.ts", "electron/**/*", "shared/**/*", "src/types/whisper-node.d.ts"]
+  "include": ["vite.config.ts", "electron/**/*", "shared/**/*"]
 }

@@ -85,7 +85,7 @@ During browser recording, use these keyboard shortcuts to control your session:
    - For faster/smaller model: `npm run whisper:download:base` (downloads base.en, 142 MB)
    - For manual download: Get models from [HuggingFace](https://huggingface.co/ggerganov/whisper.cpp/tree/main) and place in:
      ```
-     node_modules/whisper-node/lib/whisper.cpp/models/
+     models/
      ```
 
 3. **Verify Whisper setup:**
@@ -95,7 +95,7 @@ During browser recording, use these keyboard shortcuts to control your session:
 
 ### Whisper Model Setup
 
-The app uses Whisper models from `node_modules/whisper-node/lib/whisper.cpp/models/`. The default model is **small.en** for better transcription quality.
+The app uses Whisper models from the `models/` directory in the project root. The default model is **small.en** for better transcription quality.
 
 **Available models:**
 
@@ -146,7 +146,7 @@ Then restart the app. It will create a new settings file with `small.en` as the 
 
 If you see "Whisper model not found" errors, verify the model file exists:
 ```bash
-ls -lh node_modules/whisper-node/lib/whisper.cpp/models/
+ls -lh models/
 ```
 
 You should see `ggml-small.en.bin` (465 MB). If not, run `npm run whisper:download`.

@@ -42,9 +42,9 @@ Transcript segments are intelligently associated with browser actions:
 
 ### Direct Whisper.cpp Integration
 
-**Problem Solved**: The `whisper-node` npm package only supports 6 parameters and silently ignores all others (like `beam_size`, `entropy_threshold`, etc.). This was causing poor transcription quality.
+**Problem Solved**: Previous integrations using npm wrappers were limited or buggy.
 
-**Solution**: We bypass whisper-node and call whisper.cpp directly with full parameter control:
+**Solution**: We bundle and call `whisper.cpp` directly with full parameter control:
 
 ```typescript
 // Direct command execution with all parameters
@@ -124,9 +124,8 @@ dodo-recorder/
 │   ├── ggml-small.en.bin    # Default model
 │   ├── ggml-base.en.bin     # Optional
 │   └── ggml-tiny.en.bin     # Optional
-├── node_modules/
-│   └── whisper-node/
-│       └── lib/whisper.cpp/  # Only the executable, not models
+├── vendor/
+│   └── whisper.cpp/      # Vendored source and build scripts
 └── ...
 ```
 

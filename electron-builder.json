@@ -9,7 +9,10 @@
     "dist-electron"
   ],
   "mac": {
-    "target": ["dmg", "zip"],
+    "target": [
+      "dmg",
+      "zip"
+    ],
     "icon": "build/icon.icns",
     "entitlements": "build/entitlements.mac.plist",
     "entitlementsInherit": "build/entitlements.mac.plist",
@@ -18,11 +21,17 @@
     }
   },
   "win": {
-    "target": ["nsis", "portable"],
+    "target": [
+      "nsis",
+      "portable"
+    ],
     "icon": "build/icon.ico"
   },
   "linux": {
-    "target": ["AppImage", "deb"],
+    "target": [
+      "AppImage",
+      "deb"
+    ],
     "icon": "build/icon.png",
     "category": "Development"
   },
@@ -30,8 +39,23 @@
     {
       "from": "models",
       "to": "models",
-      "filter": ["**/*"]
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "vendor/whisper.cpp/main",
+      "to": "bin/whisper",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "vendor/whisper.cpp/ggml-metal.metal",
+      "to": "bin/ggml-metal.metal",
+      "filter": [
+        "**/*"
+      ]
     }
   ]
 }
-

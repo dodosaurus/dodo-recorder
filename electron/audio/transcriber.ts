@@ -55,7 +55,7 @@ export class Transcriber {
     
     if (!fs.existsSync(modelPath)) {
       logger.error('❌ Whisper model not found!')
-      logger.error('Please run: cd node_modules/whisper-node/lib/whisper.cpp && make')
+      logger.error('Please run: npm run postinstall')
       logger.error(`Then download: ggml-${this.modelName}.bin to the models directory`)
       logger.error('Download from: https://huggingface.co/ggerganov/whisper.cpp/tree/main')
     } else {
@@ -71,7 +71,7 @@ export class Transcriber {
 
   /**
    * Get the default model path based on model name
-   * Uses models folder in the project root instead of whisper-node package
+   * Uses models folder in the project root
    */
   private getDefaultModelPath(): string {
     // Use models folder in project root
@@ -185,22 +185,32 @@ export class Transcriber {
       logger.info(`Audio file: ${audioPath}`)
       logger.info(`Model: ${this.modelName}`)
       
-      // Get whisper.cpp path
-      const whisperNodeDir = path.dirname(require.resolve('whisper-node/package.json'))
-      const whisperCppDir = path.join(whisperNodeDir, 'lib/whisper.cpp')
-      const whisperMainPath = path.join(whisperCppDir, 'main')
+      // Get whisper binary path
+      let whisperPath: string
+      let metalPath: string | undefined
+
+      if (app.isPackaged) {
+        // In production, binary is in Resources/bin
+        const resourcesPath = process.resourcesPath
+        whisperPath = path.join(resourcesPath, 'bin', 'whisper')
+        metalPath = path.join(resourcesPath, 'bin', 'ggml-metal.metal')
+      } else {
+        // In dev, binary is in vendor/whisper.cpp/main
+        const appPath = app.getAppPath()
+        whisperPath = path.join(appPath, 'vendor/whisper.cpp/main')
+      }
+      
       const modelPath = this.modelPath || this.getDefaultModelPath()
       const jsonOutputPath = `${audioPath}.json`
       
-      // Build command with ALL the parameters we need (whisper-node was ignoring most of them!)
-      const command = [
-        whisperMainPath,
-        '-m', modelPath,
-        '-f', audioPath,
+      // Build command with ALL the parameters we need
+      const commandArgs = [
+        `"${whisperPath}"`,
+        '-m', `"${modelPath}"`,
+        '-f', `"${audioPath}"`,
         '-l', 'en',
         '-oj',  // Output JSON format
         '--print-progress',  // Show progress
-        // Critical parameters for early speech detection:
         '-ml', '0',  // max-len: no length limit
         '-sow',  // split-on-word: split on word boundaries
         '-bo', '5',  // best-of: use best of 5 candidates
@@ -208,14 +218,18 @@ export class Transcriber {
         '-et', '2.0',  // entropy-thold: LOWERED from 2.4 to 2.0 for better early detection
         '-lpt', '-1.0',  // logprob-thold: log probability threshold
         '--prompt', '"This is a recording session with browser interactions, clicking, navigation, and voice commentary."'
-      ].join(' ')
+      ]
+
+      const command = commandArgs.join(' ')
       
       logger.info('Executing whisper.cpp command:')
       logger.info(command)
       
+      const binaryDir = path.dirname(whisperPath)
+      
       // Execute whisper.cpp directly
       const { stdout, stderr } = await execAsync(command, {
-        cwd: whisperCppDir,
+        cwd: binaryDir,
         maxBuffer: 10 * 1024 * 1024  // 10MB buffer for large outputs
       })
       
