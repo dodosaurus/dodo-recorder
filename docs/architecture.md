@@ -234,6 +234,18 @@ This project couldn't be a pure web app because it needs to:
 
 ---
 
+## Tech Stack
+
+- **Electron** - Cross-platform desktop framework
+- **React** - UI library
+- **TypeScript** - Type safety
+- **Tailwind CSS** - Styling
+- **Playwright** - Browser automation
+- **Whisper.cpp** - Local voice transcription (via whisper-node)
+- **Zustand** - State management
+
+---
+
 ## Whisper Model Choice: Why ggerganov/whisper.cpp?
 
 ### The Models Are The Same - Just Different Implementations

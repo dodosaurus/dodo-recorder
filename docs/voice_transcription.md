@@ -212,6 +212,23 @@ Includes narrative + action reference table for easy lookup.
 4. Microphone permissions granted
 5. Audio chunks were recorded (check console logs)
 
+### Issue: App still using old model (base.en) after upgrade
+
+If you upgraded from an older version and the app is still trying to use `base.en`, delete your settings file to reset to the new defaults:
+
+```bash
+# macOS
+rm ~/Library/Application\ Support/dodo-recorder/settings.json
+
+# Windows
+del %APPDATA%\dodo-recorder\settings.json
+
+# Linux
+rm ~/.config/dodo-recorder/settings.json
+```
+
+Then restart the app. It will create a new settings file with `small.en` as the default.
+
 ## Performance Characteristics
 
 ### Transcription Speed
