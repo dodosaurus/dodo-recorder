@@ -24,18 +24,10 @@ interface WhisperResult {
 
 export class Transcriber {
   private isInitialized = false
-  private modelName: string
-  private modelPath?: string
   private transcriptionTimeoutMs: number
 
-  constructor(
-    modelName: string = 'small.en', // Upgraded to small.en for better quality
-    transcriptionTimeoutMs: number = 300000,
-    modelPath?: string
-  ) {
-    this.modelName = modelName
+  constructor(transcriptionTimeoutMs: number = 300000) {
     this.transcriptionTimeoutMs = transcriptionTimeoutMs
-    this.modelPath = modelPath
   }
 
   /**
@@ -44,20 +36,19 @@ export class Transcriber {
    * @returns Promise that resolves when initialization is complete
    */
   async initialize(): Promise<void> {
-    // Use custom model path if provided, otherwise use default
-    const modelPath = this.modelPath || this.getDefaultModelPath()
+    const modelPath = this.getModelPath()
     
     logger.info('='.repeat(60))
     logger.info('🎤 Whisper Transcriber Initialization')
     logger.info('='.repeat(60))
-    logger.info(`Model: ${this.modelName}`)
+    logger.info('Model: small.en (bundled)')
     logger.info(`Path: ${modelPath}`)
     
     if (!fs.existsSync(modelPath)) {
       logger.error('❌ Whisper model not found!')
-      logger.error('Please run: npm run postinstall')
-      logger.error(`Then download: ggml-${this.modelName}.bin to the models directory`)
-      logger.error('Download from: https://huggingface.co/ggerganov/whisper.cpp/tree/main')
+      logger.error('Please download: ggml-small.en.bin')
+      logger.error('From: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin')
+      logger.error(`Place it in: ${path.dirname(modelPath)}`)
     } else {
       const stats = fs.statSync(modelPath)
       const sizeMB = (stats.size / (1024 * 1024)).toFixed(2)
@@ -70,16 +61,15 @@ export class Transcriber {
   }
 
   /**
-   * Get the default model path based on model name
+   * Get the model path (always uses small.en)
    * Uses models folder in the project root
    */
-  private getDefaultModelPath(): string {
-    // Use models folder in project root
+  private getModelPath(): string {
     const appPath = app.isPackaged
       ? path.dirname(app.getPath('exe'))
       : app.getAppPath()
     const modelsDir = path.join(appPath, 'models')
-    return path.join(modelsDir, `ggml-${this.modelName}.bin`)
+    return path.join(modelsDir, 'ggml-small.en.bin')
   }
 
   /**
@@ -183,24 +173,22 @@ export class Transcriber {
       logger.info('🎙️  Starting Whisper Transcription (Direct whisper.cpp)')
       logger.info('='.repeat(60))
       logger.info(`Audio file: ${audioPath}`)
-      logger.info(`Model: ${this.modelName}`)
+      logger.info('Model: small.en (bundled)')
       
-      // Get whisper binary path
+      // Get whisper binary path (now in models/ folder)
       let whisperPath: string
-      let metalPath: string | undefined
 
       if (app.isPackaged) {
-        // In production, binary is in Resources/bin
+        // In production, binary is in Resources/models
         const resourcesPath = process.resourcesPath
-        whisperPath = path.join(resourcesPath, 'bin', 'whisper')
-        metalPath = path.join(resourcesPath, 'bin', 'ggml-metal.metal')
+        whisperPath = path.join(resourcesPath, 'models', 'whisper')
       } else {
-        // In dev, binary is in vendor/whisper.cpp/main
+        // In dev, binary is in models/whisper
         const appPath = app.getAppPath()
-        whisperPath = path.join(appPath, 'vendor/whisper.cpp/main')
+        whisperPath = path.join(appPath, 'models', 'whisper')
       }
       
-      const modelPath = this.modelPath || this.getDefaultModelPath()
+      const modelPath = this.getModelPath()
       const jsonOutputPath = `${audioPath}.json`
       
       // Build command with ALL the parameters we need

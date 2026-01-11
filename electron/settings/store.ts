@@ -9,8 +9,6 @@ import { logger } from '../utils/logger'
  */
 export interface AppSettings {
   whisper: {
-    modelName: 'tiny.en' | 'base.en' | 'small.en' | 'medium.en'
-    modelPath?: string
     transcriptionTimeoutMs: number
   }
   voiceDistribution: {
@@ -33,7 +31,6 @@ export interface AppSettings {
  */
 const DEFAULT_SETTINGS: AppSettings = {
   whisper: {
-    modelName: 'small.en',
     transcriptionTimeoutMs: 300000, // 5 minutes
   },
   voiceDistribution: {
@@ -154,14 +151,10 @@ export class SettingsStore {
   }
 
   /**
-   * Get Whisper model configuration
+   * Get Whisper transcription timeout
    */
-  getWhisperConfig(): { modelName: string; modelPath?: string; transcriptionTimeoutMs: number } {
-    return {
-      modelName: this.settings.whisper.modelName,
-      modelPath: this.settings.whisper.modelPath,
-      transcriptionTimeoutMs: this.settings.whisper.transcriptionTimeoutMs,
-    }
+  getWhisperTimeout(): number {
+    return this.settings.whisper.transcriptionTimeoutMs
   }
 
   /**

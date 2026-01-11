@@ -24,9 +24,8 @@ npm-debug.log*
 .env
 .env.local
 
-# Whisper models
-models/
-vendor/
+# Whisper models (gitignore *.bin files only, binary is committed)
+models/*.bin
 
 # Temp files
 *.tmp

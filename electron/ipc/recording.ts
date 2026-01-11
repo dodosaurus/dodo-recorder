@@ -66,7 +66,7 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
       
       try {
         const settings = getSettingsStore()
-        const whisperConfig = settings.getWhisperConfig()
+        const whisperTimeout = settings.getWhisperTimeout()
         
         // Generate session ID for screenshot directory using the startTime from frontend
         // This ensures the screenshot directory matches the session directory created during save
@@ -79,11 +79,7 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
         
         browserRecorder = new BrowserRecorder()
         sessionWriter = new SessionWriter(outputPath)
-        transcriber = new Transcriber(
-          whisperConfig.modelName,
-          whisperConfig.transcriptionTimeoutMs,
-          whisperConfig.modelPath
-        )
+        transcriber = new Transcriber(whisperTimeout)
 
         browserRecorder.on('action', (action) => {
           mainWindow?.webContents.send('action-recorded', action)
@@ -128,12 +124,8 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
     return handleIpc(async () => {
       if (!transcriber) {
         const settings = getSettingsStore()
-        const whisperConfig = settings.getWhisperConfig()
-        transcriber = new Transcriber(
-          whisperConfig.modelName,
-          whisperConfig.transcriptionTimeoutMs,
-          whisperConfig.modelPath
-        )
+        const whisperTimeout = settings.getWhisperTimeout()
+        transcriber = new Transcriber(whisperTimeout)
         await transcriber.initialize()
       }
       const segments = await transcriber.transcribe(Buffer.from(audioBuffer))

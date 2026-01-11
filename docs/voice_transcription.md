@@ -92,53 +92,37 @@ Then subtract 1500ms from all Whisper timestamps to realign with actual recordin
 | `-sow` (split_on_word) | flag | Split on word boundaries, not tokens |
 | `--prompt` | context string | Prime model with expected vocabulary |
 
-## Whisper Model Selection
+## Whisper Model
 
-### Default: small.en (Recommended)
+### Bundled Model: small.en
+
+Dodo Recorder uses the **small.en** model exclusively, bundled with the application.
+
+**Download Model (Required for Development):**
 
 ```bash
-npm run whisper:download  # Downloads small.en (466 MB) to models/ folder
+# Download to models/ folder in project root
+curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 ```
 
 **Characteristics:**
 - Size: 466 MB disk, ~1.0 GB RAM
 - Quality: Better accuracy, especially for technical terms
 - Speed: Medium (acceptable for real-time use)
-- **Best for**: Production use, captures early speech reliably
-
-### Alternative Models
-
-| Model | Size | RAM | Quality | Speed | Use Case | Download Command |
-|-------|------|-----|---------|-------|----------|------------------|
-| tiny.en | 75 MB | ~390 MB | Basic | Fastest | Quick tests only | `npm run whisper:download:tiny` |
-| base.en | 142 MB | ~500 MB | Good | Fast | Previous default | `npm run whisper:download:base` |
-| **small.en** | **466 MB** | **~1.0 GB** | **Better** | **Medium** | **Current default** ✓ | `npm run whisper:download` |
-| medium.en | 1.5 GB | ~2.6 GB | Best | Slower | Maximum accuracy needed | `npm run whisper:download:medium` |
+- Captures early speech reliably with optimized parameters
 
 ### Model Location
 
-Models are stored in the `models/` folder in the project root:
+The model is stored in the `models/` folder:
 ```
 dodo-recorder/
 ├── models/
-│   ├── ggml-small.en.bin    # Default model
-│   ├── ggml-base.en.bin     # Optional
-│   └── ggml-tiny.en.bin     # Optional
-├── vendor/
-│   └── whisper.cpp/      # Vendored source and build scripts
+│   ├── whisper              # Whisper.cpp binary (committed to git)
+│   └── ggml-small.en.bin    # AI model weights (download manually, gitignored)
 └── ...
 ```
 
-### Changing Models
-
-Update in settings file or app UI:
-```json
-{
-  "whisper": {
-    "modelName": "small.en"
-  }
-}
-```
+**Note:** The model file (`.bin`) is gitignored. Developers must manually download it once. The binary is committed to git.
 
 ## Output Format
 
@@ -218,27 +202,10 @@ LinkedIn button [action:ef955889:click]...
 
 **Check**:
 1. Model file exists: `models/ggml-small.en.bin` (in project root)
-2. If model is missing, run: `npm run whisper:download`
+2. If model is missing, download it: `curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin`
 3. FFmpeg is working: Check logs for conversion errors
 4. Microphone permissions granted
 5. Audio chunks were recorded (check console logs)
-
-### Issue: App still using old model (base.en) after upgrade
-
-If you upgraded from an older version and the app is still trying to use `base.en`, delete your settings file to reset to the new defaults:
-
-```bash
-# macOS
-rm ~/Library/Application\ Support/dodo-recorder/settings.json
-
-# Windows
-del %APPDATA%\dodo-recorder\settings.json
-
-# Linux
-rm ~/.config/dodo-recorder/settings.json
-```
-
-Then restart the app. It will create a new settings file with `small.en` as the default.
 
 ## Performance Characteristics
 

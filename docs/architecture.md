@@ -159,8 +159,6 @@ Persistent settings management with JSON file storage:
 ```typescript
 interface AppSettings {
   whisper: {
-    modelName: 'tiny.en' | 'base.en' | 'small.en' | 'medium.en'
-    modelPath?: string
     transcriptionTimeoutMs: number
   }
   voiceDistribution: {
@@ -183,7 +181,7 @@ interface AppSettings {
 - Settings loaded on app startup
 - Voice distribution windows updated dynamically when settings change
 - User preferences remembered between sessions
-- Default: `small.en` model (previous versions used `base.en`)
+- Model is hard-coded to `small.en` (no user selection)
 
 ### 7. **Utility Modules** ([`electron/utils/`](electron/utils/))
 Shared utility functions for common operations:
@@ -341,9 +339,11 @@ dodo-recorder/
 ├── shared/                     # ⚡ Types shared between main & renderer
 │   └── types.ts                # RecordedAction, SessionBundle, etc.
 ├── docs/                       # Documentation
-├── models/                     # Whisper models (ggml-*.bin)
-└── vendor/                     # External dependencies
-    └── whisper.cpp/            # Bundled whisper.cpp
+├── models/                     # Whisper components
+│   ├── whisper                 # Whisper.cpp binary (committed to git)
+│   └── ggml-small.en.bin      # AI model weights (download manually, gitignored)
+└── shared/                     # Types shared between main & renderer
+    └── types.ts                # RecordedAction, SessionBundle, etc.
 
 ⚡ = Added/reorganized since initial architecture
 ```
@@ -446,26 +446,24 @@ This project couldn't be a pure web app because it needs to:
 
 ### The GGML Format
 
-The `.bin` files you see (like `ggml-base.en.bin`) are:
+The `.bin` file (`ggml-small.en.bin`) contains:
 - OpenAI's Whisper model weights
 - Converted to GGML format (Georgi Gerganov's ML format)
 - Optimized for CPU inference
 - Quantized for smaller file sizes and faster processing
 
-### Model Size Trade-offs
+### Bundled Model: small.en
 
-```
-tiny.en   (75 MB)  → Fast but basic accuracy
-base.en   (142 MB) → Good balance (previous default)
-small.en  (466 MB) → Better accuracy ✓ (current default)
-medium.en (1.5 GB) → Best accuracy, much slower
-```
+**Characteristics:**
+- Size: 466 MB disk, ~1.0 GB RAM during transcription
+- Quality: Better accuracy, especially for technical terms (LinkedIn, GitHub, etc.)
+- Speed: Medium (~2-3x real-time - 10 seconds of audio transcribes in 3-5 seconds)
+- Reliability: Better early speech detection with optimized parameters
 
-The project now defaults to `small.en` (changed from `base.en`) because:
-- Better accuracy for technical terms (LinkedIn, GitHub, etc.)
-- Better early speech detection with optimized parameters
-- Reasonable speed for most use cases (~2-3x real-time)
-- Worth the extra 324MB for improved transcription quality
+**Why small.en?**
+- Best balance of accuracy, speed, and size for production use
+- Captures early speech reliably (critical for recording sessions)
+- No model selection complexity - one model that works well for all users
 
 ### Alternative Approaches (Not Used)
 
@@ -483,4 +481,4 @@ The project now defaults to `small.en` (changed from `base.en`) because:
 
 ### Summary
 
-We're using **OpenAI's Whisper model**, just running it locally via the `whisper.cpp` implementation instead of calling OpenAI's cloud API. It's the same AI, different execution environment - optimized for desktop apps that need privacy, offline capability, and no recurring costs.
+We're using **OpenAI's Whisper small.en model**, running it locally via the `whisper.cpp` implementation instead of calling OpenAI's cloud API. It's the same AI, different execution environment - optimized for desktop apps that need privacy, offline capability, and no recurring costs.

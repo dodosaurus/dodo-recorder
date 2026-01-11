@@ -42,20 +42,6 @@
       "filter": [
         "**/*"
       ]
-    },
-    {
-      "from": "vendor/whisper.cpp/main",
-      "to": "bin/whisper",
-      "filter": [
-        "**/*"
-      ]
-    },
-    {
-      "from": "vendor/whisper.cpp/ggml-metal.metal",
-      "to": "bin/ggml-metal.metal",
-      "filter": [
-        "**/*"
-      ]
     }
   ]
 }

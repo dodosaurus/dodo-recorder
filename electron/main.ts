@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog, systemPreferences, session } from 'electron'
 import path from 'path'
+import fs from 'fs'
 import { cleanupOldTempFiles } from './utils/fs'
 import { logger } from './utils/logger'
 import { getSettingsStore } from './settings/store'
@@ -39,6 +40,65 @@ function setupPermissionHandlers() {
   })
 }
 
+/**
+ * Check if Whisper components exist and show helpful error if missing
+ */
+function checkWhisperComponents(): boolean {
+  const appPath = app.isPackaged
+    ? path.dirname(app.getPath('exe'))
+    : app.getAppPath()
+  const modelPath = path.join(appPath, 'models', 'ggml-small.en.bin')
+  const binaryPath = path.join(appPath, 'models', 'whisper')
+  
+  // Check binary
+  if (!fs.existsSync(binaryPath)) {
+    logger.error('❌ Whisper binary not found at:', binaryPath)
+    
+    dialog.showMessageBoxSync({
+      type: 'error',
+      title: 'Whisper Binary Missing',
+      message: 'Whisper binary file not found',
+      detail:
+        'The whisper binary should be in the repository.\n\n' +
+        'Binary expected at:\n' +
+        binaryPath + '\n\n' +
+        'This file should be committed to git. Please ensure you have the latest code.',
+      buttons: ['Exit']
+    })
+    
+    return false
+  }
+  
+  // Check model
+  if (!fs.existsSync(modelPath)) {
+    logger.error('❌ Whisper model not found at:', modelPath)
+    
+    const downloadCommand = 'curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin'
+    
+    dialog.showMessageBoxSync({
+      type: 'error',
+      title: 'Whisper Model Missing',
+      message: 'Whisper model file not found',
+      detail:
+        'The application requires the Whisper model to transcribe voice recordings.\n\n' +
+        'Model file expected at:\n' +
+        modelPath + '\n\n' +
+        'To download the model, run this command in your terminal:\n\n' +
+        downloadCommand + '\n\n' +
+        'Or download manually from:\n' +
+        'https://huggingface.co/ggerganov/whisper.cpp/tree/main',
+      buttons: ['Exit']
+    })
+    
+    return false
+  }
+  
+  const stats = fs.statSync(modelPath)
+  const sizeMB = (stats.size / (1024 * 1024)).toFixed(2)
+  logger.info(`✅ Whisper binary and model found (model: ${sizeMB} MB)`)
+  return true
+}
+
 async function createWindow() {
   setupPermissionHandlers()
   await requestMicrophonePermission()
@@ -75,6 +135,12 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  // Check if Whisper components exist
+  if (!checkWhisperComponents()) {
+    app.quit()
+    return
+  }
+  
   // Initialize settings
   const settings = getSettingsStore()
   
