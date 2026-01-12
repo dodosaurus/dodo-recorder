@@ -8,7 +8,7 @@ Dodo Recorder is an Electron + React + TypeScript desktop application for record
 
 **Tech Stack:**
 - **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, Zustand (state management)
-- **Backend:** Electron 28, Node.js 20+, Playwright
+- **Backend:** Electron 28, Node.js 18+, Playwright
 - **Audio:** Whisper.cpp for transcription, ffmpeg for audio processing
 - **UI Components:** shadcn/ui patterns (CVA for variants)
 
@@ -231,6 +231,34 @@ dodo-recorder/
 │   └── types.ts          # Shared type definitions
 └── models/               # Whisper.cpp binary and model
 ```
+
+## Session Output Format
+
+Each recording session produces a folder with 4 essential files:
+
+```
+session-YYYY-MM-DD-HHMMSS/
+├── README.md          # Quick start for AI agents (session metadata, test intent)
+├── transcript.txt     # Comprehensive AI header + narrative with action references
+├── actions.json       # _meta wrapper + clean actions array (no voice data)
+└── screenshots/       # Visual captures
+```
+
+**Key Characteristics:**
+- **Framework-Agnostic**: Works with Playwright, Cypress, Selenium, Puppeteer, etc.
+- **AI-Instruction-Complete**: Standalone with full parsing documentation in transcript.txt
+- **Self-Documenting**: All instructions embedded, no external docs needed
+- **Human-Readable**: Clear metadata and narrative flow
+
+**Action References Format:**
+- Actions referenced in transcript as `[action:SHORT_ID:TYPE]`
+- `SHORT_ID` = First 8 chars of full UUID in actions.json
+- Example: `[action:8c61934e:click]` → `"id": "8c61934e-4cd3-4793-bdb5-5c1c6d696f37"`
+
+**Multiple Locator Strategies:**
+- Each action provides multiple locator strategies with confidence levels
+- Priority: testId > text/placeholder/role > css > xpath
+- Use high confidence locators when available
 
 ## Important Notes
 
