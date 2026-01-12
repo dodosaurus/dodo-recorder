@@ -5,10 +5,28 @@
 - **Browser Recording**: Launch and record interactions in a controlled Chromium browser
 - **Rich Locator Extraction**: Captures multiple selector strategies (testId, role, text, CSS, XPath)
 - **Voice Transcription**: Local speech-to-text using Whisper.cpp with optimized early speech detection
-- **Screenshot Capture**: Manual screenshot capture via keyboard shortcut (Cmd+Shift+S / Ctrl+Shift+S)
+- **Screenshot Capture**: Manual screenshot capture via keyboard shortcut (Cmd+Shift+S / Ctrl+Shift+S) or widget button
+- **Recording Widget**: Floating UI widget in the browser for quick access to recording controls
 - **Enhanced Transcripts**: AI-friendly narrative format with embedded action IDs
 - **Smart Voice Distribution**: Intelligently associates voice commentary with browser actions
 - **Session Export**: Generates structured JSON bundles ready for AI consumption
+
+## Recording Widget
+
+When you start a recording session, a floating widget appears in the browser window (top-right corner by default). This widget provides quick access to recording controls:
+
+### Widget Features
+
+**Screenshot Button**
+- Click to capture a screenshot of the current browser state
+- Same as pressing Cmd+Shift+S (Mac) or Ctrl+Shift+S (Windows/Linux)
+- Shows visual feedback when screenshot is captured
+
+**Assertion Mode Toggle**
+- Click to enable/disable assertion mode
+- When active (highlighted in blue), all clicks become assertions
+- Alternative to holding Alt/Option or Cmd/Ctrl while clicking
+- Click again to return to normal clicking mode
 
 ## Keyboard Shortcuts
 
@@ -39,9 +57,9 @@ During browser recording, use these keyboard shortcuts to control your session:
 
 **Typical Workflow:**
 ```
-1. Click normally to interact with the page
-2. Alt+Click on elements you want to verify (assertions)
-3. Press Cmd+Shift+S (Mac) or Ctrl+Shift+S (Windows/Linux) to capture important visual states
+1. Use the recording widget or click normally to interact with the page
+2. Click the button in widget to enable assertion mode, or use Alt+Click on elements you want to verify
+3. Click the button in widget or press Cmd+Shift+S (Mac) / Ctrl+Shift+S (Windows/Linux) to capture screenshots
 4. Speak your commentary to explain what you're testing
 ```
 

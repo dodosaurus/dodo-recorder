@@ -10,6 +10,15 @@
 
 ## Quick Usage
 
+**Recording Widget:** A floating widget appears in the browser when recording starts (top-right corner). Use it to:
+- Take screenshots
+- Toggle assertion mode (auto-disables after recording an assertion)
+- Drag to reposition
+
+Note: Interactions with the widget are never recorded.
+
+**Keyboard Shortcuts:**
+
 | Key | Action |
 |-----|--------|
 | **Cmd+Shift+S** (Mac)<br>**Ctrl+Shift+S** (Windows/Linux) | Take Screenshot |
