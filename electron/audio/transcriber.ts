@@ -1,8 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import { app } from 'electron'
-import { exec } from 'child_process'
-import { promisify } from 'util'
+import { spawn } from 'child_process'
 import { ensureDir, safeUnlink, getTempPath } from '../utils/fs'
 import { logger } from '../utils/logger'
 import type { TranscriptSegment } from '../../shared/types'
@@ -10,8 +9,6 @@ import type { TranscriptSegment } from '../../shared/types'
 const ffmpegPath = require('ffmpeg-static') as string
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const ffmpeg = require('fluent-ffmpeg')
-
-const execAsync = promisify(exec)
 
 logger.debug('FFmpeg path:', ffmpegPath)
 ffmpeg.setFfmpegPath(ffmpegPath)
@@ -191,11 +188,10 @@ export class Transcriber {
       const modelPath = this.getModelPath()
       const jsonOutputPath = `${audioPath}.json`
       
-      // Build command with ALL the parameters we need
-      const commandArgs = [
-        `"${whisperPath}"`,
-        '-m', `"${modelPath}"`,
-        '-f', `"${audioPath}"`,
+      // Build args array for spawn (no shell, no command injection risk)
+      const args = [
+        '-m', modelPath,
+        '-f', audioPath,
         '-l', 'en',
         '-oj',  // Output JSON format
         '--print-progress',  // Show progress
@@ -205,20 +201,41 @@ export class Transcriber {
         '-bs', '5',  // beam-size: beam search size
         '-et', '2.0',  // entropy-thold: LOWERED from 2.4 to 2.0 for better early detection
         '-lpt', '-1.0',  // logprob-thold: log probability threshold
-        '--prompt', '"This is a recording session with browser interactions, clicking, navigation, and voice commentary."'
+        '--prompt', 'This is a recording session with browser interactions, clicking, navigation, and voice commentary.'
       ]
-
-      const command = commandArgs.join(' ')
       
-      logger.info('Executing whisper.cpp command:')
-      logger.info(command)
+      logger.info('Executing whisper.cpp with args:', args)
       
       const binaryDir = path.dirname(whisperPath)
       
-      // Execute whisper.cpp directly
-      const { stdout, stderr } = await execAsync(command, {
-        cwd: binaryDir,
-        maxBuffer: 10 * 1024 * 1024  // 10MB buffer for large outputs
+      // Execute whisper.cpp using spawn (no shell, safe from command injection)
+      const { stdout, stderr } = await new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+        const child = spawn(whisperPath, args, {
+          cwd: binaryDir,
+        })
+        
+        let stdout = ''
+        let stderr = ''
+        
+        child.stdout?.on('data', (data) => {
+          stdout += data.toString()
+        })
+        
+        child.stderr?.on('data', (data) => {
+          stderr += data.toString()
+        })
+        
+        child.on('close', (code) => {
+          if (code === 0) {
+            resolve({ stdout, stderr })
+          } else {
+            reject(new Error(`Whisper exited with code ${code}: ${stderr}`))
+          }
+        })
+        
+        child.on('error', (err) => {
+          reject(new Error(`Failed to spawn whisper: ${err.message}`))
+        })
       })
       
       if (stderr) {
