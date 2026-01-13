@@ -100,14 +100,15 @@ function VoiceSegmentBadge({ segment }: { segment: TranscriptSegment }) {
 }
 
 export function ActionsList() {
-  const { actions, removeAction, status } = useRecordingStore(useShallow((state) => ({
+  const { actions, removeAction, status, highlightedActionId } = useRecordingStore(useShallow((state) => ({
     actions: state.actions,
     removeAction: state.removeAction,
     status: state.status,
+    highlightedActionId: state.highlightedActionId,
   })))
 
   const [expandedActions, setExpandedActions] = useState<Set<string>>(new Set())
-
+  
   const toggleExpand = (id: string) => {
     setExpandedActions(prev => {
       const next = new Set(prev)
@@ -152,7 +153,13 @@ export function ActionsList() {
           return (
             <div
               key={action.id}
-              className="group px-4 py-3 hover:bg-card transition-colors"
+              data-action-id={action.id}
+              className={cn(
+                'group px-4 py-3 transition-colors',
+                highlightedActionId === action.id
+                  ? 'bg-blue-500/20 border-l-4 border-l-blue-400'
+                  : 'hover:bg-card'
+              )}
             >
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 pt-0.5">
@@ -160,11 +167,11 @@ export function ActionsList() {
                     {String(index + 1).padStart(2, '0')}
                   </span>
                 </div>
-                
+
                 <div className={cn('flex-shrink-0 p-1.5 rounded bg-secondary', colorClass)}>
                   <Icon className="w-3.5 h-3.5" />
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -198,7 +205,7 @@ export function ActionsList() {
                   <p className="text-sm text-foreground mt-0.5 truncate" title={description}>
                     {description}
                   </p>
-                  
+
                   {(hasLocators || hasVoiceSegments) && (
                     <button
                       onClick={() => toggleExpand(action.id)}
@@ -223,7 +230,7 @@ export function ActionsList() {
                   </Button>
                 )}
               </div>
-              
+
               {isExpanded && (
                 <div className="mt-2 ml-[52px] space-y-2 pb-1">
                   {hasVoiceSegments && (
@@ -236,7 +243,7 @@ export function ActionsList() {
                       ))}
                     </div>
                   )}
-                  
+
                   {hasLocators && (
                     <div className="space-y-1.5">
                       {hasVoiceSegments && (

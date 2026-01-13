@@ -5,6 +5,7 @@ import { Transcriber } from '../audio/transcriber'
 import { handleIpc, ipcError } from '../utils/ipc'
 import { validateUrl, validateOutputPath, validateAudioBuffer } from '../utils/validation'
 import { distributeVoiceSegments, generateFullTranscript } from '../utils/voiceDistribution'
+import { generateTranscriptWithReferences } from '../utils/enhancedTranscript'
 import { getSettingsStore } from '../settings/store'
 import { logger } from '../utils/logger'
 import type { RecordedAction, TranscriptSegment } from '../../shared/types'
@@ -168,6 +169,40 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
       const transcript = generateFullTranscript(segments)
       return { transcript }
     }, 'Failed to generate transcript')
+  })
+
+  ipcMain.handle('generate-transcript-with-references', async (
+    _,
+    actions: unknown,
+    sessionId: unknown,
+    startTime: unknown,
+    startUrl: unknown
+  ) => {
+    if (!validateRecordedActionsArray(actions)) {
+      return ipcError('Invalid actions array structure')
+    }
+    
+    if (typeof sessionId !== 'string') {
+      return ipcError('Invalid sessionId: must be a string')
+    }
+    
+    if (typeof startTime !== 'number') {
+      return ipcError('Invalid startTime: must be a number')
+    }
+    
+    if (typeof startUrl !== 'string' && startUrl !== undefined) {
+      return ipcError('Invalid startUrl: must be a string')
+    }
+    
+    return handleIpc(async () => {
+      const transcript = generateTranscriptWithReferences(
+        actions,
+        sessionId,
+        startTime,
+        startUrl
+      )
+      return { transcript }
+    }, 'Failed to generate transcript with references')
   })
 }
 

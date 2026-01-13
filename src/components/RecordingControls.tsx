@@ -9,7 +9,7 @@ export function RecordingControls() {
   const {
     status, startUrl, outputPath, actions, transcriptSegments, notes, isVoiceEnabled,
     audioStatus, audioChunksCount, audioError, startTime,
-    setStatus, setStartTime, addAction, setTranscriptSegments, reset,
+    setStatus, setStartTime, addAction, setTranscriptSegments, setTranscriptText, reset,
     setAudioStatus, incrementAudioChunks, setAudioError
   } = useRecordingStore(useShallow((state) => ({
     status: state.status,
@@ -27,6 +27,7 @@ export function RecordingControls() {
     setStartTime: state.setStartTime,
     addAction: state.addAction,
     setTranscriptSegments: state.setTranscriptSegments,
+    setTranscriptText: state.setTranscriptText,
     reset: state.reset,
     setAudioStatus: state.setAudioStatus,
     incrementAudioChunks: state.incrementAudioChunks,
@@ -153,6 +154,48 @@ export function RecordingControls() {
           })
           setTranscriptSegments(result.segments)
           setAudioStatus('complete')
+          
+          // Distribute voice segments across actions RIGHT AFTER transcription
+          if (startTime && result.segments.length > 0) {
+            console.log(`Distributing ${result.segments.length} voice segments across ${actions.length} actions...`)
+            try {
+              const distributionResult = await window.electronAPI.distributeVoiceSegments(
+                actions,
+                result.segments,
+                startTime
+              )
+              if (distributionResult.success && distributionResult.actions) {
+                console.log('Voice segments distributed successfully')
+                
+                // Update actions in store with distributed voice segments
+                // We need to replace all actions with the new ones that have voice segments
+                const actionsWithVoice = distributionResult.actions
+                
+                // Generate transcript with references for UI display
+                const sessionId = new Date(startTime).toISOString()
+                  .replace(/T/, '-')
+                  .replace(/:/g, '')
+                  .split('.')[0]
+                const transcriptResult = await window.electronAPI.generateTranscriptWithReferences(
+                  actionsWithVoice,
+                  sessionId,
+                  startTime,
+                  startUrl
+                )
+                if (transcriptResult.success && transcriptResult.transcript) {
+                  setTranscriptText(transcriptResult.transcript)
+                  console.log('Transcript with voice commentary generated successfully')
+                }
+                
+                // Update actions in store - replace entire actions array with distributed ones
+                useRecordingStore.setState({ actions: actionsWithVoice })
+              } else if ('success' in distributionResult && !distributionResult.success) {
+                console.error('Failed to distribute voice segments:', distributionResult.error)
+              }
+            } catch (error) {
+              console.error('Exception during voice distribution:', error)
+            }
+          }
         } else {
           console.error('❌ Transcription failed:', result)
           setAudioError('success' in result && !result.success ? result.error : 'Transcription failed')
@@ -191,6 +234,22 @@ export function RecordingControls() {
         if (result.success && result.actions) {
           actionsWithVoice = result.actions
           console.log('Voice segments distributed successfully')
+          
+          // Generate transcript with references for UI display
+          const sessionId = new Date(startTime).toISOString()
+            .replace(/T/, '-')
+            .replace(/:/g, '')
+            .split('.')[0]
+          const transcriptResult = await window.electronAPI.generateTranscriptWithReferences(
+            actionsWithVoice,
+            sessionId,
+            startTime,
+            startUrl
+          )
+          if (transcriptResult.success && transcriptResult.transcript) {
+            setTranscriptText(transcriptResult.transcript)
+            console.log('Transcript generated successfully')
+          }
         } else if ('success' in result && !result.success) {
           console.error('Failed to distribute voice segments:', result.error)
         }
@@ -211,22 +270,6 @@ export function RecordingControls() {
     
     if (result.success) {
       console.log('Session saved successfully to:', result.path)
-      
-      // Reload user preferences before resetting to restore URL and output path
-      const prefsResult = await window.electronAPI.getUserPreferences()
-      
-      reset()
-      
-      // Restore the saved preferences after reset
-      if (prefsResult.success && (prefsResult as any).preferences) {
-        const preferences = (prefsResult as any).preferences
-        if (preferences.startUrl) {
-          useRecordingStore.getState().setStartUrl(preferences.startUrl)
-        }
-        if (preferences.outputPath) {
-          useRecordingStore.getState().setOutputPath(preferences.outputPath)
-        }
-      }
     } else {
       console.error('Failed to save session:', 'success' in result ? result.error : 'Unknown error')
     }
