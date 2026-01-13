@@ -36,7 +36,9 @@ Transcript segments are intelligently associated with browser actions:
 - **Lookback window**: 10 seconds before each action
 - **Lookahead window**: 5 seconds after each action
 - **Overlap handling**: Long commentary spanning multiple actions is distributed appropriately
-- **Pre-action capture**: Speech before the first action is preserved
+- **Multi-action assignment**: Segments longer than 3 seconds that span multiple actions are assigned to ALL relevant actions
+- **Pre-action capture**: Speech before the first action is preserved (assigned to first action)
+- **Closest action fallback**: Segments outside all action windows are assigned to the temporally closest action
 
 ## Key Implementation Details
 
@@ -224,6 +226,78 @@ LinkedIn button [action:ef955889:click]...
 - Model: 466 MB (small.en)
 - Per session: ~100-500 KB audio (depends on duration)
 - Temporary files: Cleaned up automatically
+
+## Voice Distribution Flow
+
+```mermaid
+flowchart TD
+    A[Voice Segments<br/>+ Actions] --> B[Sort by timestamp]
+    B --> C[Pre-action segments?]
+    C -->|Yes| D[Assign to first action]
+    C -->|No| E[Find actions in window<br/>±10s before / +5s after]
+    D --> E
+    E --> F{How many<br/>relevant actions?}
+    F -->|0| G[Assign to closest action]
+    F -->|1| H[Assign to that action]
+    F -->|2+| I{Segment > 3s<br/>and spans actions?}
+    I -->|Yes| J[Assign to ALL actions]
+    I -->|No| K[Assign to closest action]
+    G --> L[Actions with voiceSegments]
+    H --> L
+    J --> L
+    K --> L
+    L --> M[Generate transcript.txt<br/>with embedded references]
+    L --> N[Write actions.json<br/>without voice data]
+
+    style A fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
+    style B fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style C fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style D fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style E fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style F fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style G fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style H fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style I fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style J fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    style K fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style L fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style M fill:#d4edda,stroke:#28a745,stroke-width:3px
+    style N fill:#d4edda,stroke:#28a745,stroke-width:3px
+```
+
+### Example Scenario
+
+```mermaid
+sequenceDiagram
+    participant T as Time (ms)
+    participant V as Voice Segments
+    participant A1 as Action 1<br/>(click)
+    participant A2 as Action 2<br/>(click)
+    participant A3 as Action 3<br/>(screenshot)
+    participant Out as Output
+
+    Note over T: 0s
+    V->>V: "Now I'll click the submit button"<br/>[0s - 2s]
+    
+    Note over T: 3s
+    A1->>A1: Click action at 3s
+    
+    V->>V: "Then verify the form"<br/>[4s - 6s]
+    
+    Note over T: 7s
+    A2->>A2: Click action at 7s
+    
+    Note over T: 10s
+    A3->>A3: Screenshot at 10s
+    
+    Note over Out: Distribution Result:
+    Note over Out: Action 1: "Now I'll click the submit button"
+    Note over Out: Action 2: "Then verify the form"
+    Note over Out: Action 3: (no voice)
+    
+    Note over Out: Transcript Output:
+    Note over Out: "Now I'll click the submit button [action:abc12345:click]<br/>Then verify the form [action:def67890:click]<br/>[action:ghi12345:screenshot] [screenshot:screenshot-001.png]"
+```
 
 ## Architecture
 
