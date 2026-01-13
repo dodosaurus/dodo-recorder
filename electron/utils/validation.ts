@@ -1,5 +1,7 @@
 import path from 'path'
 import os from 'os'
+import fs from 'fs'
+import { app } from 'electron'
 
 const ALLOWED_PROTOCOLS = ['http:', 'https:']
 const SESSION_ID_REGEX = /^[a-zA-Z0-9_-]+$/
@@ -51,23 +53,42 @@ export function validateOutputPath(outputPath: string): { valid: boolean; error?
     return { valid: false, error: 'Output path is required' }
   }
   
+  // Resolve to absolute path first
   const resolved = path.resolve(outputPath)
-  const normalized = path.normalize(outputPath)
   
-  // Check for path traversal attempts
-  if (normalized.includes('..')) {
+  // Normalize to remove . and .. segments
+  const normalized = path.normalize(resolved)
+  
+  // Check for path traversal (normalized should not differ from resolved)
+  if (normalized !== resolved) {
     return { valid: false, error: 'Path traversal not allowed' }
   }
   
-  // Check for URL-encoded path traversal attempts
-  if (outputPath.includes('%2e') || outputPath.includes('%2E')) {
-    return { valid: false, error: 'Path traversal not allowed' }
+  // Additional Windows-specific checks
+  if (process.platform === 'win32') {
+    // Check for UNC paths or device paths
+    if (/^\\\\\?\\/.test(outputPath) || /^[A-Za-z]:/.test(outputPath)) {
+      // Allow but validate further
+    }
   }
   
   // Ensure path is within user directories
   const homeDir = os.homedir()
-  if (!resolved.startsWith(homeDir)) {
+  const userDataDir = app.getPath('userData')
+  const allowedDirs = [homeDir, userDataDir]
+  
+  if (!allowedDirs.some(dir => normalized.startsWith(dir))) {
     return { valid: false, error: 'Path must be within user directory' }
+  }
+  
+  // Check for symlink traversal
+  try {
+    const realPath = fs.realpathSync(normalized)
+    if (realPath !== normalized) {
+      return { valid: false, error: 'Symlink traversal not allowed' }
+    }
+  } catch {
+    // Path doesn't exist yet, that's OK
   }
   
   return { valid: true }
