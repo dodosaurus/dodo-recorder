@@ -2,10 +2,14 @@ import path from 'path'
 import os from 'os'
 import fs from 'fs'
 import { app } from 'electron'
+import type { AppSettings } from '../settings/store'
 
 const ALLOWED_PROTOCOLS = ['http:', 'https:']
 const SESSION_ID_REGEX = /^[a-zA-Z0-9_-]+$/
 const MAX_AUDIO_SIZE = 50 * 1024 * 1024 // 50MB limit
+const MAX_URL_LENGTH = 2048
+const MAX_PATH_LENGTH = 4096
+const MAX_TIMEOUT_MS = 600000 // 10 minutes
 
 export function validateUrl(url: string): { valid: boolean; error?: string } {
   if (!url || typeof url !== 'string') {
@@ -92,5 +96,77 @@ export function validateOutputPath(outputPath: string): { valid: boolean; error?
   }
   
   return { valid: true }
+}
+
+export function validateSettingsUpdate(data: unknown): data is Partial<AppSettings> {
+  if (!data || typeof data !== 'object') return false
+  
+  const settings = data as Partial<AppSettings>
+  
+  // Validate nested objects
+  if (settings.whisper && typeof settings.whisper !== 'object') return false
+  if (settings.voiceDistribution && typeof settings.voiceDistribution !== 'object') return false
+  if (settings.output && typeof settings.output !== 'object') return false
+  if (settings.userPreferences && typeof settings.userPreferences !== 'object') return false
+  
+  // Validate whisper settings
+  if (settings.whisper?.transcriptionTimeoutMs !== undefined) {
+    if (typeof settings.whisper.transcriptionTimeoutMs !== 'number') return false
+    if (settings.whisper.transcriptionTimeoutMs < 0 || settings.whisper.transcriptionTimeoutMs > MAX_TIMEOUT_MS) {
+      return false
+    }
+  }
+  
+  // Validate voice distribution settings
+  if (settings.voiceDistribution?.lookbackMs !== undefined) {
+    if (typeof settings.voiceDistribution.lookbackMs !== 'number') return false
+    if (settings.voiceDistribution.lookbackMs < 0 || settings.voiceDistribution.lookbackMs > 60000) return false
+  }
+  if (settings.voiceDistribution?.lookaheadMs !== undefined) {
+    if (typeof settings.voiceDistribution.lookaheadMs !== 'number') return false
+    if (settings.voiceDistribution.lookaheadMs < 0 || settings.voiceDistribution.lookaheadMs > 60000) return false
+  }
+  if (settings.voiceDistribution?.longSegmentThresholdMs !== undefined) {
+    if (typeof settings.voiceDistribution.longSegmentThresholdMs !== 'number') return false
+    if (settings.voiceDistribution.longSegmentThresholdMs < 0 || settings.voiceDistribution.longSegmentThresholdMs > 60000) return false
+  }
+  
+  // Validate output settings
+  if (settings.output?.includeScreenshots !== undefined) {
+    if (typeof settings.output.includeScreenshots !== 'boolean') return false
+  }
+  if (settings.output?.prettyPrintJson !== undefined) {
+    if (typeof settings.output.prettyPrintJson !== 'boolean') return false
+  }
+  
+  // Validate user preferences
+  if (settings.userPreferences?.startUrl !== undefined) {
+    if (typeof settings.userPreferences.startUrl !== 'string') return false
+    if (settings.userPreferences.startUrl.length > MAX_URL_LENGTH) return false
+  }
+  if (settings.userPreferences?.outputPath !== undefined) {
+    if (typeof settings.userPreferences.outputPath !== 'string') return false
+    if (settings.userPreferences.outputPath.length > MAX_PATH_LENGTH) return false
+  }
+  
+  return true
+}
+
+export function validateUserPreferencesUpdate(data: unknown): data is Partial<{ startUrl: string; outputPath: string }> {
+  if (!data || typeof data !== 'object') return false
+  
+  const preferences = data as Partial<{ startUrl: string; outputPath: string }>
+  
+  if (preferences.startUrl !== undefined) {
+    if (typeof preferences.startUrl !== 'string') return false
+    if (preferences.startUrl.length > MAX_URL_LENGTH) return false
+  }
+  
+  if (preferences.outputPath !== undefined) {
+    if (typeof preferences.outputPath !== 'string') return false
+    if (preferences.outputPath.length > MAX_PATH_LENGTH) return false
+  }
+  
+  return true
 }
 

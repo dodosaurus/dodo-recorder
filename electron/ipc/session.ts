@@ -3,6 +3,7 @@ import { handleIpc, ipcError } from '../utils/ipc'
 import { updateTimeWindows } from '../utils/voiceDistribution'
 import { getSettingsStore } from '../settings/store'
 import { logger } from '../utils/logger'
+import { validateSettingsUpdate, validateUserPreferencesUpdate } from '../utils/validation'
 import type { SessionBundle } from '../../shared/types'
 import { getSessionWriter } from './recording'
 
@@ -66,9 +67,14 @@ export function registerSettingsHandlers() {
   })
 
   ipcMain.handle('settings-update', async (_, updates: unknown) => {
+    if (!validateSettingsUpdate(updates)) {
+      logger.error('[IPC] Invalid settings data structure')
+      return ipcError('Invalid settings data structure')
+    }
+    
     return handleIpc(async () => {
       const settings = getSettingsStore()
-      settings.update(updates as any)
+      settings.update(updates)
       
       // Apply voice distribution settings immediately
       updateTimeWindows(settings.getVoiceDistributionConfig())
@@ -97,9 +103,14 @@ export function registerSettingsHandlers() {
   })
 
   ipcMain.handle('user-preferences-update', async (_, preferences: unknown) => {
+    if (!validateUserPreferencesUpdate(preferences)) {
+      logger.error('[IPC] Invalid user preferences data structure')
+      return ipcError('Invalid user preferences data structure')
+    }
+    
     return handleIpc(async () => {
       const settings = getSettingsStore()
-      settings.updateUserPreferences(preferences as any)
+      settings.updateUserPreferences(preferences)
       return { preferences: settings.getUserPreferences() }
     }, 'Failed to update user preferences')
   })
