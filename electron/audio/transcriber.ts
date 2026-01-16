@@ -63,7 +63,7 @@ export class Transcriber {
    */
   private getModelPath(): string {
     const appPath = app.isPackaged
-      ? path.dirname(app.getPath('exe'))
+      ? process.resourcesPath
       : app.getAppPath()
     const modelsDir = path.join(appPath, 'models')
     return path.join(modelsDir, 'ggml-small.en.bin')

@@ -45,7 +45,7 @@ function setupPermissionHandlers() {
  */
 function checkWhisperComponents(): boolean {
   const appPath = app.isPackaged
-    ? path.dirname(app.getPath('exe'))
+    ? process.resourcesPath
     : app.getAppPath()
   const modelPath = path.join(appPath, 'models', 'ggml-small.en.bin')
   const binaryPath = path.join(appPath, 'models', 'whisper')
