@@ -2,10 +2,11 @@ import type { RecordedAction, TranscriptSegment } from '../../shared/types'
 
 // Configuration constants for the distribution algorithm
 // These can be overridden via settings
+// Updated for better precision: tighter windows for more accurate voice-to-action association
 let TIME_WINDOWS = {
-  LOOKBACK: 10000,  // 10 seconds before action
-  LOOKAHEAD: 5000,  // 5 seconds after action
-  LONG_SEGMENT_THRESHOLD: 3000, // 3+ seconds = long segment
+  LOOKBACK: 4000,  // 4 seconds before action (reduced from 10s for precision)
+  LOOKAHEAD: 2000,  // 2 seconds after action (reduced from 5s for precision)
+  LONG_SEGMENT_THRESHOLD: 2000, // 2+ seconds = long segment (reduced from 3s)
 }
 
 /**
