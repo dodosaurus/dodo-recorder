@@ -132,6 +132,11 @@ cd dodo-recorder
 npm install
 ```
 
+> **Note:** The `npm install` command automatically installs Playwright Chromium browser via a postinstall script. If you encounter issues, you can manually install it with:
+> ```bash
+> npx playwright install chromium
+> ```
+
 #### 2. Download Whisper Model (REQUIRED)
 
 The Whisper model file (466 MB) is not in the repository. Download it once:
@@ -197,7 +202,6 @@ xattr -cr /Applications/Dodo\ Recorder.app
 ```
 
 This is normal for unsigned apps. See the [Installation Guide](docs/INSTALLATION.md) for detailed steps and alternative methods.
-
 ### "Whisper model not found" Error
 
 **Problem:** App can't find `models/ggml-small.en.bin`
@@ -274,6 +278,9 @@ A: Yes! The session output is framework-agnostic. AI agents can generate tests f
 
 **Q: Is my voice data sent to the cloud?**
 A: No. All transcription happens locally using Whisper.cpp. Your voice recordings never leave your machine.
+
+**Q: Why do I get "Playwright browser not installed" error?**
+A: Run `npx playwright install chromium` to download the Playwright Chromium browser. The `npm install` command should do this automatically via a postinstall script, but you may need to run it manually if that fails.
 
 ---
 

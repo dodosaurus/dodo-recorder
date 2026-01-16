@@ -199,20 +199,6 @@ If everything works, you're ready to start recording! 🎉
 
 ---
 
-## Alternative Installation Methods
-
-### Homebrew (Coming Soon)
-
-We're working on submitting Dodo Recorder to Homebrew Cask. Once available, you'll be able to install with:
-
-```bash
-brew install --cask dodo-recorder
-```
-
-This will bypass the quarantine flag issue entirely.
-
-Track progress: [#issue](https://github.com/dodosaurus/dodo-recorder/issues) _(to be created)_
-
 ### Building from Source
 
 If you prefer to build from source:
@@ -262,19 +248,6 @@ Track progress: Check the [project roadmap](https://github.com/dodosaurus/dodo-r
 - **Documentation**: Check the [User Guide](user_guide.md) for features and usage
 - **Issues**: Report bugs or request features on [GitHub Issues](https://github.com/dodosaurus/dodo-recorder/issues)
 - **Discussions**: Ask questions in [GitHub Discussions](https://github.com/dodosaurus/dodo-recorder/discussions)
-
----
-
-## Contributing
-
-Want to help with code signing or distribution?
-
-- **GitHub Sponsors**: Help fund an Apple Developer account
-- **Homebrew Cask**: Submit a PR to add Dodo Recorder to Homebrew
-- **Documentation**: Improve installation guides and troubleshooting
-- **Testing**: Report installation issues on different macOS versions
-
-See [`CONTRIBUTING.md`](../CONTRIBUTING.md) for more ways to contribute.
 
 ---
 

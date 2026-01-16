@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build && electron-builder",
     "preview": "vite preview",
-    "electron:build": "vite build && electron-builder"
+    "electron:build": "vite build && electron-builder",
+    "postinstall": "playwright install chromium"
   },
   "keywords": [
     "playwright",

@@ -2,6 +2,7 @@ import { chromium, Browser, Page, Frame } from 'playwright'
 import { EventEmitter } from 'events'
 import { randomUUID } from 'crypto'
 import path from 'path'
+import fs from 'fs'
 import { logger } from '../utils/logger'
 import type { RecordedAction } from '../../shared/types'
 import { getInjectionScript } from './injected-script'
@@ -17,6 +18,20 @@ export class BrowserRecorder extends EventEmitter {
   private initialNavigationComplete: boolean = false
 
   /**
+   * Checks if Playwright Chromium browser is installed
+   * @returns true if browser is installed, false otherwise
+   */
+  private async checkBrowserInstalled(): Promise<boolean> {
+    try {
+      // Try to get browser executable path
+      const browserPath = chromium.executablePath()
+      return fs.existsSync(browserPath)
+    } catch (error) {
+      return false
+    }
+  }
+
+  /**
    * Starts recording browser interactions
    * @param url - The URL to navigate to
    * @param screenshotDir - Optional directory to save screenshots
@@ -28,6 +43,18 @@ export class BrowserRecorder extends EventEmitter {
     this.actions = []
     this.screenshotDir = screenshotDir || null
     this.initialNavigationComplete = false
+
+    // Check if Playwright browsers are installed
+    const browserInstalled = await this.checkBrowserInstalled()
+    if (!browserInstalled) {
+      const errorMessage =
+        'Playwright Chromium browser is not installed.\n\n' +
+        'Please run the following command to install it:\n' +
+        '  npx playwright install chromium\n\n' +
+        'After installation, restart the app and try again.'
+      logger.error('❌ Playwright browser not installed')
+      throw new Error(errorMessage)
+    }
 
     this.browser = await chromium.launch({
       headless: false,

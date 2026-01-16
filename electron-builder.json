@@ -49,6 +49,17 @@
       "filter": [
         "ffmpeg*"
       ]
+    },
+    {
+      "from": "node_modules/playwright-core/.local-browsers",
+      "to": "playwright-browsers",
+      "filter": [
+        "**/*"
+      ]
     }
+  ],
+  "asarUnpack": [
+    "**/*.node",
+    "resources/playwright-browsers/**/*"
   ]
 }
