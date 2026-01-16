@@ -188,21 +188,8 @@ export function TranscriptView() {
               )
             }
 
-            if (part.type === 'screenshot' && part.screenshotFilename) {
-              return (
-                <span
-                  key={`screenshot-${index}`}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 mx-0.5 rounded-md bg-indigo-500/10 text-indigo-400 align-middle"
-                  title={`Screenshot: ${part.screenshotFilename}`}
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span className="text-xs font-mono font-medium">
-                    {part.screenshotFilename}
-                  </span>
-                </span>
-              )
-            }
-
+            // Screenshot references are already shown as action badges with type 'screenshot'
+            // so we skip rendering separate screenshot filename badges to avoid duplication
             return null
           })}
         </div>
