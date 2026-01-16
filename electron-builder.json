@@ -51,7 +51,7 @@
       ]
     },
     {
-      "from": "node_modules/playwright-core/.local-browsers",
+      "from": "playwright-browsers",
       "to": "playwright-browsers",
       "filter": [
         "**/*"

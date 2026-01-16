@@ -1,8 +1,45 @@
+import path from 'path'
+import fs from 'fs'
+
+/**
+ * Gets the path to the Playwright browsers directory
+ * In development: uses project root's playwright-browsers
+ * In production: uses app.asar's resources/playwright-browsers
+ *
+ * IMPORTANT: This must be called BEFORE importing Playwright because
+ * Playwright reads PLAYWRIGHT_BROWSERS_PATH at module load time.
+ */
+function getBrowsersPath(): string {
+  // Check if we're in development mode
+  // In development, process.resourcesPath points to Electron's own resources,
+  // not our project's resources. We need to check NODE_ENV or use a different approach.
+  const isDevelopment = process.env.NODE_ENV === 'development' ||
+                      process.env.VITE_DEV_SERVER_URL !== undefined ||
+                      !process.resourcesPath?.includes('app.asar')
+
+  if (isDevelopment) {
+    // In development, use the project root's playwright-browsers directory
+    return path.join(process.cwd(), 'playwright-browsers')
+  }
+
+  // In production (packaged app), resources are in app.asar
+  if (process.resourcesPath) {
+    return path.join(process.resourcesPath, 'playwright-browsers')
+  }
+
+  // Fallback to project root
+  return path.join(process.cwd(), 'playwright-browsers')
+}
+
+// Set PLAYWRIGHT_BROWSERS_PATH BEFORE importing Playwright
+// Playwright reads this environment variable at module load time
+const browsersPath = getBrowsersPath()
+process.env.PLAYWRIGHT_BROWSERS_PATH = browsersPath
+
+// Now import Playwright after setting the environment variable
 import { chromium, Browser, Page, Frame } from 'playwright'
 import { EventEmitter } from 'events'
 import { randomUUID } from 'crypto'
-import path from 'path'
-import fs from 'fs'
 import { logger } from '../utils/logger'
 import type { RecordedAction } from '../../shared/types'
 import { getInjectionScript } from './injected-script'
@@ -44,14 +81,16 @@ export class BrowserRecorder extends EventEmitter {
     this.screenshotDir = screenshotDir || null
     this.initialNavigationComplete = false
 
+    // Log the Playwright browsers path (set at module load time)
+    logger.debug(`Playwright browsers path: ${browsersPath}`)
+
     // Check if Playwright browsers are installed
     const browserInstalled = await this.checkBrowserInstalled()
     if (!browserInstalled) {
       const errorMessage =
         'Playwright Chromium browser is not installed.\n\n' +
-        'Please run the following command to install it:\n' +
-        '  npx playwright install chromium\n\n' +
-        'After installation, restart the app and try again.'
+        `Expected location: ${browsersPath}\n\n` +
+        'This should have been bundled with the app. Please reinstall the application.'
       logger.error('❌ Playwright browser not installed')
       throw new Error(errorMessage)
     }

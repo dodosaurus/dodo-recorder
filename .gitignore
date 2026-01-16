@@ -27,6 +27,9 @@ npm-debug.log*
 # Whisper models (gitignore *.bin files only, binary is committed)
 models/*.bin
 
+# Playwright browsers (installed locally for bundling, platform-specific)
+playwright-browsers/
+
 # Temp files
 *.tmp
 .temp/

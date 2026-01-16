@@ -132,9 +132,11 @@ cd dodo-recorder
 npm install
 ```
 
-> **Note:** The `npm install` command automatically installs Playwright Chromium browser via a postinstall script. If you encounter issues, you can manually install it with:
+> **Note:** The `npm install` command automatically installs Playwright Chromium browser to a local `playwright-browsers/` directory via a postinstall script. This directory is bundled with the production app so the browser is available on all machines.
+>
+> If you encounter issues, you can manually install the browsers with:
 > ```bash
-> npx playwright install chromium
+> ./build/install-playwright-browsers.sh
 > ```
 
 #### 2. Download Whisper Model (REQUIRED)
@@ -280,7 +282,7 @@ A: Yes! The session output is framework-agnostic. AI agents can generate tests f
 A: No. All transcription happens locally using Whisper.cpp. Your voice recordings never leave your machine.
 
 **Q: Why do I get "Playwright browser not installed" error?**
-A: Run `npx playwright install chromium` to download the Playwright Chromium browser. The `npm install` command should do this automatically via a postinstall script, but you may need to run it manually if that fails.
+A: Run `./build/install-playwright-browsers.sh` to download the Playwright Chromium browser to the local `playwright-browsers/` directory. The `npm install` command should do this automatically via a postinstall script. If building for production, ensure the browsers are installed before running `npm run electron:build`.
 
 ---
 
