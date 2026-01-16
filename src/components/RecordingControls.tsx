@@ -302,37 +302,45 @@ export function RecordingControls() {
 
     if (status === 'recording' && audioStatus === 'recording') {
       return (
-        <div className="flex items-center gap-2 text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-md">
-          <Mic className="h-3.5 w-3.5 animate-pulse" />
-          <span>Recording audio</span>
-          <span className="ml-auto font-mono">{audioChunksCount}s</span>
+        <div className="flex items-center justify-center text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-md">
+          <div className="flex items-center gap-2">
+            <Mic className="h-3.5 w-3.5 animate-pulse" />
+            <span>Recording audio</span>
+            <span className="font-mono">{audioChunksCount}s</span>
+          </div>
         </div>
       )
     }
 
     if (audioStatus === 'processing') {
       return (
-        <div className="flex items-center gap-2 text-xs bg-amber-500/10 text-amber-400 px-3 py-2 rounded-md">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          <span>Transcribing audio with Whisper...</span>
+        <div className="flex items-center justify-center text-xs bg-amber-500/10 text-amber-400 px-3 py-2 rounded-md">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <span>Transcribing audio...</span>
+          </div>
         </div>
       )
     }
 
     if (audioStatus === 'complete' && transcriptSegments.length > 0) {
       return (
-        <div className="flex items-center gap-2 text-xs bg-emerald-500/10 text-emerald-400 px-3 py-2 rounded-md">
-          <Mic className="h-3.5 w-3.5" />
-          <span>{transcriptSegments.length} voice segment{transcriptSegments.length !== 1 ? 's' : ''} transcribed</span>
+        <div className="flex items-center justify-center text-xs bg-emerald-500/10 text-emerald-400 px-3 py-2 rounded-md">
+          <div className="flex items-center gap-2">
+            <Mic className="h-3.5 w-3.5" />
+            <span>{transcriptSegments.length} voice segment{transcriptSegments.length !== 1 ? 's' : ''} transcribed</span>
+          </div>
         </div>
       )
     }
 
     if (audioStatus === 'error') {
       return (
-        <div className="flex items-center gap-2 text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-md">
-          <MicOff className="h-3.5 w-3.5" />
-          <span>{audioError || 'Audio error'}</span>
+        <div className="flex items-center justify-center text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-md">
+          <div className="flex items-center gap-2">
+            <MicOff className="h-3.5 w-3.5" />
+            <span>{audioError || 'Audio error'}</span>
+          </div>
         </div>
       )
     }
