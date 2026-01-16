@@ -42,6 +42,13 @@
       "filter": [
         "**/*"
       ]
+    },
+    {
+      "from": "node_modules/ffmpeg-static",
+      "to": "ffmpeg-static",
+      "filter": [
+        "ffmpeg*"
+      ]
     }
   ]
 }

@@ -6,11 +6,28 @@ import { ensureDir, safeUnlink, getTempPath } from '../utils/fs'
 import { logger } from '../utils/logger'
 import type { TranscriptSegment } from '../../shared/types'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const ffmpegPath = require('ffmpeg-static') as string
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const ffmpeg = require('fluent-ffmpeg')
 
-logger.debug('FFmpeg path:', ffmpegPath)
+/**
+ * Get ffmpeg binary path, handling both development and production environments
+ */
+function getFfmpegPath(): string {
+  if (app.isPackaged) {
+    // In production, ffmpeg is extracted to Resources/ffmpeg-static/
+    const resourcesPath = process.resourcesPath
+    const ffmpegPath = path.join(resourcesPath, 'ffmpeg-static', 'ffmpeg')
+    logger.debug('FFmpeg path (production):', ffmpegPath)
+    return ffmpegPath
+  } else {
+    // In development, use ffmpeg-static from node_modules
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const ffmpegPath = require('ffmpeg-static') as string
+    logger.debug('FFmpeg path (development):', ffmpegPath)
+    return ffmpegPath
+  }
+}
+
+const ffmpegPath = getFfmpegPath()
 ffmpeg.setFfmpegPath(ffmpegPath)
 
 interface WhisperResult {
