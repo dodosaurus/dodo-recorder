@@ -18,6 +18,9 @@ export interface ElectronAPI {
   generateTranscriptWithReferences: (actions: RecordedAction[], sessionId: string, startTime: number, startUrl?: string) => Promise<IpcResult<{ transcript: string }>>
   getUserPreferences: () => Promise<IpcResult<{ preferences: UserPreferences }>>
   updateUserPreferences: (preferences: Partial<UserPreferences>) => Promise<IpcResult<{ preferences: UserPreferences }>>
+  getLogPath: () => Promise<string>
+  openLogFile: () => Promise<IpcResult>
+  openLogFolder: () => Promise<IpcResult>
   minimizeWindow?: () => void
   maximizeWindow?: () => void
   closeWindow?: () => void

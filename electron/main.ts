@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, systemPreferences, session } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, systemPreferences, session, shell } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { cleanupOldTempFiles } from './utils/fs'
@@ -135,6 +135,9 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  // Log startup information
+  logger.logStartupInfo()
+  
   // Check if Whisper components exist
   if (!checkWhisperComponents()) {
     app.quit()
@@ -195,4 +198,32 @@ ipcMain.handle('select-output-folder', async () => {
   })
   if (result.canceled) return null
   return result.filePaths[0]
+})
+
+// Log management IPC handlers
+ipcMain.handle('get-log-path', () => {
+  return logger.getLogPath()
+})
+
+ipcMain.handle('open-log-file', async () => {
+  try {
+    const logPath = logger.getLogPath()
+    await shell.openPath(logPath)
+    return { success: true }
+  } catch (error) {
+    logger.error('Failed to open log file:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
+})
+
+ipcMain.handle('open-log-folder', async () => {
+  try {
+    const logPath = logger.getLogPath()
+    const logDir = path.dirname(logPath)
+    await shell.openPath(logDir)
+    return { success: true }
+  } catch (error) {
+    logger.error('Failed to open log folder:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
+  }
 })

@@ -1,76 +1,76 @@
 /**
- * Logger utility for handling sensitive data in logs
- * Provides environment-aware logging with different levels
+ * Production-ready logger using electron-log
+ * Automatically logs to files in standard OS locations:
+ * - macOS: ~/Library/Logs/dodo-recorder/main.log
+ * - Windows: %USERPROFILE%\AppData\Roaming\dodo-recorder\logs\main.log
+ * - Linux: ~/.config/dodo-recorder/logs/main.log
+ *
+ * Features:
+ * - Automatic file rotation
+ * - Console output in development
+ * - Persistent logs in production
+ * - Standard log levels (debug, info, warn, error)
  */
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+import log from 'electron-log'
+import { app } from 'electron'
 
+// Configure log file format
+log.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}'
+log.transports.console.format = '[{h}:{i}:{s}.{ms}] [{level}] {text}'
+
+// Set log levels based on environment
 const isDevelopment = process.env.NODE_ENV === 'development'
 
-/**
- * Sanitizes sensitive data from log messages
- * Removes file paths, tokens, and other sensitive information
- */
-function sanitizeMessage(msg: string): string {
-  if (isDevelopment) {
-    // In development, show full messages
-    return msg
-  }
+if (isDevelopment) {
+  log.transports.file.level = 'debug'
+  log.transports.console.level = 'debug'
+} else {
+  log.transports.file.level = 'info'
+  log.transports.console.level = 'error' // Only show errors in production console
+}
+
+// Enable file logging with rotation
+log.transports.file.maxSize = 10 * 1024 * 1024 // 10 MB
+
+// Log startup information once
+let startupLogged = false
+export function logStartupInfo(): void {
+  if (startupLogged) return
+  startupLogged = true
   
-  // In production, sanitize sensitive patterns
-  return msg
-    .replace(/\/Users\/[^/]+/g, '/Users/***')
-    .replace(/\/home\/[^/]+/g, '/home/***')
-    .replace(/C:\\Users\\[^\\]+/g, 'C:\\Users\\***')
-    .replace(/token[=:]\s*[^\s]+/gi, 'token=***')
-    .replace(/password[=:]\s*[^\s]+/gi, 'password=***')
-    .replace(/api[_-]?key[=:]\s*[^\s]+/gi, 'api_key=***')
+  log.info('='.repeat(80))
+  log.info('Dodo Recorder Starting')
+  log.info('='.repeat(80))
+  log.info(`App Version: ${app.getVersion()}`)
+  log.info(`Electron: ${process.versions.electron}`)
+  log.info(`Chrome: ${process.versions.chrome}`)
+  log.info(`Node: ${process.versions.node}`)
+  log.info(`Platform: ${process.platform} ${process.arch}`)
+  log.info(`Environment: ${isDevelopment ? 'development' : 'production'}`)
+  log.info(`Log File: ${log.transports.file.getFile().path}`)
+  log.info('='.repeat(80))
 }
 
 /**
- * Formats log message with timestamp and level
+ * Get the path to the current log file
  */
-function formatMessage(level: LogLevel, msg: string): string {
-  const timestamp = new Date().toISOString()
-  return `[${timestamp}] [${level.toUpperCase()}] ${msg}`
+export function getLogPath(): string {
+  return log.transports.file.getFile().path
 }
 
+/**
+ * Logger interface matching our previous implementation
+ */
 export const logger = {
-  /**
-   * Debug level logging - only shown in development
-   */
-  debug: (msg: string, ...args: unknown[]): void => {
-    if (isDevelopment) {
-      console.log(formatMessage('debug', sanitizeMessage(msg)), ...args)
-    }
-  },
-
-  /**
-   * Info level logging - shown in all environments
-   */
-  info: (msg: string, ...args: unknown[]): void => {
-    console.log(formatMessage('info', sanitizeMessage(msg)), ...args)
-  },
-
-  /**
-   * Warning level logging - shown in all environments
-   */
-  warn: (msg: string, ...args: unknown[]): void => {
-    console.warn(formatMessage('warn', sanitizeMessage(msg)), ...args)
-  },
-
-  /**
-   * Error level logging - shown in all environments
-   */
-  error: (msg: string, ...args: unknown[]): void => {
-    console.error(formatMessage('error', sanitizeMessage(msg)), ...args)
-  },
-
-  /**
-   * Log with custom level
-   */
-  log: (level: LogLevel, msg: string, ...args: unknown[]): void => {
-    const method = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log
-    method(formatMessage(level, sanitizeMessage(msg)), ...args)
-  },
+  debug: (...args: any[]): void => log.debug(...args),
+  info: (...args: any[]): void => log.info(...args),
+  warn: (...args: any[]): void => log.warn(...args),
+  error: (...args: any[]): void => log.error(...args),
+  
+  // Additional helpers
+  getLogPath,
+  logStartupInfo,
 }
+
+export default logger

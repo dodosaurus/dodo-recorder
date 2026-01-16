@@ -173,11 +173,15 @@ try {
   throw new Error('Navigation failed')
 }
 
-// Use logger utility (not console.log directly)
+// Use logger utility (not console.log directly in main process)
 import { logger } from './utils/logger'
 logger.info('Recording started')
 logger.error('Failed to start recording:', error)
-logger.debug('Debug info (dev only)')  // Only shows in NODE_ENV=development
+logger.debug('Debug info')  // Shows in development, logs to file in production
+
+// In renderer process (React), console.log is fine for debugging
+console.log('🎬 startRecording() called')
+console.error('❌ Failed to start recording:', error)
 ```
 
 ### Comments and Documentation
@@ -260,11 +264,85 @@ session-YYYY-MM-DD-HHMMSS/
 - Priority: testId > text/placeholder/role > css > xpath
 - Use high confidence locators when available
 
+## Logging and Debugging
+
+### Production Logging with electron-log
+
+The app uses [`electron-log`](https://www.npmjs.com/package/electron-log) for production-ready logging:
+
+**Features:**
+- Automatic file logging to standard OS locations
+- Console output in development
+- Log rotation (max 10MB per file)
+- Multiple log levels (debug, info, warn, error)
+
+**Log Locations:**
+```
+macOS:    ~/Library/Logs/dodo-recorder/main.log
+Windows:  %USERPROFILE%\AppData\Roaming\dodo-recorder\logs\main.log
+Linux:    ~/.config/dodo-recorder/logs/main.log
+```
+
+**Usage in Main Process:**
+```typescript
+import { logger } from './utils/logger'
+
+// Log levels
+logger.debug('Detailed debug info')    // Dev only
+logger.info('Normal operation')         // Always logged to file
+logger.warn('Warning message')          // Always logged
+logger.error('Error occurred', error)   // Always logged
+
+// Get log file path
+const logPath = logger.getLogPath()
+
+// Log startup info (call once in main.ts)
+logger.logStartupInfo()
+```
+
+**Usage in Renderer Process:**
+```typescript
+// Use console.log for renderer debugging - shows in DevTools
+console.log('🎬 Component rendered')
+console.error('❌ Error in component:', error)
+
+// Access logs via IPC
+const logPath = await window.electronAPI.getLogPath()
+await window.electronAPI.openLogFile()    // Opens log in default editor
+await window.electronAPI.openLogFolder()  // Opens log folder
+```
+
+**In-App Log Access:**
+- The StatusBar component includes "View Logs" and folder buttons
+- Located in bottom-right of the app window
+- Users can click to open logs without knowing the path
+
+**Log Levels by Environment:**
+```typescript
+// Development (npm run dev)
+- Console: debug level
+- File: debug level
+
+// Production (built app)
+- Console: error level only
+- File: info level and above
+```
+
+**Best Practices:**
+- Use `logger` in main process (Electron), `console.log` in renderer (React)
+- Include context with errors: `logger.error('Operation failed', { url, reason })`
+- Use emojis for visual scanning: `logger.info('🎬 Recording started')`
+- Log state transitions: `logger.info(`Status: ${oldStatus} -> ${newStatus}`)`
+
+**Debugging Production Issues:**
+See [`docs/LOGGING_AND_DEBUGGING.md`](docs/LOGGING_AND_DEBUGGING.md) for comprehensive debugging guide.
+
 ## Important Notes
 
 - **Whisper Model:** The 466MB `models/ggml-small.en.bin` file must be downloaded manually (not in git). The app shows an error dialog if missing.
 - **Path Alias:** Use `@/*` to import from `src/` directory
 - **Tailwind:** Dark mode only (`darkMode: 'class'`), custom color scheme defined in `tailwind.config.js`
 - **Security:** Validate all IPC inputs (see `electron/utils/validation.ts` for patterns)
-- **Logging:** Use `logger` utility, which sanitizes sensitive paths/tokens in production
+- **Logging:** Main process uses `electron-log` (persists to file), renderer uses `console.log` (DevTools)
 - **IPC Handlers:** Register once in `electron/ipc/handlers.ts` to prevent duplicates
+- **Production Debugging:** Use "View Logs" button in app status bar or check log file locations above

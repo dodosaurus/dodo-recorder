@@ -218,6 +218,14 @@ Or download manually from [Hugging Face](https://huggingface.co/ggerganov/whispe
 git pull origin main
 ```
 
+### Debugging Production Builds
+
+For issues in production builds where the console isn't visible, use the integrated logging system:
+
+- **In-app access:** "View Logs" button in the status bar (bottom-right)
+- **macOS logs:** `~/Library/Logs/dodo-recorder/main.log`
+- **Full guide:** See **[Logging and Debugging Guide](docs/LOGGING_AND_DEBUGGING.md)**
+
 ### Windows/Linux Binary (Future Development)
 
 > **Note:** This section is for future reference when adding Windows/Linux support.
@@ -272,6 +280,7 @@ A: No. All transcription happens locally using Whisper.cpp. Your voice recording
 ## 📚 Documentation
 
 - **[Installation Guide](docs/INSTALLATION.md)**: Detailed installation steps, troubleshooting, and macOS quarantine flag fixes
+- **[Logging and Debugging Guide](docs/logs_and_debugging.md)**: How to access logs and debug production issues
 - **[User Guide](docs/user_guide.md)**: Complete feature documentation, keyboard shortcuts, and output format details
 - **[Architecture](docs/architecture.md)**: System design, data flow, and technical implementation
 - **[Voice Transcription](docs/voice_transcription.md)**: Deep dive into the local transcription system

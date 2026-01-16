@@ -52,7 +52,20 @@ export function RecordingControls() {
   const canSave = status === 'idle' && actions.length > 0
 
   const startRecording = async () => {
-    if (!canStart || !window.electronAPI) return
+    console.log('🎬 startRecording() called')
+    console.log('  canStart:', canStart)
+    console.log('  startUrl:', startUrl)
+    console.log('  outputPath:', outputPath)
+    console.log('  status:', status)
+    console.log('  isVoiceEnabled:', isVoiceEnabled)
+    console.log('  window.electronAPI:', !!window.electronAPI)
+    
+    if (!canStart || !window.electronAPI) {
+      console.error('❌ Cannot start recording - preconditions not met')
+      console.error('  canStart:', canStart)
+      console.error('  electronAPI available:', !!window.electronAPI)
+      return
+    }
 
     setAudioError(null)
     setSessionSaved(false)
@@ -61,17 +74,23 @@ export function RecordingControls() {
     // This ensures audio timestamps align with action timestamps
     const recordingStartTime = Date.now()
     setStartTime(recordingStartTime)
+    console.log('⏰ Recording start time set:', recordingStartTime)
 
     // Start audio recording FIRST (before browser) to capture everything
     if (isVoiceEnabled) {
+      console.log('🎤 Voice recording enabled - checking microphone permission...')
       try {
         const permResult = await window.electronAPI.checkMicrophonePermission()
+        console.log('🎤 Microphone permission result:', permResult)
+        
         if (!permResult.granted) {
+          console.error('❌ Microphone permission denied')
           setAudioError('Microphone permission denied')
           setAudioStatus('error')
           return
         }
         
+        console.log('🎤 Requesting microphone stream...')
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
@@ -80,6 +99,7 @@ export function RecordingControls() {
             sampleRate: 16000  // Match Whisper's expected sample rate
           }
         })
+        console.log('🎤 Microphone stream acquired')
         
         mediaRecorderRef.current = new MediaRecorder(stream, {
           mimeType: 'audio/webm;codecs=opus',
@@ -98,27 +118,47 @@ export function RecordingControls() {
         setAudioStatus('recording')
         console.log('🎤 Audio recording started at:', recordingStartTime)
       } catch (err) {
-        console.error('Failed to start audio recording:', err)
+        console.error('❌ Failed to start audio recording:', err)
         setAudioError(err instanceof Error ? err.message : 'Failed to access microphone')
         setAudioStatus('error')
         return
       }
+    } else {
+      console.log('🔇 Voice recording disabled')
     }
 
     // Now start browser recording - pass the startTime so backend uses the same timestamp
-    const result = await window.electronAPI.startRecording(startUrl, outputPath, recordingStartTime)
+    console.log('🌐 Starting browser recording...')
+    console.log('  URL:', startUrl)
+    console.log('  Output:', outputPath)
+    console.log('  Start time:', recordingStartTime)
     
-    if (!result.success) {
-      console.error('Failed to start recording:', result.error)
+    try {
+      const result = await window.electronAPI.startRecording(startUrl, outputPath, recordingStartTime)
+      console.log('🌐 Browser recording result:', result)
+      
+      if (!result.success) {
+        console.error('❌ Failed to start recording:', result.error)
+        // Stop audio if browser failed to start
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          console.log('🎤 Stopping audio due to browser recording failure')
+          mediaRecorderRef.current.stop()
+          mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
+        }
+        return
+      }
+
+      console.log('✅ Recording started successfully')
+      setStatus('recording')
+    } catch (err) {
+      console.error('❌ Exception during startRecording IPC call:', err)
       // Stop audio if browser failed to start
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        console.log('🎤 Stopping audio due to exception')
         mediaRecorderRef.current.stop()
         mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
       }
-      return
     }
-
-    setStatus('recording')
   }
 
   const stopRecording = async () => {
