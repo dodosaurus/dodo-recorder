@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/assets/saurus.png" alt="Dodo Recorder Icon" width="128" height="128">
+  <img src="src/assets/saurus_no_bg.png" alt="Dodo Recorder Icon" width="128" height="128">
 </p>
 
 <h1 align="center">Dodo Recorder</h1>

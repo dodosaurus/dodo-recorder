@@ -48,7 +48,7 @@ If you add tests:
 import { app, BrowserWindow } from 'electron'          // External
 import { logger } from './utils/logger'                // Internal
 import type { RecordedAction } from '@/types/session'  // Types
-import saurusIcon from '@/assets/saurus.png'           // Assets
+import saurusIcon from '@/assets/saurus_no_bg.png'           // Assets
 
 // Use path alias @/* for src/ files (configured in tsconfig.json and vite.config.ts)
 import { useRecordingStore } from '@/stores/recordingStore'
