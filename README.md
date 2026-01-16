@@ -91,6 +91,16 @@ session-YYYY-MM-DD-HHMMSS/
 
 > **Note:** This initial release supports macOS only. The application is designed with cross-platform compatibility in mind, and Windows/Linux builds will be available in a future release.
 
+#### macOS First Launch
+
+After installation, you'll need to remove the quarantine flag (one-time step):
+
+```bash
+xattr -cr /Applications/Dodo\ Recorder.app
+```
+
+**Why?** Dodo Recorder is currently unsigned (code signing requires an Apple Developer account at $99/year). This is common for open-source projects. For detailed installation steps, troubleshooting, and alternative methods, see the **[Installation Guide](docs/INSTALLATION.md)**.
+
 ### First Recording
 
 1. Launch Dodo Recorder
@@ -177,6 +187,17 @@ dodo-recorder/
 
 ## 🔧 Troubleshooting
 
+### "App is damaged" Error on macOS
+
+**Problem:** macOS shows "Dodo Recorder is damaged and can't be opened"
+
+**Solution:** Remove the quarantine flag:
+```bash
+xattr -cr /Applications/Dodo\ Recorder.app
+```
+
+This is normal for unsigned apps. See the [Installation Guide](docs/INSTALLATION.md) for detailed steps and alternative methods.
+
 ### "Whisper model not found" Error
 
 **Problem:** App can't find `models/ggml-small.en.bin`
@@ -219,31 +240,38 @@ chmod +x /path/to/dodo-recorder/models/whisper
 
 ## ❓ FAQ
 
-**Q: Why is the model not in git?**  
+**Q: Why does macOS say the app is damaged?**
+A: Dodo Recorder is currently unsigned (code signing requires a $99/year Apple Developer account). Run `xattr -cr /Applications/Dodo\ Recorder.app` to fix this. See the [Installation Guide](docs/INSTALLATION.md) for details.
+
+**Q: Is it safe to run an unsigned app?**
+A: Yes! Dodo Recorder is open source—you can audit the code yourself. All processing happens locally on your machine with no telemetry or data collection.
+
+**Q: Why is the model not in git?**
 A: It's 466 MB—too large for git repositories. Download it once manually.
 
-**Q: Why is the binary in git?**  
+**Q: Why is the binary in git?**
 A: It's only 1 MB and simplifies setup significantly.
 
-**Q: Can I use a different Whisper model?**  
+**Q: Can I use a different Whisper model?**
 A: The app is hard-coded to use `small.en` for consistency and performance.
 
-**Q: Do I need to download the model for every clone?**  
+**Q: Do I need to download the model for every clone?**
 A: Yes, but only once per machine. The file persists across npm installs.
 
 **Q: What if I'm not on macOS?**
 A: The current release (v0.1.0) supports macOS only. Windows and Linux support is planned for a future release. The codebase is designed to be cross-platform compatible, and the necessary abstraction layers are already in place.
 
-**Q: Does this work with frameworks other than Playwright?**  
+**Q: Does this work with frameworks other than Playwright?**
 A: Yes! The session output is framework-agnostic. AI agents can generate tests for Playwright, Cypress, Selenium, Puppeteer, or any other framework.
 
-**Q: Is my voice data sent to the cloud?**  
+**Q: Is my voice data sent to the cloud?**
 A: No. All transcription happens locally using Whisper.cpp. Your voice recordings never leave your machine.
 
 ---
 
 ## 📚 Documentation
 
+- **[Installation Guide](docs/INSTALLATION.md)**: Detailed installation steps, troubleshooting, and macOS quarantine flag fixes
 - **[User Guide](docs/user_guide.md)**: Complete feature documentation, keyboard shortcuts, and output format details
 - **[Architecture](docs/architecture.md)**: System design, data flow, and technical implementation
 - **[Voice Transcription](docs/voice_transcription.md)**: Deep dive into the local transcription system
