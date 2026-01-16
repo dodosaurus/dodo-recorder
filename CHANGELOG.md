@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Initial Release
 
+#### Platform Support
+- ✅ **macOS** - Fully supported
+- ⏳ **Windows** - Planned for future release
+- ⏳ **Linux** - Planned for future release
+
+> **Note:** This initial release supports macOS only. The codebase is designed to be cross-platform, and Windows/Linux support will be added in a future release. All necessary abstraction layers for cross-platform compatibility are already in place.
+
 #### Features
 - 🎙️ Voice commentary recording with Whisper.cpp transcription (fully offline)
 - 🎭 Browser interaction recording via Playwright

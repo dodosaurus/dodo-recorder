@@ -8,6 +8,10 @@
   A desktop application for recording browser interactions and voice commentary, producing session bundles optimized for AI-assisted Playwright test generation.
 </p>
 
+<p align="center">
+  <strong>⚠️ Currently macOS only</strong> • Windows/Linux support planned for future release
+</p>
+
 ---
 
 ## 🎯 Overview
@@ -63,8 +67,8 @@ session-YYYY-MM-DD-HHMMSS/
 
 | Shortcut | Action |
 |----------|--------|
-| **Cmd+Shift+S** (Mac)<br>**Ctrl+Shift+S** (Windows/Linux) | Take Screenshot |
-| **Alt/Option + Click** | Record Assertion |
+| **Cmd+Shift+S** | Take Screenshot |
+| **Option + Click** | Record Assertion |
 
 ### 🔐 Privacy & Local Processing
 
@@ -78,10 +82,14 @@ session-YYYY-MM-DD-HHMMSS/
 
 ### Installation
 
-Download the latest release for your platform:
-- **macOS**: `.dmg` or `.zip`
-- **Windows**: `.exe` installer or portable
-- **Linux**: AppImage or `.deb`
+**Current Release (v0.1.0):**
+- **macOS**: `.dmg` or `.zip` ✅
+
+**Coming Soon:**
+- **Windows**: `.exe` installer or portable (planned for future release)
+- **Linux**: AppImage or `.deb` (planned for future release)
+
+> **Note:** This initial release supports macOS only. The application is designed with cross-platform compatibility in mind, and Windows/Linux builds will be available in a future release.
 
 ### First Recording
 
@@ -189,9 +197,11 @@ Or download manually from [Hugging Face](https://huggingface.co/ggerganov/whispe
 git pull origin main
 ```
 
-### Windows/Linux Binary
+### Windows/Linux Binary (Future Development)
 
-The committed binary is for macOS. On Windows or Linux, build whisper.cpp manually:
+> **Note:** This section is for future reference when adding Windows/Linux support.
+
+The committed binary is for macOS. When Windows/Linux support is added, the whisper.cpp binary will need to be built for those platforms:
 
 ```bash
 # Clone and build whisper.cpp
@@ -221,8 +231,8 @@ A: The app is hard-coded to use `small.en` for consistency and performance.
 **Q: Do I need to download the model for every clone?**  
 A: Yes, but only once per machine. The file persists across npm installs.
 
-**Q: What if I'm not on macOS?**  
-A: Build the whisper.cpp binary for your platform (see troubleshooting section).
+**Q: What if I'm not on macOS?**
+A: The current release (v0.1.0) supports macOS only. Windows and Linux support is planned for a future release. The codebase is designed to be cross-platform compatible, and the necessary abstraction layers are already in place.
 
 **Q: Does this work with frameworks other than Playwright?**  
 A: Yes! The session output is framework-agnostic. AI agents can generate tests for Playwright, Cypress, Selenium, Puppeteer, or any other framework.
