@@ -83,7 +83,10 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
         transcriber = new Transcriber(whisperTimeout)
 
         browserRecorder.on('action', (action) => {
-          mainWindow?.webContents.send('action-recorded', action)
+          // Check if window and webContents are still valid before sending
+          if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+            mainWindow.webContents.send('action-recorded', action)
+          }
         })
 
         await browserRecorder.start(startUrl, screenshotDir)
