@@ -1,6 +1,6 @@
 import { useRecordingStore } from '@/stores/recordingStore'
 import { Button } from '@/components/ui/button'
-import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw } from 'lucide-react'
+import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw, CheckCircle } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { RecordedAction, SessionBundle } from '@/types/session'
@@ -8,9 +8,9 @@ import type { RecordedAction, SessionBundle } from '@/types/session'
 export function RecordingControls() {
   const {
     status, startUrl, outputPath, actions, transcriptSegments, notes, isVoiceEnabled,
-    audioStatus, audioChunksCount, audioError, startTime,
+    audioStatus, audioChunksCount, audioError, startTime, sessionSaved,
     setStatus, setStartTime, addAction, setTranscriptSegments, setTranscriptText, reset,
-    setAudioStatus, incrementAudioChunks, setAudioError
+    setAudioStatus, incrementAudioChunks, setAudioError, setSessionSaved
   } = useRecordingStore(useShallow((state) => ({
     status: state.status,
     startUrl: state.startUrl,
@@ -23,6 +23,7 @@ export function RecordingControls() {
     audioChunksCount: state.audioChunksCount,
     audioError: state.audioError,
     startTime: state.startTime,
+    sessionSaved: state.sessionSaved,
     setStatus: state.setStatus,
     setStartTime: state.setStartTime,
     addAction: state.addAction,
@@ -32,6 +33,7 @@ export function RecordingControls() {
     setAudioStatus: state.setAudioStatus,
     incrementAudioChunks: state.incrementAudioChunks,
     setAudioError: state.setAudioError,
+    setSessionSaved: state.setSessionSaved,
   })))
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -53,6 +55,7 @@ export function RecordingControls() {
     if (!canStart || !window.electronAPI) return
 
     setAudioError(null)
+    setSessionSaved(false)
 
     // Set start time FIRST, before any recording starts
     // This ensures audio timestamps align with action timestamps
@@ -270,6 +273,7 @@ export function RecordingControls() {
     
     if (result.success) {
       console.log('Session saved successfully to:', result.path)
+      setSessionSaved(true)
     } else {
       console.error('Failed to save session:', 'success' in result ? result.error : 'Unknown error')
     }
@@ -395,11 +399,21 @@ export function RecordingControls() {
           <Button
             className="w-full"
             size="lg"
-            variant="success"
+            variant={sessionSaved ? "outline" : "success"}
             onClick={saveSession}
+            disabled={sessionSaved}
           >
-            <Save className="h-4 w-4 mr-2" />
-            Save Session
+            {sessionSaved ? (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Session Saved
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save Session
+              </>
+            )}
           </Button>
           <Button
             className="w-full"

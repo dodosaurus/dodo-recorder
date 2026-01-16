@@ -13,6 +13,7 @@ interface RecordingState {
   outputPath: string
   notes: string
   isVoiceEnabled: boolean
+  sessionSaved: boolean
   
   audioStatus: AudioStatus
   audioChunksCount: number
@@ -32,6 +33,7 @@ interface RecordingState {
   setOutputPath: (path: string) => void
   setNotes: (notes: string) => void
   setVoiceEnabled: (enabled: boolean) => void
+  setSessionSaved: (saved: boolean) => void
   setAudioStatus: (status: AudioStatus) => void
   incrementAudioChunks: () => void
   setAudioError: (error: string | null) => void
@@ -50,6 +52,7 @@ const initialState = {
   outputPath: '',
   notes: '',
   isVoiceEnabled: true,
+  sessionSaved: false,
   audioStatus: 'idle' as AudioStatus,
   audioChunksCount: 0,
   audioError: null as string | null,
@@ -87,6 +90,8 @@ export const useRecordingStore = create<RecordingState>((set) => ({
   setNotes: (notes) => set({ notes }),
   
   setVoiceEnabled: (enabled) => set({ isVoiceEnabled: enabled }),
+
+  setSessionSaved: (saved) => set({ sessionSaved: saved }),
 
   setAudioStatus: (audioStatus) => set({ audioStatus }),
 
