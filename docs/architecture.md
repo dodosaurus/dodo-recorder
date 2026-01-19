@@ -372,7 +372,7 @@ dodo-recorder/
 | **Communication** | `fetch('/api/...')` | IPC (`ipcMain.handle` / `ipcRenderer.invoke`) |
 | **Server** | Node.js server | Main process (Node.js) |
 | **Client** | Browser | BrowserWindow (Chromium) |
-| **Deployment** | Deploy to Vercel | Build native app (`.dmg`, `.exe`) |
+| **Development** | Next.js dev server | `npm run dev` (Vite + Electron) |
 
 ---
 

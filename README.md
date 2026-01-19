@@ -5,18 +5,18 @@
 </p>
 
 <p align="center">
-  A desktop application for recording browser interactions and voice commentary, producing session bundles optimized for AI-assisted Playwright test generation.
+  A desktop application for recording browser interactions and voice commentary, producing session bundles optimized for AI-assisted test generation.
 </p>
 
 <p align="center">
-  <strong>⚠️ Currently macOS only</strong> • Windows/Linux support planned for future release
+  <strong>⚠️ Active Development</strong> • Open Source • Contributions Welcome
 </p>
 
 ---
 
 ## 🎯 Overview
 
-Dodo Recorder transforms manual browser testing into AI-ready session bundles. Record your interactions, speak your test intentions, and let the app generate comprehensive documentation that AI agents can use to write Playwright tests automatically.
+Dodo Recorder transforms manual browser testing into AI-ready session bundles. Record your interactions, speak your test intentions, and let the app generate comprehensive documentation that AI agents can use to write tests automatically.
 
 **What makes Dodo Recorder special:**
 
@@ -78,61 +78,25 @@ session-YYYY-MM-DD-HHMMSS/
 
 ---
 
-## 🚀 Quick Start
-
-### Installation
-
-**Current Release (v0.1.0):**
-- **macOS**: `.dmg` or `.zip` ✅
-
-**Coming Soon:**
-- **Windows**: `.exe` installer or portable (planned for future release)
-- **Linux**: AppImage or `.deb` (planned for future release)
-
-> **Note:** This initial release supports macOS only. The application is designed with cross-platform compatibility in mind, and Windows/Linux builds will be available in a future release.
-
-#### macOS First Launch
-
-After installation, you'll need to remove the quarantine flag (one-time step):
-
-```bash
-xattr -cr /Applications/Dodo\ Recorder.app
-```
-
-**Why?** Dodo Recorder is currently unsigned (code signing requires an Apple Developer account at $99/year). This is common for open-source projects. For detailed installation steps, troubleshooting, and alternative methods, see the **[Installation Guide](docs/INSTALLATION.md)**.
-
-### First Recording
-
-1. Launch Dodo Recorder
-2. Enter the URL you want to test
-3. Click "Start Recording"
-4. A browser window opens with a floating widget
-5. Perform your test actions and speak your intentions
-6. Click "Stop Recording" when done
-7. Find your session bundle in the configured output directory
-
-> 💡 **Pro Tip**: Speak continuously while testing. Say things like "Now I'll click the login button to verify authentication works" for better AI test generation.
-
----
-
-## 🛠️ Developer Setup
+## 🛠️ Development Setup
 
 ### Prerequisites
 
 - **Node.js 18+** and npm
 - **Git**
+- **macOS, Windows, or Linux**
 
 ### Installation Steps
 
 #### 1. Clone and Install Dependencies
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/dodosaurus/dodo-recorder.git
 cd dodo-recorder
 npm install
 ```
 
-> **Note:** The `npm install` command automatically installs Playwright Chromium browser to a local `playwright-browsers/` directory via a postinstall script. This directory is bundled with the production app so the browser is available on all machines.
+> **Note:** The `npm install` command automatically installs Playwright Chromium browser to a local `playwright-browsers/` directory via a postinstall script.
 >
 > If you encounter issues, you can manually install the browsers with:
 > ```bash
@@ -164,12 +128,17 @@ Expected output: `-rw-r--r--  models/ggml-small.en.bin` (~466M file size)
 npm run dev
 ```
 
-**Production Build:**
+This starts the Vite dev server and Electron in watch mode. The app will automatically reload when you make changes.
+
+### Building for Production
+
 ```bash
 npm run electron:build
 ```
 
-Distributable apps are created in the `release/` folder.
+Built apps are created in the `release/` folder for your current platform.
+
+> **Note:** This project is in active development. Production builds are for testing purposes only.
 
 ### Project Structure
 
@@ -192,18 +161,14 @@ dodo-recorder/
 
 ---
 
+## 🤝 Contributing
+
+Contributions are welcome! See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for our community standards.
+
+---
+
 ## 🔧 Troubleshooting
 
-### "App is damaged" Error on macOS
-
-**Problem:** macOS shows "Dodo Recorder is damaged and can't be opened"
-
-**Solution:** Remove the quarantine flag:
-```bash
-xattr -cr /Applications/Dodo\ Recorder.app
-```
-
-This is normal for unsigned apps. See the [Installation Guide](docs/INSTALLATION.md) for detailed steps and alternative methods.
 ### "Whisper model not found" Error
 
 **Problem:** App can't find `models/ggml-small.en.bin`
@@ -224,56 +189,34 @@ Or download manually from [Hugging Face](https://huggingface.co/ggerganov/whispe
 git pull origin main
 ```
 
-### Debugging Production Builds
+### Debugging
 
-For issues in production builds where the console isn't visible, use the integrated logging system:
+For debugging in development mode, the app provides comprehensive logging:
 
-- **In-app access:** "View Logs" button in the status bar (bottom-right)
-- **macOS logs:** `~/Library/Logs/dodo-recorder/main.log`
-- **Full guide:** See **[Logging and Debugging Guide](docs/LOGGING_AND_DEBUGGING.md)**
+- **Console logs**: Visible in terminal when running `npm run dev`
+- **DevTools**: Press `Cmd+Option+I` (Mac) or `Ctrl+Shift+I` (Windows/Linux) to open browser DevTools
+- **Log files** (production builds): See [`docs/logs_and_debugging.md`](docs/logs_and_debugging.md)
 
-### Windows/Linux Binary (Future Development)
+### Platform-Specific Issues
 
-> **Note:** This section is for future reference when adding Windows/Linux support.
+**macOS:**
+- If you see permission errors, you may need to grant microphone access in System Preferences → Security & Privacy → Microphone
 
-The committed binary is for macOS. When Windows/Linux support is added, the whisper.cpp binary will need to be built for those platforms:
-
-```bash
-# Clone and build whisper.cpp
-git clone https://github.com/ggerganov/whisper.cpp.git /tmp/whisper
-cd /tmp/whisper
-git checkout v1.5.4
-make main
-
-# Copy to your project
-cp main /path/to/dodo-recorder/models/whisper
-chmod +x /path/to/dodo-recorder/models/whisper
-```
+**Windows/Linux:**
+- Ensure FFmpeg is installed and accessible in your PATH for audio processing
 
 ---
 
 ## ❓ FAQ
 
-**Q: Why does macOS say the app is damaged?**
-A: Dodo Recorder is currently unsigned (code signing requires a $99/year Apple Developer account). Run `xattr -cr /Applications/Dodo\ Recorder.app` to fix this. See the [Installation Guide](docs/INSTALLATION.md) for details.
-
-**Q: Is it safe to run an unsigned app?**
-A: Yes! Dodo Recorder is open source—you can audit the code yourself. All processing happens locally on your machine with no telemetry or data collection.
-
 **Q: Why is the model not in git?**
 A: It's 466 MB—too large for git repositories. Download it once manually.
-
-**Q: Why is the binary in git?**
-A: It's only 1 MB and simplifies setup significantly.
 
 **Q: Can I use a different Whisper model?**
 A: The app is hard-coded to use `small.en` for consistency and performance.
 
 **Q: Do I need to download the model for every clone?**
 A: Yes, but only once per machine. The file persists across npm installs.
-
-**Q: What if I'm not on macOS?**
-A: The current release (v0.1.0) supports macOS only. Windows and Linux support is planned for a future release. The codebase is designed to be cross-platform compatible, and the necessary abstraction layers are already in place.
 
 **Q: Does this work with frameworks other than Playwright?**
 A: Yes! The session output is framework-agnostic. AI agents can generate tests for Playwright, Cypress, Selenium, Puppeteer, or any other framework.
@@ -282,22 +225,22 @@ A: Yes! The session output is framework-agnostic. AI agents can generate tests f
 A: No. All transcription happens locally using Whisper.cpp. Your voice recordings never leave your machine.
 
 **Q: Why do I get "Playwright browser not installed" error?**
-A: Run `./build/install-playwright-browsers.sh` to download the Playwright Chromium browser to the local `playwright-browsers/` directory. The `npm install` command should do this automatically via a postinstall script. If building for production, ensure the browsers are installed before running `npm run electron:build`.
+A: Run `./build/install-playwright-browsers.sh` to download the Playwright Chromium browser. The `npm install` command should do this automatically via a postinstall script.
 
 ---
 
 ## 📚 Documentation
 
-- **[Installation Guide](docs/INSTALLATION.md)**: Detailed installation steps, troubleshooting, and macOS quarantine flag fixes
-- **[Logging and Debugging Guide](docs/logs_and_debugging.md)**: How to access logs and debug production issues
 - **[User Guide](docs/user_guide.md)**: Complete feature documentation, keyboard shortcuts, and output format details
 - **[Architecture](docs/architecture.md)**: System design, data flow, and technical implementation
 - **[Voice Transcription](docs/voice_transcription.md)**: Deep dive into the local transcription system
 - **[Output Format](docs/output_format.md)**: Detailed explanation of session bundle structure
+- **[Logging and Debugging](docs/logs_and_debugging.md)**: How to access logs and debug issues
+- **[Agent Guidelines](AGENTS.md)**: Coding standards and guidelines for AI agents
 - **[Initial Vision](docs/special/initial_vision.md)**: Original project goals and design principles
 
 ---
 
 ## 📄 License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.

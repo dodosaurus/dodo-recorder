@@ -19,16 +19,16 @@ Dodo Recorder is an Electron + React + TypeScript desktop application for record
 npm run dev                    # Start Vite dev server + Electron in watch mode
 ```
 
-### Build
+### Build (for testing only)
 ```bash
-npm run build                  # Build and package the app for distribution
+npm run build                  # Build the app for local testing
 npm run electron:build         # Same as above
 npm run preview               # Preview Vite build (no Electron)
 ```
 
 ### Output
 - Development: Runs from source files
-- Production builds: `release/` directory (dmg, zip for Mac; nsis, portable for Windows; AppImage, deb for Linux)
+- Test builds: `release/` directory (for local testing only)
 - Electron compiled output: `dist-electron/` (main.js, preload.js)
 - Renderer compiled output: `dist/`
 
