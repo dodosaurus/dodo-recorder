@@ -74,7 +74,6 @@ interface RecordingState {
 
 // Use type for unions, primitives, or utility types
 type RecordingStatus = 'idle' | 'recording' | 'paused' | 'processing' | 'saving'
-type AudioStatus = 'idle' | 'recording' | 'processing' | 'complete' | 'error'
 
 // Shared types live in shared/types.ts (accessible by both main and renderer)
 // Renderer-only types in src/types/
@@ -335,7 +334,7 @@ await window.electronAPI.openLogFolder()  // Opens log folder
 - Log state transitions: `logger.info(`Status: ${oldStatus} -> ${newStatus}`)`
 
 **Debugging Production Issues:**
-See [`docs/LOGGING_AND_DEBUGGING.md`](docs/LOGGING_AND_DEBUGGING.md) for comprehensive debugging guide.
+See [`docs/logs_and_debugging.md`](docs/logs_and_debugging.md) for comprehensive debugging guide.
 
 ## Important Notes
 
