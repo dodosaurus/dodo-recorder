@@ -12,6 +12,8 @@
   <strong>⚠️ Active Development</strong> • Open Source • Contributions Welcome
 </p>
 
+![Screenshot from Dodo Recorder](docs/images/main_screenshot.png)
+
 ---
 
 ## 🎯 Overview
