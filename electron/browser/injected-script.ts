@@ -272,7 +272,7 @@ export function getInjectionScript(): () => void {
       const widgetAssertMode = typeof win.__dodoAssertionMode === 'function'
         ? win.__dodoAssertionMode()
         : false
-      const assertMode = widgetAssertMode || e.altKey === true || e.metaKey === true
+      const assertMode = widgetAssertMode || e.metaKey === true || e.ctrlKey === true
 
       recordAction(JSON.stringify({
         type: assertMode ? 'assert' : 'click',

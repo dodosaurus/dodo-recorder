@@ -109,7 +109,7 @@ screenshotBtn.addEventListener('click', async (e) => {
 **Interactions:**
 - **Click**: Toggles assertion mode on/off
 - **Active state**: Blue background + modified icon colors
-- **Tooltip**: Shows "Assertion Mode (Alt+Click or Cmd+Click)" on hover
+- **Tooltip**: Shows "Assertion Mode (Cmd+Click / Ctrl+Click)" on hover
 
 **Behavior:**
 - When active: All clicks on page become assertions

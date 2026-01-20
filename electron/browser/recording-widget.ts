@@ -31,7 +31,6 @@ export function getWidgetScript(): () => void {
     // Detect OS for tooltip text
     const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
     const modKey = isMac ? 'Cmd' : 'Ctrl'
-    const altKey = isMac ? '⌥ Option' : 'Alt'
     
     // Access injected functions
     const recordAction = (window as unknown as DodoWindow).__dodoRecordAction
@@ -215,7 +214,7 @@ export function getWidgetScript(): () => void {
     const assertionBtn = document.createElement('button')
     assertionBtn.className = 'widget-btn'
     assertionBtn.id = 'assertion-btn'
-    assertionBtn.title = `Assertion Mode (${altKey}+Click or ${modKey}+Click)`
+    assertionBtn.title = `Assertion Mode (${modKey}+Click)`
     assertionBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="rgba(100, 116, 139, 0.7)" stroke="rgba(148, 163, 184, 0.9)"></path>
       <circle cx="12" cy="12" r="4" fill="rgba(71, 85, 105, 0.9)" stroke="rgba(148, 163, 184, 0.9)"></circle>
@@ -226,7 +225,7 @@ export function getWidgetScript(): () => void {
 
     const assertionTooltip = document.createElement('span')
     assertionTooltip.className = 'tooltip'
-    assertionTooltip.textContent = `Assertion Mode (${altKey}+Click or ${modKey}+Click)`
+    assertionTooltip.textContent = `Assertion Mode (${modKey}+Click)`
     assertionBtn.appendChild(assertionTooltip)
 
     widget.appendChild(screenshotBtn)

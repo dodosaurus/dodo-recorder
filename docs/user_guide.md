@@ -25,7 +25,7 @@ When you start a recording session, a floating widget appears in the browser win
 **Assertion Mode Toggle**
 - Click to enable/disable assertion mode
 - When active (highlighted in blue), all clicks become assertions
-- Alternative to holding Alt/Option or Cmd/Ctrl while clicking
+- Alternative to holding Cmd (macOS) or Ctrl (Windows/Linux) while clicking
 - Click again to return to normal clicking mode
 
 ## Keyboard Shortcuts
@@ -34,15 +34,14 @@ During browser recording, use these keyboard shortcuts to control your session:
 
 | Shortcut | Action | Description |
 |----------|--------|-------------|
-| **Alt + Click** (Windows/Linux)<br>**⌥ Option + Click** (Mac) | **Assertion Mode** | Records an assertion instead of a click. Use this to verify element presence without triggering the click action. |
-| **Cmd + Click** (Mac)<br>**Ctrl + Click** (Windows/Linux) | **Assertion Mode** | Alternative shortcut for assertion mode. |
+| **Cmd + Click** (Mac)<br>**Ctrl + Click** (Windows/Linux) | **Assertion Mode** | Records an assertion instead of a click. Use this to verify element presence without triggering the click action. |
 | **Cmd+Shift+S** (Mac)<br>**Ctrl+Shift+S** (Windows/Linux) | **Take Screenshot** | Captures a screenshot of the current browser state. The screenshot is saved to the session's `screenshots/` folder and referenced in the enhanced transcript. |
 
 ### Usage Examples
 
 **Recording Assertions:**
 ```
-1. Hold Alt/Option or Cmd/Ctrl
+1. Hold Cmd (Mac) or Ctrl (Windows/Linux)
 2. Click on an element
 3. Element is recorded as "assert" type (not clicked)
 4. Release modifier key
@@ -58,7 +57,7 @@ During browser recording, use these keyboard shortcuts to control your session:
 **Typical Workflow:**
 ```
 1. Use the recording widget or click normally to interact with the page
-2. Click the button in widget to enable assertion mode, or use Alt+Click on elements you want to verify
+2. Click the button in widget to enable assertion mode, or use Cmd+Click (Mac) / Ctrl+Click (Windows/Linux) on elements you want to verify
 3. Click the button in widget or press Cmd+Shift+S (Mac) / Ctrl+Shift+S (Windows/Linux) to capture screenshots
 4. Speak your commentary to explain what you're testing
 ```

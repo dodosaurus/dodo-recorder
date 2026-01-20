@@ -69,8 +69,8 @@ session-YYYY-MM-DD-HHMMSS/
 
 | Shortcut | Action |
 |----------|--------|
-| **Cmd+Shift+S** | Take Screenshot |
-| **Option + Click** | Record Assertion |
+| **Cmd+Shift+S** (Mac)<br>**Ctrl+Shift+S** (Windows/Linux) | Take Screenshot |
+| **Cmd + Click** (Mac)<br>**Ctrl + Click** (Windows/Linux) | Record Assertion |
 
 ### 🔐 Privacy & Local Processing
 
