@@ -399,13 +399,18 @@ export function getWidgetInitScript(): () => void {
   return () => {
     const initWidget = () => {
       try {
-        // Small delay to ensure page scripts have loaded
-        setTimeout(() => {
-          // The actual widget creation function will be injected separately
-          if (typeof (window as any).__dodoCreateWidget === 'function') {
+        // Wait for document.body to be available before creating widget
+        const checkBodyAndCreate = () => {
+          if (document.body && typeof (window as any).__dodoCreateWidget === 'function') {
             (window as any).__dodoCreateWidget()
+          } else {
+            // If body doesn't exist yet, wait a bit and try again
+            setTimeout(checkBodyAndCreate, 50)
           }
-        }, 100)
+        }
+        
+        // Small delay to ensure page scripts have loaded and body is ready
+        setTimeout(checkBodyAndCreate, 100)
       } catch (error) {
         console.error('[Dodo Recorder] Failed to create widget:', error)
       }

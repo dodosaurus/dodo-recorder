@@ -146,7 +146,8 @@ export class BrowserRecorder extends EventEmitter {
     await this.page.addInitScript(getInjectionScript())
     
     // Inject the widget creation function
-    await this.page.addInitScript(`window.__dodoCreateWidget = ${getWidgetScript().toString()}`)
+    // Note: Using string concatenation to avoid nested template literal issues
+    await this.page.addInitScript('window.__dodoCreateWidget = ' + getWidgetScript().toString())
     
     // Inject the widget initialization script
     await this.page.addInitScript(getWidgetInitScript())
