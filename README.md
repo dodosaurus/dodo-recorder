@@ -75,7 +75,6 @@ session-YYYY-MM-DD-HHMMSS/
 ### 🔐 Privacy & Local Processing
 
 - **No Cloud Dependencies**: All transcription happens locally using Whisper.cpp
-- **Offline First**: No internet required after initial setup
 - **Your Data Stays Local**: Session bundles remain on your machine
 
 ---

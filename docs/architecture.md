@@ -437,7 +437,6 @@ This project couldn't be a pure web app because it needs to:
 4. **Desktop Integration**
    - Easy to bundle with Electron app
    - No external dependencies at runtime
-   - Works offline
 
 5. **Same Accuracy**
    - Uses identical model weights from OpenAI

@@ -962,7 +962,6 @@ Future: Could add configuration for:
 
 - **100% Local Processing**: No audio sent to cloud services
 - **No API Keys Required**: Whisper runs entirely on your machine
-- **Offline Capable**: Works without internet connection
 - **Data Retention**: Audio files deleted after transcription (only text kept)
 - **No Telemetry**: No usage data collected or transmitted
 
