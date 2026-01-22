@@ -341,7 +341,7 @@ if (isDevelopment) {
 
 Then rebuild:
 ```bash
-npm run electron:build
+npm run build
 ```
 
 ### Log Rotation

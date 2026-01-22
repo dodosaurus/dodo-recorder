@@ -131,15 +131,21 @@ npm run dev
 
 This starts the Vite dev server and Electron in watch mode. The app will automatically reload when you make changes.
 
-### Building for Production
+### Building
 
+**Unsigned build** (for local testing):
 ```bash
-npm run electron:build
+npm run build
+```
+
+**Signed and notarized build** (for distribution):
+```bash
+npm run build:prod
 ```
 
 Built apps are created in the `release/` folder for your current platform.
 
-> **Note:** This project is in active development. Production builds are for testing purposes only.
+> **Note for Maintainers:** See [`docs/code_signing.md`](docs/code_signing.md) for code signing and notarization setup. Contributors don't need code signing for development.
 
 ### Project Structure
 

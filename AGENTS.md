@@ -22,7 +22,6 @@ npm run dev                    # Start Vite dev server + Electron in watch mode
 ### Build (for testing only)
 ```bash
 npm run build                  # Build the app for local testing
-npm run electron:build         # Same as above
 npm run preview               # Preview Vite build (no Electron)
 ```
 

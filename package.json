@@ -6,9 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && electron-builder",
-    "preview": "vite preview",
-    "electron:build": "vite build && electron-builder",
-    "electron:build:signed": "dotenv -- vite build && dotenv -- electron-builder --mac",
+    "build:prod": "dotenv -- vite build && dotenv -- electron-builder --mac",
     "postinstall": "./build/install-playwright-browsers.sh",
     "generate-icons": "./build/generate-icons.sh"
   },

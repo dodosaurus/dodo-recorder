@@ -21,7 +21,11 @@
     },
     "hardenedRuntime": true,
     "gatekeeperAssess": false,
-    "category": "public.app-category.developer-tools"
+    "category": "public.app-category.developer-tools",
+    "type": "distribution",
+    "notarize": {
+      "teamId": "L7PUGF6Q28"
+    }
   },
   "win": {
     "target": [
