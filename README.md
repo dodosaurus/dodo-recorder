@@ -141,6 +141,42 @@ Built apps are created in the `release/` folder for your current platform.
 
 > **Note:** This project is in active development. Production builds are for testing purposes only.
 
+### Code Signing (macOS)
+
+For macOS distribution, the app should be code signed to avoid Gatekeeper warnings ("app is damaged"). This requires an Apple Developer account and certificate.
+
+**Setup:**
+
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Fill in your Apple Developer credentials in `.env`:
+   - `APPLE_ID` - Your Apple ID email
+   - `APPLE_APP_SPECIFIC_PASSWORD` - Generate at [appleid.apple.com](https://appleid.apple.com)
+   - `APPLE_TEAM_ID` - Find in Apple Developer portal
+   - `CSC_LINK` - Path to your `.p12` certificate file
+   - `CSC_KEY_PASSWORD` - Password for your certificate
+
+3. Place your `.p12` certificate file in a local directory (e.g., `dodo-recorder-certificate/`)
+
+4. Build with code signing:
+   ```bash
+   npm run electron:build:signed
+   ```
+
+**Important Security Notes:**
+- **NEVER commit** your `.p12` certificate file or `.env` file to git
+- The certificate directory is already in `.gitignore`
+- Keep backups of your certificate in a secure location
+- For CI/CD, use encrypted secrets instead of environment files
+
+**Without Code Signing:**
+If you build without code signing (`npm run electron:build`), users may see a security warning on first launch. They can bypass this by:
+- Right-clicking the app and selecting "Open"
+- Or in System Settings → Privacy & Security, clicking "Open Anyway"
+
 ### Project Structure
 
 ```

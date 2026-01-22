@@ -8,6 +8,7 @@
     "build": "vite build && electron-builder",
     "preview": "vite preview",
     "electron:build": "vite build && electron-builder",
+    "electron:build:signed": "dotenv -- vite build && dotenv -- electron-builder --mac",
     "postinstall": "./build/install-playwright-browsers.sh",
     "generate-icons": "./build/generate-icons.sh"
   },
@@ -46,6 +47,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "concurrently": "^8.2.2",
+    "dotenv-cli": "^7.4.4",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1",
     "lucide-react": "^0.294.0",

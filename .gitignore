@@ -24,6 +24,11 @@ npm-debug.log*
 .env
 .env.local
 
+# Certificates (NEVER commit these)
+*.p12
+*.pem
+*-certificate/
+
 # Whisper models (gitignore *.bin files only, binary is committed)
 models/*.bin
 
