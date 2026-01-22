@@ -7,8 +7,9 @@ set -e
 
 echo "🎨 Generating icons for Dodo Recorder..."
 
-# Source image
-SOURCE="src/assets/saurus.png"
+# Source image - Use square version without pre-rounded corners for proper macOS icon rendering
+# macOS applies its own corner masking; pre-rounded corners interfere with system effects
+SOURCE="src/assets/saurus-square.png"
 
 # Check if source image exists
 if [ ! -f "$SOURCE" ]; then
@@ -41,8 +42,15 @@ iconutil -c icns build/icon.iconset -o build/icon.icns
 # Generate Windows .ico (512x512)
 echo "🪟 Generating Windows .ico file..."
 sips -z 512 512 "$SOURCE" --out build/icon.png
-# Note: For .ico generation, you may need ImageMagick or other tools
-# convert build/icon.png -define icon:auto-resize=256,128,96,64,48,32,16 build/icon.ico
+# Generate .ico using ImageMagick if available
+if command -v magick &> /dev/null; then
+  magick build/icon.png -define icon:auto-resize=256,128,96,64,48,32,16 build/icon.ico
+  echo "  ✅ Generated build/icon.ico"
+else
+  echo "  ⚠️  ImageMagick not found - .ico file not generated"
+  echo "  To generate .ico, install ImageMagick and run:"
+  echo "    magick build/icon.png -define icon:auto-resize=256,128,96,64,48,32,16 build/icon.ico"
+fi
 
 # Generate Linux icon (512x512)
 echo "🐧 Generating Linux icon file..."
