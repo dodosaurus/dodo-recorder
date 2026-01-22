@@ -205,7 +205,13 @@ export class Transcriber {
       const modelPath = this.getModelPath()
       const jsonOutputPath = `${audioPath}.json`
       
+      // Prompt text to prime Whisper - also used for filtering hallucinations
+      const WHISPER_PROMPT = 'This is a recording session with browser interactions, clicking, navigation, and voice commentary.'
+      
       // Build args array for spawn (no shell, no command injection risk)
+      // Parameters tuned to minimize hallucinations on silence:
+      // - Lower entropy threshold (2.0) = better early speech detection
+      // - Repetition filtering = handled in post-processing (more reliable than Whisper params)
       const args = [
         '-m', modelPath,
         '-f', audioPath,
@@ -217,8 +223,8 @@ export class Transcriber {
         '-bo', '5',  // best-of: use best of 5 candidates
         '-bs', '5',  // beam-size: beam search size
         '-et', '2.0',  // entropy-thold: LOWERED from 2.4 to 2.0 for better early detection
-        '-lpt', '-1.0',  // logprob-thold: log probability threshold
-        '--prompt', 'This is a recording session with browser interactions, clicking, navigation, and voice commentary.'
+        '-lpt', '-1.0',  // logprob-thold: log probability threshold (keep at default for stability)
+        '--prompt', WHISPER_PROMPT
       ]
       
       logger.info('Executing whisper.cpp with args:', args)
@@ -307,10 +313,36 @@ export class Transcriber {
         logger.info(`      Text: "${segment.speech}"`)
       })
 
-      // Filter out segments that are likely noise or silence
+      // First pass: Detect repetitive hallucinations
+      // Count occurrences of each text segment
+      const textCounts = new Map<string, number>()
+      result.forEach(segment => {
+        const text = segment.speech.trim()
+        textCounts.set(text, (textCounts.get(text) || 0) + 1)
+      })
+      
+      // Find texts that appear 2+ times (likely hallucinations)
+      const hallucinatedTexts = new Set<string>()
+      textCounts.forEach((count, text) => {
+        if (count >= 2) {
+          hallucinatedTexts.add(text)
+          logger.debug(`  🔍 Detected repetitive text (${count}x): "${text}"`)
+        }
+      })
+
+      // Filter out segments that are likely noise, silence, or hallucinations
       const validSegments = result.filter(segment => {
         const text = segment.speech.trim()
+        
+        // Check if segment is the prompt text (Whisper hallucination when silent)
+        const isPromptHallucination = text === WHISPER_PROMPT
+        
+        // Check if segment is a repetitive hallucination
+        const isRepetitiveHallucination = hallucinatedTexts.has(text)
+        
         const isValid = text.length > 0 &&
+               !isPromptHallucination &&  // Remove prompt text hallucinations
+               !isRepetitiveHallucination &&  // Remove repetitive hallucinations
                !text.match(/^\[.*\]$/) &&  // Remove [BLANK_AUDIO], [noise], etc.
                !text.match(/^\(.*\)$/) &&  // Remove (mouse clicking), etc.
                text !== '...' &&
@@ -318,7 +350,13 @@ export class Transcriber {
                text.length > 2  // Minimum 3 characters
         
         if (!isValid) {
-          logger.debug(`  ❌ Filtered out: "${text}"`)
+          if (isPromptHallucination) {
+            logger.debug(`  ❌ Filtered out prompt hallucination: "${text}"`)
+          } else if (isRepetitiveHallucination) {
+            logger.debug(`  ❌ Filtered out repetitive hallucination: "${text}"`)
+          } else {
+            logger.debug(`  ❌ Filtered out: "${text}"`)
+          }
         }
         return isValid
       })
