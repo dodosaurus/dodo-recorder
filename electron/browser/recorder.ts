@@ -1,5 +1,6 @@
 import path from 'path'
 import fs from 'fs'
+import { app } from 'electron'
 
 /**
  * Gets the path to the Playwright browsers directory
@@ -10,24 +11,11 @@ import fs from 'fs'
  * Playwright reads PLAYWRIGHT_BROWSERS_PATH at module load time.
  */
 function getBrowsersPath(): string {
-  // Check if we're in development mode
-  // In development, process.resourcesPath points to Electron's own resources,
-  // not our project's resources. We need to check NODE_ENV or use a different approach.
-  const isDevelopment = process.env.NODE_ENV === 'development' ||
-                      process.env.VITE_DEV_SERVER_URL !== undefined ||
-                      !process.resourcesPath?.includes('app.asar')
-
-  if (isDevelopment) {
-    // In development, use the project root's playwright-browsers directory
-    return path.join(process.cwd(), 'playwright-browsers')
-  }
-
-  // In production (packaged app), resources are in app.asar
-  if (process.resourcesPath) {
+  if (app.isPackaged) {
+    // Production: browsers are in extraResources
     return path.join(process.resourcesPath, 'playwright-browsers')
   }
-
-  // Fallback to project root
+  // Development: browsers are in project root
   return path.join(process.cwd(), 'playwright-browsers')
 }
 
