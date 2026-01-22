@@ -6,6 +6,10 @@ export interface UserPreferences {
   outputPath: string
 }
 
+export interface MicrophoneSettings {
+  selectedMicrophoneId?: string
+}
+
 /**
  * Validates that data conforms to RecordedAction interface
  */
@@ -35,6 +39,8 @@ export interface ElectronAPI {
   generateTranscriptWithReferences: (actions: RecordedAction[], sessionId: string, startTime: number, startUrl?: string) => Promise<IpcResult<{ transcript: string }>>
   getUserPreferences: () => Promise<IpcResult<{ preferences: UserPreferences }>>
   updateUserPreferences: (preferences: Partial<UserPreferences>) => Promise<IpcResult<{ preferences: UserPreferences }>>
+  getMicrophoneSettings: () => Promise<IpcResult<{ settings: MicrophoneSettings }>>
+  updateMicrophoneSettings: (settings: Partial<MicrophoneSettings>) => Promise<IpcResult<{ settings: MicrophoneSettings }>>
   getLogPath: () => Promise<string>
   openLogFile: () => Promise<IpcResult>
   openLogFolder: () => Promise<IpcResult>
@@ -86,6 +92,12 @@ const electronAPI: ElectronAPI = {
 
   updateUserPreferences: (preferences: Partial<UserPreferences>) =>
     ipcRenderer.invoke('user-preferences-update', preferences),
+
+  getMicrophoneSettings: () =>
+    ipcRenderer.invoke('get-microphone-settings'),
+
+  updateMicrophoneSettings: (settings: Partial<MicrophoneSettings>) =>
+    ipcRenderer.invoke('update-microphone-settings', settings),
 
   getLogPath: () => ipcRenderer.invoke('get-log-path'),
   openLogFile: () => ipcRenderer.invoke('open-log-file'),

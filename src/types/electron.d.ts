@@ -5,6 +5,10 @@ export interface UserPreferences {
   outputPath: string
 }
 
+export interface MicrophoneSettings {
+  selectedMicrophoneId?: string
+}
+
 export interface ElectronAPI {
   selectOutputFolder: () => Promise<string | null>
   startRecording: (startUrl: string, outputPath: string, startTime: number) => Promise<IpcResult>
@@ -18,6 +22,8 @@ export interface ElectronAPI {
   generateTranscriptWithReferences: (actions: RecordedAction[], sessionId: string, startTime: number, startUrl?: string) => Promise<IpcResult<{ transcript: string }>>
   getUserPreferences: () => Promise<IpcResult<{ preferences: UserPreferences }>>
   updateUserPreferences: (preferences: Partial<UserPreferences>) => Promise<IpcResult<{ preferences: UserPreferences }>>
+  getMicrophoneSettings: () => Promise<IpcResult<{ settings: MicrophoneSettings }>>
+  updateMicrophoneSettings: (settings: Partial<MicrophoneSettings>) => Promise<IpcResult<{ settings: MicrophoneSettings }>>
   getLogPath: () => Promise<string>
   openLogFile: () => Promise<IpcResult>
   openLogFolder: () => Promise<IpcResult>

@@ -18,6 +18,7 @@ interface RecordingState {
   audioStatus: AudioStatus
   audioChunksCount: number
   audioError: string | null
+  selectedMicrophoneId: string | undefined
   
   isTranscriptViewOpen: boolean
   highlightedActionId: string | null
@@ -37,6 +38,7 @@ interface RecordingState {
   setAudioStatus: (status: AudioStatus) => void
   incrementAudioChunks: () => void
   setAudioError: (error: string | null) => void
+  setSelectedMicrophoneId: (deviceId: string | undefined) => void
   setTranscriptViewOpen: (open: boolean) => void
   setHighlightedActionId: (id: string | null) => void
   reset: () => void
@@ -56,6 +58,7 @@ const initialState = {
   audioStatus: 'idle' as AudioStatus,
   audioChunksCount: 0,
   audioError: null as string | null,
+  selectedMicrophoneId: undefined as string | undefined,
   isTranscriptViewOpen: false,
   highlightedActionId: null as string | null,
 }
@@ -100,6 +103,8 @@ export const useRecordingStore = create<RecordingState>((set) => ({
   })),
 
   setAudioError: (audioError) => set({ audioError }),
+  
+  setSelectedMicrophoneId: (selectedMicrophoneId) => set({ selectedMicrophoneId }),
   
   setTranscriptViewOpen: (open) => set({ isTranscriptViewOpen: open }),
   

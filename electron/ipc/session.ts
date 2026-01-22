@@ -114,4 +114,33 @@ export function registerSettingsHandlers() {
       return { preferences: settings.getUserPreferences() }
     }, 'Failed to update user preferences')
   })
+
+  ipcMain.handle('get-microphone-settings', async () => {
+    return handleIpc(async () => {
+      const settings = getSettingsStore()
+      return { settings: settings.getAudioSettings() }
+    }, 'Failed to get microphone settings')
+  })
+
+  ipcMain.handle('update-microphone-settings', async (_, settings: unknown) => {
+    // Basic validation - settings should be an object with optional selectedMicrophoneId
+    if (!settings || typeof settings !== 'object') {
+      logger.error('[IPC] Invalid microphone settings data structure')
+      return ipcError('Invalid microphone settings data structure')
+    }
+    
+    const microphoneSettings = settings as Partial<{ selectedMicrophoneId: string }>
+    
+    // Validate selectedMicrophoneId if provided
+    if (microphoneSettings.selectedMicrophoneId !== undefined && typeof microphoneSettings.selectedMicrophoneId !== 'string') {
+      logger.error('[IPC] Invalid selectedMicrophoneId: must be a string')
+      return ipcError('Invalid selectedMicrophoneId: must be a string')
+    }
+    
+    return handleIpc(async () => {
+      const settingsStore = getSettingsStore()
+      settingsStore.updateAudioSettings(microphoneSettings)
+      return { settings: settingsStore.getAudioSettings() }
+    }, 'Failed to update microphone settings')
+  })
 }

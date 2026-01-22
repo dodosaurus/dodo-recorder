@@ -2,6 +2,7 @@ import { useRecordingStore } from '@/stores/recordingStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { MicrophoneSelector } from '@/components/MicrophoneSelector'
 import { Folder, Mic } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useEffect } from 'react'
@@ -9,7 +10,7 @@ import { useEffect } from 'react'
 export function SettingsPanel() {
   const {
     startUrl, setStartUrl, outputPath, setOutputPath,
-    isVoiceEnabled, setVoiceEnabled, status
+    isVoiceEnabled, setVoiceEnabled, status, selectedMicrophoneId, setSelectedMicrophoneId
   } = useRecordingStore(useShallow((state) => ({
     startUrl: state.startUrl,
     setStartUrl: state.setStartUrl,
@@ -18,6 +19,8 @@ export function SettingsPanel() {
     isVoiceEnabled: state.isVoiceEnabled,
     setVoiceEnabled: state.setVoiceEnabled,
     status: state.status,
+    selectedMicrophoneId: state.selectedMicrophoneId,
+    setSelectedMicrophoneId: state.setSelectedMicrophoneId,
   })))
 
   const isDisabled = status === 'recording' || status === 'processing'
@@ -50,10 +53,21 @@ export function SettingsPanel() {
       } else {
         console.log('[SettingsPanel] Failed to load preferences or no data')
       }
+
+      // Load microphone settings
+      console.log('[SettingsPanel] Loading microphone settings...')
+      const micResult = await window.electronAPI.getMicrophoneSettings()
+      console.log('[SettingsPanel] getMicrophoneSettings result:', micResult)
+      
+      if (micResult.success && (micResult as any).settings) {
+        const settings = (micResult as any).settings
+        console.log('[SettingsPanel] Loaded microphone settings:', settings)
+        setSelectedMicrophoneId(settings.selectedMicrophoneId)
+      }
     }
     
     loadPreferences()
-  }, [setStartUrl, setOutputPath])
+  }, [setStartUrl, setOutputPath, setSelectedMicrophoneId])
 
   // Save startUrl when it changes
   const handleStartUrlChange = async (url: string) => {
@@ -70,6 +84,15 @@ export function SettingsPanel() {
       setOutputPath(path)
       // Save the selected path to preferences
       await window.electronAPI.updateUserPreferences({ outputPath: path })
+    }
+  }
+
+  const handleMicrophoneChange = async (deviceId: string | undefined) => {
+    console.log('[SettingsPanel] Microphone changed to:', deviceId)
+    setSelectedMicrophoneId(deviceId)
+    
+    if (window.electronAPI) {
+      await window.electronAPI.updateMicrophoneSettings({ selectedMicrophoneId: deviceId })
     }
   }
 
@@ -124,9 +147,16 @@ export function SettingsPanel() {
       </div>
 
       {isVoiceEnabled && (
-        <p className="text-xs text-muted-foreground text-center">
-          Speak your observations during recording. Audio will be transcribed locally using Whisper.
-        </p>
+        <>
+          <MicrophoneSelector
+            disabled={isDisabled}
+            selectedDeviceId={selectedMicrophoneId}
+            onDeviceChange={handleMicrophoneChange}
+          />
+          <p className="text-xs text-muted-foreground text-center">
+            Speak your observations during recording. Audio will be transcribed locally using Whisper.
+          </p>
+        </>
       )}
     </div>
   )

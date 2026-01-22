@@ -1,5 +1,6 @@
 import { useRecordingStore } from '@/stores/recordingStore'
 import { Button } from '@/components/ui/button'
+import { AudioLevelMeter } from '@/components/AudioLevelMeter'
 import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw, CheckCircle } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
@@ -8,9 +9,9 @@ import type { RecordedAction, SessionBundle } from '@/types/session'
 export function RecordingControls() {
   const {
     status, startUrl, outputPath, actions, transcriptSegments, notes, isVoiceEnabled,
-    audioStatus, audioChunksCount, audioError, startTime, sessionSaved,
+    audioStatus, audioChunksCount, audioError, startTime, sessionSaved, selectedMicrophoneId,
     setStatus, setStartTime, addAction, setTranscriptSegments, setTranscriptText, reset,
-    setAudioStatus, incrementAudioChunks, setAudioError, setSessionSaved
+    setAudioStatus, incrementAudioChunks, setAudioError, setSessionSaved, setSelectedMicrophoneId
   } = useRecordingStore(useShallow((state) => ({
     status: state.status,
     startUrl: state.startUrl,
@@ -24,6 +25,7 @@ export function RecordingControls() {
     audioError: state.audioError,
     startTime: state.startTime,
     sessionSaved: state.sessionSaved,
+    selectedMicrophoneId: state.selectedMicrophoneId,
     setStatus: state.setStatus,
     setStartTime: state.setStartTime,
     addAction: state.addAction,
@@ -34,10 +36,12 @@ export function RecordingControls() {
     incrementAudioChunks: state.incrementAudioChunks,
     setAudioError: state.setAudioError,
     setSessionSaved: state.setSessionSaved,
+    setSelectedMicrophoneId: state.setSelectedMicrophoneId,
   })))
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  const audioStreamRef = useRef<MediaStream | null>(null)
 
   useEffect(() => {
     if (!window.electronAPI) return
@@ -90,33 +94,93 @@ export function RecordingControls() {
           return
         }
         
-        console.log('🎤 Requesting microphone stream...')
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: 16000  // Match Whisper's expected sample rate
-          }
-        })
-        console.log('🎤 Microphone stream acquired')
-        
-        mediaRecorderRef.current = new MediaRecorder(stream, {
-          mimeType: 'audio/webm;codecs=opus',
-          audioBitsPerSecond: 128000
-        })
-        audioChunksRef.current = []
-
-        mediaRecorderRef.current.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            audioChunksRef.current.push(e.data)
-            incrementAudioChunks()
+        // Validate selected device exists before requesting stream
+        if (selectedMicrophoneId) {
+          console.log('🎤 Validating selected microphone device...')
+          const devices = await navigator.mediaDevices.enumerateDevices()
+          const deviceExists = devices.some(d => d.deviceId === selectedMicrophoneId)
+          
+          if (!deviceExists) {
+            console.warn('⚠️  Selected microphone not found, falling back to default')
+            setAudioError('Selected microphone not available, using default')
+            // Clear selected device and fall back to default
+            setSelectedMicrophoneId(undefined)
+            // Update settings to clear the invalid device
+            if (window.electronAPI) {
+              await window.electronAPI.updateMicrophoneSettings({ selectedMicrophoneId: undefined })
+            }
           }
         }
+        
+        console.log('🎤 Requesting microphone stream...')
+        console.log('🎤 Selected microphone ID:', selectedMicrophoneId)
+        
+        // Try to get stream with selected device
+        let stream: MediaStream | undefined
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              deviceId: selectedMicrophoneId ? { exact: selectedMicrophoneId } : undefined,
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: 16000  // Match Whisper's expected sample rate
+            }
+          })
+          console.log('🎤 Microphone stream acquired')
+        } catch (getUserMediaError) {
+          console.error('❌ Failed to get stream with selected device:', getUserMediaError)
+          
+          // Fallback to default device if selected device fails
+          if (selectedMicrophoneId) {
+            console.warn('🔄 Falling back to default microphone...')
+            try {
+              stream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                  echoCancellation: true,
+                  noiseSuppression: true,
+                  autoGainControl: true,
+                  sampleRate: 16000
+                }
+              })
+              console.log('✅ Fallback to default device succeeded')
+              setAudioError(null)
+            } catch (fallbackError) {
+              console.error('❌ Fallback to default device also failed:', fallbackError)
+              setAudioError(fallbackError instanceof Error ? fallbackError.message : 'Failed to access any microphone')
+              setAudioStatus('error')
+              return
+            }
+          } else {
+            // No selected device, so initial failure is a real error
+            console.error('❌ Failed to access default microphone')
+            setAudioError(getUserMediaError instanceof Error ? getUserMediaError.message : 'Failed to access microphone')
+            setAudioStatus('error')
+            return
+          }
+        }
+        
+        if (stream) {
+          // Store stream for audio level meter
+          audioStreamRef.current = stream
+          
+          mediaRecorderRef.current = new MediaRecorder(stream, {
+            mimeType: 'audio/webm;codecs=opus',
+            audioBitsPerSecond: 128000
+          })
+          audioChunksRef.current = []
 
-        mediaRecorderRef.current.start(1000)
-        setAudioStatus('recording')
-        console.log('🎤 Audio recording started at:', recordingStartTime)
+          mediaRecorderRef.current.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+              audioChunksRef.current.push(e.data)
+              incrementAudioChunks()
+            }
+          }
+
+          mediaRecorderRef.current.start(1000)
+          setAudioStatus('recording')
+          console.log('🎤 Audio recording started at:', recordingStartTime)
+        }
       } catch (err) {
         console.error('❌ Failed to start audio recording:', err)
         setAudioError(err instanceof Error ? err.message : 'Failed to access microphone')
@@ -144,6 +208,12 @@ export function RecordingControls() {
           console.log('🎤 Stopping audio due to browser recording failure')
           mediaRecorderRef.current.stop()
           mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
+          mediaRecorderRef.current = null
+        }
+        // Clean up audio stream reference
+        if (audioStreamRef.current) {
+          audioStreamRef.current.getTracks().forEach(track => track.stop())
+          audioStreamRef.current = null
         }
         return
       }
@@ -157,6 +227,12 @@ export function RecordingControls() {
         console.log('🎤 Stopping audio due to exception')
         mediaRecorderRef.current.stop()
         mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
+        mediaRecorderRef.current = null
+      }
+      // Clean up audio stream reference
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop())
+        audioStreamRef.current = null
       }
     }
   }
@@ -251,6 +327,12 @@ export function RecordingControls() {
       
       mediaRecorderRef.current = null
       audioChunksRef.current = []
+      
+      // Clean up audio stream reference
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop())
+        audioStreamRef.current = null
+      }
     } else {
       setAudioStatus('idle')
     }
@@ -346,11 +428,14 @@ export function RecordingControls() {
 
     if (status === 'recording' && audioStatus === 'recording') {
       return (
-        <div className="flex items-center justify-center text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-md">
-          <div className="flex items-center gap-2">
-            <Mic className="h-3.5 w-3.5 animate-pulse" />
-            <span>Recording audio</span>
-            <span className="font-mono">{audioChunksCount}s</span>
+        <div className="space-y-2">
+          <AudioLevelMeter stream={audioStreamRef.current || undefined} />
+          <div className="flex items-center justify-center text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-md">
+            <div className="flex items-center gap-2">
+              <Mic className="h-3.5 w-3.5 animate-pulse" />
+              <span>Recording audio</span>
+              <span className="font-mono">{audioChunksCount}s</span>
+            </div>
           </div>
         </div>
       )

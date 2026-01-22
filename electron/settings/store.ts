@@ -24,6 +24,9 @@ export interface AppSettings {
     startUrl: string
     outputPath: string
   }
+  audio: {
+    selectedMicrophoneId?: string
+  }
 }
 
 /**
@@ -45,6 +48,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   userPreferences: {
     startUrl: '',
     outputPath: '',
+  },
+  audio: {
+    selectedMicrophoneId: undefined,
   },
 }
 
@@ -100,6 +106,10 @@ export class SettingsStore {
       userPreferences: {
         ...DEFAULT_SETTINGS.userPreferences,
         ...loaded.userPreferences,
+      },
+      audio: {
+        ...DEFAULT_SETTINGS.audio,
+        ...loaded.audio,
       },
     }
   }
@@ -182,6 +192,24 @@ export class SettingsStore {
     this.settings.userPreferences = {
       ...this.settings.userPreferences,
       ...preferences,
+    }
+    this.saveSettings()
+  }
+
+  /**
+   * Get audio settings
+   */
+  getAudioSettings(): { selectedMicrophoneId?: string } {
+    return { ...this.settings.audio }
+  }
+
+  /**
+   * Update audio settings
+   */
+  updateAudioSettings(settings: Partial<{ selectedMicrophoneId: string }>): void {
+    this.settings.audio = {
+      ...this.settings.audio,
+      ...settings,
     }
     this.saveSettings()
   }
