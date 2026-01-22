@@ -1,6 +1,5 @@
 import { useRecordingStore } from '@/stores/recordingStore'
 import { Button } from '@/components/ui/button'
-import { AudioLevelMeter } from '@/components/AudioLevelMeter'
 import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw, CheckCircle } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
@@ -42,6 +41,9 @@ export function RecordingControls() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const audioStreamRef = useRef<MediaStream | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const audioLevelUpdateRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!window.electronAPI) return
@@ -50,6 +52,34 @@ export function RecordingControls() {
     })
     return unsubscribe
   }, [addAction])
+
+  const cleanupAudioMonitoring = () => {
+    if (audioLevelUpdateRef.current) {
+      cancelAnimationFrame(audioLevelUpdateRef.current)
+      audioLevelUpdateRef.current = null
+    }
+
+    if (analyserRef.current) {
+      analyserRef.current.disconnect()
+      analyserRef.current = null
+    }
+
+    if (audioContextRef.current) {
+      void audioContextRef.current.close()
+      audioContextRef.current = null
+    }
+
+    if (window.electronAPI) {
+      void window.electronAPI.updateAudioActivity(false)
+      void window.electronAPI.updateAudioLevel(0)
+    }
+  }
+
+  const setAudioActive = (active: boolean) => {
+    if (window.electronAPI) {
+      void window.electronAPI.updateAudioActivity(active)
+    }
+  }
 
   const canStart = startUrl && outputPath && status === 'idle'
   const canStop = status === 'recording'
@@ -91,6 +121,7 @@ export function RecordingControls() {
           console.error('❌ Microphone permission denied')
           setAudioError('Microphone permission denied')
           setAudioStatus('error')
+          setAudioActive(false)
           return
         }
         
@@ -163,7 +194,28 @@ export function RecordingControls() {
         if (stream) {
           // Store stream for audio level meter
           audioStreamRef.current = stream
-          
+
+          // Create audio context for level monitoring
+          const audioContext = new AudioContext()
+          audioContextRef.current = audioContext
+
+          // Resume audio context (may be suspended due to autoplay policy)
+          if (audioContext.state === 'suspended') {
+            await audioContext.resume()
+            console.log('🎤 AudioContext resumed from suspended state')
+          }
+          console.log('🎤 AudioContext state:', audioContext.state)
+
+          const source = audioContext.createMediaStreamSource(stream)
+          const analyser = audioContext.createAnalyser()
+          analyser.fftSize = 256
+          analyser.smoothingTimeConstant = 0.3
+          source.connect(analyser)
+          analyserRef.current = analyser
+
+          // NOTE: Audio level monitoring will start AFTER browser recording starts
+          // to avoid race condition where level updates are sent before browserRecorder exists
+
           mediaRecorderRef.current = new MediaRecorder(stream, {
             mimeType: 'audio/webm;codecs=opus',
             audioBitsPerSecond: 128000
@@ -185,10 +237,12 @@ export function RecordingControls() {
         console.error('❌ Failed to start audio recording:', err)
         setAudioError(err instanceof Error ? err.message : 'Failed to access microphone')
         setAudioStatus('error')
+        setAudioActive(false)
         return
       }
     } else {
       console.log('🔇 Voice recording disabled')
+      setAudioActive(false)
     }
 
     // Now start browser recording - pass the startTime so backend uses the same timestamp
@@ -210,6 +264,7 @@ export function RecordingControls() {
           mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
           mediaRecorderRef.current = null
         }
+        cleanupAudioMonitoring()
         // Clean up audio stream reference
         if (audioStreamRef.current) {
           audioStreamRef.current.getTracks().forEach(track => track.stop())
@@ -220,6 +275,44 @@ export function RecordingControls() {
 
       console.log('✅ Recording started successfully')
       setStatus('recording')
+
+      // Now that browser is running, start audio monitoring and signal audio is active
+      if (isVoiceEnabled && audioStreamRef.current && analyserRef.current) {
+        // IMPORTANT: Await this to ensure audio activity is set BEFORE starting level updates
+        await window.electronAPI.updateAudioActivity(true)
+        console.log('✅ Audio activity set to true in browser')
+        
+        // Start audio level monitoring NOW that browserRecorder is ready AND active
+        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
+        
+        const updateAudioLevel = () => {
+          if (!analyserRef.current) return
+
+          analyserRef.current.getByteFrequencyData(dataArray)
+
+          let sum = 0
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += (dataArray[i] / 255) ** 2
+          }
+          const rms = Math.sqrt(sum / dataArray.length)
+          const level = Math.min(100, rms * 100 * 2)
+
+          // Log first few levels for debugging
+          if (audioLevelUpdateRef.current === null || Math.random() < 0.01) {
+            console.log('🎤 Audio level:', level.toFixed(2), '%, RMS:', rms.toFixed(4))
+          }
+
+          if (window.electronAPI) {
+            void window.electronAPI.updateAudioLevel(level)
+          }
+
+          audioLevelUpdateRef.current = requestAnimationFrame(updateAudioLevel)
+        }
+
+        // Start the animation loop
+        audioLevelUpdateRef.current = requestAnimationFrame(updateAudioLevel)
+        console.log('✅ Audio level monitoring animation loop started')
+      }
     } catch (err) {
       console.error('❌ Exception during startRecording IPC call:', err)
       // Stop audio if browser failed to start
@@ -229,6 +322,7 @@ export function RecordingControls() {
         mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop())
         mediaRecorderRef.current = null
       }
+      cleanupAudioMonitoring()
       // Clean up audio stream reference
       if (audioStreamRef.current) {
         audioStreamRef.current.getTracks().forEach(track => track.stop())
@@ -240,6 +334,7 @@ export function RecordingControls() {
   const stopRecording = async () => {
     if (!canStop || !window.electronAPI) return
 
+    setAudioActive(false)
     setStatus('processing')
 
     await window.electronAPI.stopRecording()
@@ -327,6 +422,8 @@ export function RecordingControls() {
       
       mediaRecorderRef.current = null
       audioChunksRef.current = []
+
+      cleanupAudioMonitoring()
       
       // Clean up audio stream reference
       if (audioStreamRef.current) {
@@ -408,10 +505,14 @@ export function RecordingControls() {
 
     // Reload user preferences before resetting to restore URL and output path
     const prefsResult = await window.electronAPI.getUserPreferences()
+    const micResult = await window.electronAPI.getMicrophoneSettings()
+    const currentVoiceEnabled = isVoiceEnabled
+    const currentMicrophoneId = selectedMicrophoneId
     
     reset()
-    
+
     // Restore the saved preferences after reset
+    useRecordingStore.getState().setVoiceEnabled(currentVoiceEnabled)
     if (prefsResult.success && (prefsResult as any).preferences) {
       const preferences = (prefsResult as any).preferences
       if (preferences.startUrl) {
@@ -421,6 +522,13 @@ export function RecordingControls() {
         useRecordingStore.getState().setOutputPath(preferences.outputPath)
       }
     }
+
+    if (micResult.success && (micResult as any).settings) {
+      const settings = (micResult as any).settings
+      useRecordingStore.getState().setSelectedMicrophoneId(settings.selectedMicrophoneId)
+    } else {
+      useRecordingStore.getState().setSelectedMicrophoneId(currentMicrophoneId)
+    }
   }
 
   const renderAudioStatus = () => {
@@ -428,14 +536,11 @@ export function RecordingControls() {
 
     if (status === 'recording' && audioStatus === 'recording') {
       return (
-        <div className="space-y-2">
-          <AudioLevelMeter stream={audioStreamRef.current || undefined} />
-          <div className="flex items-center justify-center text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-md">
-            <div className="flex items-center gap-2">
-              <Mic className="h-3.5 w-3.5 animate-pulse" />
-              <span>Recording audio</span>
-              <span className="font-mono">{audioChunksCount}s</span>
-            </div>
+        <div className="flex items-center justify-center text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-md">
+          <div className="flex items-center gap-2">
+            <Mic className="h-3.5 w-3.5 animate-pulse" />
+            <span>Recording audio</span>
+            <span className="font-mono">{audioChunksCount}s</span>
           </div>
         </div>
       )

@@ -11,6 +11,11 @@
  */
 export function getWidgetScript(): () => void {
   return () => {
+    // Skip injection in iframes to reduce overhead and prevent duplicates
+    if (window !== window.top) {
+      return
+    }
+
     // Constants must be defined inside the function scope for injection
     const WIDGET_HOST_ID = '__dodo-recorder-widget-host'
     
@@ -20,12 +25,25 @@ export function getWidgetScript(): () => void {
       __dodoTakeScreenshot: () => Promise<string | null>
       __dodoAssertionMode: () => boolean
       __dodoDisableAssertionMode: () => void
+      __dodoAudioLevel: number
+      __dodoAudioActive: boolean
+      __dodoShowEqualizer: () => void
+      __dodoHideEqualizer: () => void
     }
 
     // Prevent duplicate widget creation
     if (document.getElementById(WIDGET_HOST_ID)) {
       console.log('[Dodo Recorder] Widget already exists, skipping creation')
       return
+    }
+
+    // Initialize audio state globals if not already set
+    const win = window as unknown as DodoWindow
+    if (typeof win.__dodoAudioLevel === 'undefined') {
+      win.__dodoAudioLevel = 0
+    }
+    if (typeof win.__dodoAudioActive === 'undefined') {
+      win.__dodoAudioActive = false
     }
     
     // Detect OS for tooltip text
@@ -187,6 +205,39 @@ export function getWidgetScript(): () => void {
           opacity: 1;
           transition-delay: 0.5s;
         }
+
+        .audio-equalizer {
+          display: flex;
+          gap: 3px;
+          align-items: flex-end;
+          height: 35px;
+          padding: 4px 8px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 6px;
+          min-width: 55px;
+        }
+
+        .eq-bar {
+          flex: 1;
+          min-width: 4px;
+          background: currentColor;
+          border-radius: 2px 2px 0 0;
+          transition: height 0.1s ease, color 0.2s ease;
+          height: 5%;
+        }
+
+        .eq-bar[data-active="true"] {
+          color: #22c55e;
+        }
+
+        .eq-bar[data-level="medium"] {
+          color: #eab308;
+        }
+
+        .eq-bar[data-level="high"] {
+          color: #ef4444;
+        }
       `
     
     // Create widget structure programmatically
@@ -228,8 +279,22 @@ export function getWidgetScript(): () => void {
     assertionTooltip.textContent = `Assertion Mode (${modKey}+Click)`
     assertionBtn.appendChild(assertionTooltip)
 
+    // Audio equalizer (5 bars)
+    const equalizer = document.createElement('div')
+    equalizer.className = 'audio-equalizer'
+    equalizer.id = 'audio-equalizer'
+    equalizer.style.display = 'none'
+
+    for (let i = 0; i < 5; i++) {
+      const bar = document.createElement('div')
+      bar.className = 'eq-bar'
+      bar.setAttribute('data-bar-index', i.toString())
+      equalizer.appendChild(bar)
+    }
+
     widget.appendChild(screenshotBtn)
     widget.appendChild(assertionBtn)
+    widget.appendChild(equalizer)
     
     // Append style and widget to shadow DOM
     shadow.appendChild(style)
@@ -385,6 +450,87 @@ export function getWidgetScript(): () => void {
     ;(window as unknown as DodoWindow).__dodoDisableAssertionMode = () => {
       assertionModeActive = false
       assertionBtn.classList.remove('active')
+    }
+
+    // Audio equalizer animation
+    let equalizerAnimationFrame: number | null = null
+
+    const updateEqualizer = () => {
+      const win = window as unknown as DodoWindow
+      const level = win.__dodoAudioLevel || 0
+      const isActive = win.__dodoAudioActive === true
+      const bars = equalizer.querySelectorAll('.eq-bar')
+
+      // Debug logging (only occasionally to avoid spam)
+      if (Math.random() < 0.01) {
+        console.log('[Widget] updateEqualizer - isActive:', isActive, ', level:', level)
+      }
+
+      if (!isActive) {
+        equalizer.style.display = 'none'
+
+        bars.forEach((bar) => {
+          const element = bar as HTMLElement
+          element.style.height = '5%'
+          element.removeAttribute('data-active')
+          element.removeAttribute('data-level')
+        })
+      } else {
+        equalizer.style.display = 'flex'
+
+        if (level > 0) {
+          bars.forEach((bar, index) => {
+            const element = bar as HTMLElement
+            const offset = index * 0.5
+            const variance = Math.sin(Date.now() / 200 + offset) * 0.3 + 0.7
+            const barHeight = Math.min(100, level * variance)
+
+            element.style.height = `${barHeight}%`
+            element.setAttribute('data-active', 'true')
+
+            if (barHeight > 75) {
+              element.setAttribute('data-level', 'high')
+            } else if (barHeight > 50) {
+              element.setAttribute('data-level', 'medium')
+            } else {
+              element.removeAttribute('data-level')
+            }
+          })
+        } else {
+          bars.forEach((bar) => {
+            const element = bar as HTMLElement
+            element.style.height = '5%'
+            element.setAttribute('data-active', 'true')
+            element.removeAttribute('data-level')
+          })
+        }
+      }
+
+      equalizerAnimationFrame = requestAnimationFrame(updateEqualizer)
+    }
+
+    const startEqualizerAnimation = () => {
+      if (equalizerAnimationFrame === null) {
+        equalizerAnimationFrame = requestAnimationFrame(updateEqualizer)
+      }
+    }
+
+    startEqualizerAnimation()
+
+    // Expose equalizer control functions
+    ;(window as unknown as DodoWindow).__dodoShowEqualizer = () => {
+      ;(window as unknown as DodoWindow).__dodoAudioActive = true
+      equalizer.style.display = 'flex'
+      startEqualizerAnimation()
+    }
+
+    ;(window as unknown as DodoWindow).__dodoHideEqualizer = () => {
+      ;(window as unknown as DodoWindow).__dodoAudioActive = false
+      equalizer.style.display = 'none'
+      if (equalizerAnimationFrame) {
+        cancelAnimationFrame(equalizerAnimationFrame)
+        equalizerAnimationFrame = null
+      }
     }
 
     console.log('[Dodo Recorder] Widget initialized')

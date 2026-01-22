@@ -41,6 +41,7 @@ export class BrowserRecorder extends EventEmitter {
   private frameNavigatedHandler: ((frame: Frame) => void) | null = null
   private screenshotDir: string | null = null
   private initialNavigationComplete: boolean = false
+  private audioActive: boolean = false
 
   /**
    * Checks if Playwright Chromium browser is installed
@@ -202,6 +203,62 @@ export class BrowserRecorder extends EventEmitter {
    */
   getActions(): RecordedAction[] {
     return [...this.actions]
+  }
+
+  /**
+   * Updates the audio level on the browser page for the recording widget.
+   * Also ensures audio activity is maintained across page navigations.
+   */
+  async updateAudioLevel(level: number): Promise<void> {
+    if (!this.page) return
+
+    try {
+      // If audio is active, ensure state is maintained across navigations
+      const shouldBeActive = this.audioActive
+      
+      await this.page.evaluate(({ lvl, isActive }) => {
+        const win = window as any
+        win.__dodoAudioLevel = lvl
+        
+        // Re-establish active state after page navigations
+        // This happens when __dodoAudioActive is reset to false in new page context
+        if (isActive && !win.__dodoAudioActive) {
+          win.__dodoAudioActive = true
+          if (typeof win.__dodoShowEqualizer === 'function') {
+            win.__dodoShowEqualizer()
+          }
+        }
+      }, { lvl: level, isActive: shouldBeActive })
+    } catch (error) {
+      // Silently ignore failures (page may be navigating)
+    }
+  }
+
+  /**
+   * Updates whether audio recording is active in the browser widget.
+   */
+  async updateAudioActivity(active: boolean): Promise<void> {
+    if (!this.page) return
+    
+    // Store active state to maintain across navigations
+    this.audioActive = active
+
+    try {
+      await this.page.evaluate((isActive) => {
+        const win = window as any
+        win.__dodoAudioActive = isActive
+
+        if (isActive && typeof win.__dodoShowEqualizer === 'function') {
+          win.__dodoShowEqualizer()
+        }
+
+        if (!isActive && typeof win.__dodoHideEqualizer === 'function') {
+          win.__dodoHideEqualizer()
+        }
+      }, active)
+    } catch (error) {
+      // Silently ignore failures (page may be navigating)
+    }
   }
 
   /**

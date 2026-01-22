@@ -65,6 +65,13 @@ const shadow = widgetHost.attachShadow({ mode: 'closed' })
 
 ## Features
 
+**Feature Index:**
+1. Screenshot Button
+2. Assertion Button
+3. Audio Equalizer - 5-bar real-time level visualization
+4. Drag and Drop
+5. Edge Snapping
+
 ### 1. Screenshot Button
 
 **Visual Design:**
@@ -139,7 +146,77 @@ window.__dodoDisableAssertionMode = () => {
 }
 ```
 
-### 3. Drag and Drop
+### 3. Audio Equalizer (NEW ✨)
+
+**Visual Design:**
+- Compact 5-bar equalizer visualization
+- Size: ~55px × 35px
+- Displays alongside screenshot and assertion buttons
+- Only visible during voice recording
+
+**Interactions:**
+- **Auto-show**: Appears when audio recording starts
+- **Auto-hide**: Disappears when recording stops
+- **Real-time**: Updates 60fps based on microphone input
+- **Visual feedback**: Color changes based on audio level
+
+**Implementation:**
+```typescript
+// Equalizer structure (5 bars)
+<div class="audio-equalizer">
+  <div class="eq-bar" data-bar-index="0"></div>
+  <div class="eq-bar" data-bar-index="1"></div>
+  <div class="eq-bar" data-bar-index="2"></div>
+  <div class="eq-bar" data-bar-index="3"></div>
+  <div class="eq-bar" data-bar-index="4"></div>
+</div>
+
+// Animation loop reads global audio level
+const level = window.__dodoAudioLevel || 0
+
+// Each bar height varies with wave pattern for visual interest
+const variance = Math.sin(Date.now() / 200 + offset) * 0.3 + 0.7
+const barHeight = level * variance
+```
+
+**Color Logic:**
+- **Green** (0-50%): `#22c55e` - Normal speech range
+- **Yellow** (50-75%): `#eab308` - Loud speech
+- **Red** (75-100%): `#ef4444` - Very loud/clipping risk
+
+**Data Bridge:**
+
+The equalizer receives audio level data through a three-layer bridge:
+
+```mermaid
+sequenceDiagram
+    participant RC as RecordingControls<br/>(Renderer)
+    participant MP as Main Process<br/>(IPC Handler)
+    participant PW as Playwright<br/>(page.evaluate)
+    participant WG as Browser Widget<br/>(Animation Loop)
+    
+    RC->>RC: Analyze MediaStream
+    RC->>MP: IPC: updateAudioLevel(75)
+    MP->>PW: page.evaluate(...)
+    PW->>WG: window.__dodoAudioLevel = 75
+    WG->>WG: Read & animate 5 bars
+```
+
+1. **RecordingControls** analyzes audio stream with AudioContext
+2. Calculates RMS level (0-100) every frame
+3. Sends via IPC to main process
+4. **Main process** uses Playwright's `page.evaluate()` to inject level
+5. **Widget** reads `window.__dodoAudioLevel` in animation loop
+6. Updates 5 bar heights and colors accordingly
+
+**Why this approach?**
+- Widget code must be self-contained (no imports)
+- Renderer and browser are separate windows
+- IPC + Playwright bridge provides real-time updates
+- Animation loop handles visual smoothing
+- 5 bars provide good balance between detail and compactness
+
+### 4. Drag and Drop
 
 **User Experience:**
 - **Grab**: Click anywhere on widget to start dragging
@@ -188,7 +265,7 @@ document.addEventListener('mouseup', () => {
 })
 ```
 
-### 4. Edge Snapping
+### 5. Edge Snapping
 
 After dragging, the widget automatically snaps to the nearest screen edge with smooth animation:
 

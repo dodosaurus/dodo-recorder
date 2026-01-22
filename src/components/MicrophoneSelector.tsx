@@ -146,23 +146,12 @@ export function MicrophoneSelector({ disabled, onDeviceChange, selectedDeviceId 
 
       {/* Test result feedback */}
       {testResult === 'success' && (
-        <p className="text-xs text-emerald-500">✓ Microphone working</p>
+        <p className="text-xs text-emerald-500 text-center">✓ Microphone working</p>
       )}
       {testResult === 'error' && (
-        <p className="text-xs text-red-500">✗ Microphone test failed</p>
+        <p className="text-xs text-red-500 text-center">✗ Microphone test failed</p>
       )}
 
-      {/* Device count info */}
-      {devices.length > 0 && (
-        <p className="text-xs text-muted-foreground">
-          {devices.length} device{devices.length !== 1 ? 's' : ''} found
-        </p>
-      )}
-      {devices.length === 0 && !isLoading && (
-        <p className="text-xs text-muted-foreground">
-          No microphones found. Check your system settings.
-        </p>
-      )}
     </div>
   )
 }

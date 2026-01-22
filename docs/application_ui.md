@@ -256,7 +256,6 @@ Only visible when voice recording is enabled.
 - **Dropdown**: Select specific microphone device
 - **Refresh button**: Re-enumerate devices (detects new/removed devices)
 - **Test button**: Verify microphone is working
-- **Device count**: Shows number of available devices
 - **Auto-detection**: Listens for device changes via `devicechange` event
 
 **Code**:
@@ -637,46 +636,17 @@ See [`docs/transcript_view.md`](transcript_view.md) for complete documentation.
 
 ## Audio Features
 
-### 1. Audio Level Meter (NEW ✨)
+### 1. Audio Level Meter (DEPRECATED - Moved to Browser Widget)
 
-**Component**: [`src/components/AudioLevelMeter.tsx`](../src/components/AudioLevelMeter.tsx)  
-**Integration**: [`RecordingControls.tsx:407`](../src/components/RecordingControls.tsx:407)
+**Previous Location**: [`RecordingControls.tsx`](../src/components/RecordingControls.tsx)  
+**New Location**: Browser widget (see [`docs/browser_widget.md`](browser_widget.md))
 
-Real-time visualization of microphone input levels during recording.
+Real-time audio level visualization has been moved to the browser widget for better visibility during recording. The recording controls now show only a simple recording indicator.
 
-**Features:**
-- **Visual bar**: Animated canvas-based level meter
-- **Color coding**:
-  - Green: 0-50% (normal speech)
-  - Yellow: 50-75% (loud speech)
-  - Red: 75-100% (very loud/clipping risk)
-- **Percentage display**: Numeric level indicator
-- **Grid lines**: Visual reference marks at 25%, 50%, 75%
-
-**Implementation**:
-```typescript
-// Create audio context and analyser
-const audioContext = new AudioContext()
-const source = audioContext.createMediaStreamSource(stream)
-const analyser = audioContext.createAnalyser()
-analyser.fftSize = 256
-analyser.smoothingTimeConstant = 0.3
-source.connect(analyser)
-
-// Calculate RMS (root mean square) for volume level
-analyser.getByteFrequencyData(dataArray)
-let sum = 0
-for (let i = 0; i < dataArray.length; i++) {
-  sum += (dataArray[i] / 255) ** 2
-}
-const rms = Math.sqrt(sum / dataArray.length)
-const level = Math.min(100, rms * 100 * 2)
-```
-
-**Use Case**:
-- Verify microphone is working before recording
-- Monitor audio levels during recording
-- Detect if microphone is too quiet or too loud
+**Recording Indicator** ([`RecordingControls.tsx:433`](../src/components/RecordingControls.tsx:433)):
+- Pulsing microphone icon
+- Recording duration counter
+- Red background to indicate active recording
 
 ### 2. Device Selection
 
@@ -720,6 +690,27 @@ try {
 - If USB mic unplugged → app falls back to built-in mic
 - User sees notification: "Selected microphone not available, using default"
 - Recording continues without interruption
+
+### 4. Audio Level Visualization in Browser Widget (NEW)
+
+During recording, the browser widget displays a compact 5-bar equalizer showing real-time audio levels.
+
+**Features:**
+- **Compact design**: 5-bar equalizer (~55px wide) fits alongside screenshot/assertion buttons
+- **Color-coded levels**:
+  - Green (0-50%): Normal speech
+  - Yellow (50-75%): Loud speech
+  - Red (75-100%): Very loud/potential clipping
+- **Animated bars**: Wave pattern creates engaging visual feedback
+- **Auto-hide**: Only visible during active voice recording
+
+**Data Flow**:
+1. RecordingControls analyzes MediaStream audio with AudioContext
+2. Sends level data (0-100) to main process via IPC every frame
+3. Main process updates browser page via Playwright's `page.evaluate()`
+4. Widget reads `window.__dodoAudioLevel` and animates equalizer bars
+
+See [`docs/browser_widget.md`](browser_widget.md) for complete implementation details.
 
 ---
 
@@ -837,7 +828,7 @@ const { status, actions, setStatus } = useRecordingStore(
 
 3. **Verify During Recording**:
    - Start recording
-   - Observe audio level meter
+   - Observe audio equalizer in the browser widget
    - Speak normally
    - Levels should show green bars (0-50%)
    - If no movement → microphone not working
@@ -890,7 +881,7 @@ The Dodo Recorder UI provides a streamlined recording experience with key featur
 - ✅ Microphone device selection with dropdown
 - ✅ Device enumeration with refresh button
 - ✅ Microphone test functionality
-- ✅ Real-time audio level visualization
+- ✅ Real-time audio level visualization in browser widget
 - ✅ Automatic fallback to default device
 - ✅ Device change detection (auto-refresh)
 - ✅ Persistent device selection across sessions
