@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <strong>⚠️ Active Development</strong> • Open Source • Contributions Welcome
+  <strong>Active Development</strong> • Open Source
 </p>
 
 ![Screenshot from Dodo Recorder](docs/images/main_screenshot.png)
@@ -194,9 +194,9 @@ dodo-recorder/
 
 ---
 
-## 🤝 Contributing
+## 📝 Reporting Issues
 
-Contributions are welcome! See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for our community standards.
+Found a bug or have a feature request? Please open an issue on [GitHub Issues](https://github.com/dodosaurus/dodo-recorder/issues).
 
 ---
 
@@ -244,7 +244,7 @@ For debugging in development mode, the app provides comprehensive logging:
 - Production builds not currently available
 - Build from source for local testing
 - Ensure FFmpeg is installed and accessible in your PATH for audio processing
-- Not extensively tested yet — contributions welcome
+- Not extensively tested yet
 
 ---
 
@@ -269,7 +269,7 @@ A: No. All transcription happens locally using Whisper.cpp. Your voice recording
 A: Run `./build/install-playwright-browsers.sh` to download the Playwright Chromium browser. The `npm install` command should do this automatically via a postinstall script.
 
 **Q: Why is there only a macOS Apple Silicon build right now?**
-A: Initial development and testing focused on Apple Silicon (M1–M4). The app works on other platforms when building from source, but we want to complete testing and release signed builds for Intel Mac, Windows, and Linux before distributing them.
+A: Initial development and testing focused on Apple Silicon (M1–M4). The app works on other platforms when building from source, but I want to complete testing and release signed builds for Intel Mac, Windows, and Linux before distributing them.
 
 ---
 
@@ -282,7 +282,7 @@ A: Initial development and testing focused on Apple Silicon (M1–M4). The app w
 - **[Voice Transcription](docs/voice_transcription.md)**: Deep dive into the local transcription system
 - **[Output Format](docs/output_format.md)**: Detailed explanation of session bundle structure
 - **[Logging and Debugging](docs/logs_and_debugging.md)**: How to access logs and debug issues
-- **[Agent Guidelines](AGENTS.md)**: Coding standards and guidelines for AI agents
+- **[Agent Guidelines](AGENTS.md)**: Coding standards and guidelines for AI agents (for reference)
 - **[Initial Vision](docs/special/initial_vision.md)**: Original project goals and design principles
 
 ---
