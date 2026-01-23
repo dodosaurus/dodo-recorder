@@ -62,7 +62,6 @@ session-YYYY-MM-DD-HHMMSS/
 **Floating Widget** (appears in browser top-right corner):
 - 📸 Take screenshots
 - ✅ Toggle assertion mode (auto-disables after recording an assertion)
-- 🎯 Drag to reposition
 - 👻 Never recorded in your interactions
 
 **Keyboard Shortcuts:**

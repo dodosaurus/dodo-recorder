@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useRecordingStore } from '@/stores/recordingStore'
 import { MousePointer2, Type, Navigation, Keyboard, ListChecks, Camera, Target, X } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
@@ -106,7 +107,7 @@ export function TranscriptView() {
   }
 
   const narrativeText = extractNarrative(transcriptText)
-  const parts = parseTranscript(narrativeText)
+  const parts = useMemo(() => parseTranscript(narrativeText), [narrativeText])
 
   const handleActionClick = (shortId: string) => {
     // Find the full action ID by matching the short ID prefix

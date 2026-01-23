@@ -1,5 +1,6 @@
 import { useRecordingStore } from '@/stores/recordingStore'
 import { Button } from '@/components/ui/button'
+import { useSettings } from '@/lib/useSettings'
 import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw, CheckCircle } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
@@ -43,6 +44,9 @@ export function RecordingControls() {
   const audioStreamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
+
+  // Use shared settings hook to reload preferences during reset
+  const { reload: reloadSettings } = useSettings()
 
   useEffect(() => {
     if (!window.electronAPI) return
@@ -443,32 +447,17 @@ export function RecordingControls() {
   const resetSession = async () => {
     if (!window.electronAPI) return
 
-    // Reload user preferences before resetting to restore URL and output path
-    const prefsResult = await window.electronAPI.getUserPreferences()
-    const micResult = await window.electronAPI.getMicrophoneSettings()
+    // Save current voice settings
     const currentVoiceEnabled = isVoiceEnabled
-    const currentMicrophoneId = selectedMicrophoneId
     
+    // Reset the recording state
     reset()
 
-    // Restore the saved preferences after reset
+    // Restore voice enabled state
     useRecordingStore.getState().setVoiceEnabled(currentVoiceEnabled)
-    if (prefsResult.success && (prefsResult as any).preferences) {
-      const preferences = (prefsResult as any).preferences
-      if (preferences.startUrl) {
-        useRecordingStore.getState().setStartUrl(preferences.startUrl)
-      }
-      if (preferences.outputPath) {
-        useRecordingStore.getState().setOutputPath(preferences.outputPath)
-      }
-    }
 
-    if (micResult.success && (micResult as any).settings) {
-      const settings = (micResult as any).settings
-      useRecordingStore.getState().setSelectedMicrophoneId(settings.selectedMicrophoneId)
-    } else {
-      useRecordingStore.getState().setSelectedMicrophoneId(currentMicrophoneId)
-    }
+    // Reload all saved preferences (URL, output path, microphone settings)
+    await reloadSettings()
   }
 
   const renderAudioStatus = () => {

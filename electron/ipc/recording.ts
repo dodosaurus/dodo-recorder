@@ -3,44 +3,22 @@ import { BrowserRecorder } from '../browser/recorder'
 import { SessionWriter } from '../session/writer'
 import { Transcriber } from '../audio/transcriber'
 import { handleIpc, ipcError } from '../utils/ipc'
-import { validateUrl, validateOutputPath, validateAudioBuffer } from '../utils/validation'
+import {
+  validateUrl,
+  validateOutputPath,
+  validateAudioBuffer,
+  validateRecordedActionsArray,
+  validateTranscriptSegmentsArray,
+} from '../utils/validation'
 import { distributeVoiceSegments, generateFullTranscript } from '../utils/voiceDistribution'
 import { generateTranscriptWithReferences } from '../utils/enhancedTranscript'
 import { getSettingsStore } from '../settings/store'
 import { logger } from '../utils/logger'
-import type { RecordedAction, TranscriptSegment } from '../../shared/types'
 
 let browserRecorder: BrowserRecorder | null = null
 let transcriber: Transcriber | null = null
 let sessionWriter: SessionWriter | null = null
 let isRecording = false
-
-function validateRecordedActionsArray(data: unknown): data is RecordedAction[] {
-  if (!Array.isArray(data)) return false
-  
-  for (const action of data) {
-    if (!action || typeof action !== 'object') return false
-    if (typeof action.id !== 'string') return false
-    if (typeof action.timestamp !== 'number') return false
-    if (typeof action.type !== 'string') return false
-  }
-  
-  return true
-}
-
-function validateTranscriptSegmentsArray(data: unknown): data is TranscriptSegment[] {
-  if (!Array.isArray(data)) return false
-  
-  for (const segment of data) {
-    if (!segment || typeof segment !== 'object') return false
-    if (typeof segment.id !== 'string') return false
-    if (typeof segment.startTime !== 'number') return false
-    if (typeof segment.endTime !== 'number') return false
-    if (typeof segment.text !== 'string') return false
-  }
-  
-  return true
-}
 
 /**
  * Register recording-related IPC handlers

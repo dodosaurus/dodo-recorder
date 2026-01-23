@@ -3,29 +3,12 @@ import { handleIpc, ipcError } from '../utils/ipc'
 import { updateTimeWindows } from '../utils/voiceDistribution'
 import { getSettingsStore } from '../settings/store'
 import { logger } from '../utils/logger'
-import { validateSettingsUpdate, validateUserPreferencesUpdate } from '../utils/validation'
-import type { SessionBundle } from '../../shared/types'
+import {
+  validateSettingsUpdate,
+  validateUserPreferencesUpdate,
+  validateSessionBundle,
+} from '../utils/validation'
 import { getSessionWriter } from './recording'
-
-function validateSessionBundle(data: unknown): data is SessionBundle {
-  if (!data || typeof data !== 'object') return false
-  
-  const bundle = data as Partial<SessionBundle>
-  
-  // Validate required fields exist and have correct types
-  if (!Array.isArray(bundle.actions)) return false
-  if (typeof bundle.startTime !== 'number') return false
-  
-  // Validate actions array structure
-  for (const action of bundle.actions) {
-    if (!action || typeof action !== 'object') return false
-    if (typeof action.id !== 'string') return false
-    if (typeof action.timestamp !== 'number') return false
-    if (typeof action.type !== 'string') return false
-  }
-  
-  return true
-}
 
 /**
  * Register session-related IPC handlers

@@ -3,9 +3,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { MicrophoneSelector } from '@/components/MicrophoneSelector'
+import { useSettings } from '@/lib/useSettings'
 import { Folder, Mic } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
-import { useEffect } from 'react'
 
 export function SettingsPanel() {
   const {
@@ -25,56 +25,13 @@ export function SettingsPanel() {
 
   const isDisabled = status === 'recording' || status === 'processing'
 
-  // Load saved preferences on mount
-  useEffect(() => {
-    const loadPreferences = async () => {
-      if (!window.electronAPI) {
-        console.log('[SettingsPanel] electronAPI not available')
-        return
-      }
-      
-      console.log('[SettingsPanel] Loading user preferences...')
-      const result = await window.electronAPI.getUserPreferences()
-      console.log('[SettingsPanel] getUserPreferences result:', result)
-      
-      // The result structure is: { success: true, preferences: { startUrl, outputPath } }
-      if (result.success && (result as any).preferences) {
-        const preferences = (result as any).preferences
-        console.log('[SettingsPanel] Loaded preferences:', preferences)
-        
-        if (preferences.startUrl) {
-          console.log('[SettingsPanel] Setting startUrl:', preferences.startUrl)
-          setStartUrl(preferences.startUrl)
-        }
-        if (preferences.outputPath) {
-          console.log('[SettingsPanel] Setting outputPath:', preferences.outputPath)
-          setOutputPath(preferences.outputPath)
-        }
-      } else {
-        console.log('[SettingsPanel] Failed to load preferences or no data')
-      }
+  // Use shared settings hook for centralized settings management
+  const { updatePreferences, updateMicrophoneSettings } = useSettings()
 
-      // Load microphone settings
-      console.log('[SettingsPanel] Loading microphone settings...')
-      const micResult = await window.electronAPI.getMicrophoneSettings()
-      console.log('[SettingsPanel] getMicrophoneSettings result:', micResult)
-      
-      if (micResult.success && (micResult as any).settings) {
-        const settings = (micResult as any).settings
-        console.log('[SettingsPanel] Loaded microphone settings:', settings)
-        setSelectedMicrophoneId(settings.selectedMicrophoneId)
-      }
-    }
-    
-    loadPreferences()
-  }, [setStartUrl, setOutputPath, setSelectedMicrophoneId])
-
-  // Save startUrl when it changes
+  // Update startUrl with automatic persistence
   const handleStartUrlChange = async (url: string) => {
     setStartUrl(url)
-    if (window.electronAPI) {
-      await window.electronAPI.updateUserPreferences({ startUrl: url })
-    }
+    await updatePreferences({ startUrl: url })
   }
 
   const handleSelectFolder = async () => {
@@ -82,18 +39,14 @@ export function SettingsPanel() {
     const path = await window.electronAPI.selectOutputFolder()
     if (path) {
       setOutputPath(path)
-      // Save the selected path to preferences
-      await window.electronAPI.updateUserPreferences({ outputPath: path })
+      await updatePreferences({ outputPath: path })
     }
   }
 
   const handleMicrophoneChange = async (deviceId: string | undefined) => {
     console.log('[SettingsPanel] Microphone changed to:', deviceId)
     setSelectedMicrophoneId(deviceId)
-    
-    if (window.electronAPI) {
-      await window.electronAPI.updateMicrophoneSettings({ selectedMicrophoneId: deviceId })
-    }
+    await updateMicrophoneSettings({ selectedMicrophoneId: deviceId })
   }
 
   return (

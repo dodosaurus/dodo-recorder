@@ -3,6 +3,7 @@ import os from 'os'
 import fs from 'fs'
 import { app } from 'electron'
 import type { AppSettings } from '../settings/store'
+import type { RecordedAction, TranscriptSegment, SessionBundle } from '../../shared/types'
 
 const ALLOWED_PROTOCOLS = ['http:', 'https:']
 const SESSION_ID_REGEX = /^[a-zA-Z0-9_-]+$/
@@ -166,6 +167,76 @@ export function validateUserPreferencesUpdate(data: unknown): data is Partial<{ 
     if (typeof preferences.outputPath !== 'string') return false
     if (preferences.outputPath.length > MAX_PATH_LENGTH) return false
   }
+  
+  return true
+}
+
+/**
+ * Validate a single RecordedAction object
+ */
+export function validateRecordedAction(action: unknown): action is RecordedAction {
+  if (!action || typeof action !== 'object') return false
+  
+  const act = action as Partial<RecordedAction>
+  if (typeof act.id !== 'string') return false
+  if (typeof act.timestamp !== 'number') return false
+  if (typeof act.type !== 'string') return false
+  
+  return true
+}
+
+/**
+ * Validate an array of RecordedAction objects
+ */
+export function validateRecordedActionsArray(data: unknown): data is RecordedAction[] {
+  if (!Array.isArray(data)) return false
+  
+  for (const action of data) {
+    if (!validateRecordedAction(action)) return false
+  }
+  
+  return true
+}
+
+/**
+ * Validate a single TranscriptSegment object
+ */
+export function validateTranscriptSegment(segment: unknown): segment is TranscriptSegment {
+  if (!segment || typeof segment !== 'object') return false
+  
+  const seg = segment as Partial<TranscriptSegment>
+  if (typeof seg.id !== 'string') return false
+  if (typeof seg.startTime !== 'number') return false
+  if (typeof seg.endTime !== 'number') return false
+  if (typeof seg.text !== 'string') return false
+  
+  return true
+}
+
+/**
+ * Validate an array of TranscriptSegment objects
+ */
+export function validateTranscriptSegmentsArray(data: unknown): data is TranscriptSegment[] {
+  if (!Array.isArray(data)) return false
+  
+  for (const segment of data) {
+    if (!validateTranscriptSegment(segment)) return false
+  }
+  
+  return true
+}
+
+/**
+ * Validate a SessionBundle object
+ */
+export function validateSessionBundle(data: unknown): data is SessionBundle {
+  if (!data || typeof data !== 'object') return false
+  
+  const bundle = data as Partial<SessionBundle>
+  
+  // Validate required fields exist and have correct types
+  if (!validateRecordedActionsArray(bundle.actions)) return false
+  if (typeof bundle.startTime !== 'number') return false
   
   return true
 }
