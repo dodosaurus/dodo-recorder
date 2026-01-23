@@ -83,8 +83,8 @@ The complete pipeline transforms raw audio recordings and browser actions into a
 │  • Create action reference table                            │
 └─────────────────────────────────────────────────────────────┘
                               ↓
-                    [transcript.txt]
-         (Narrative with precisely placed actions)
+                      [actions.json]
+         (_meta + narrative + actions - all-in-one)
 ```
 
 ---
@@ -442,8 +442,8 @@ interface RecordedAction {
 
 ### 3.1 Overview
 
-This stage generates the final [`transcript.txt`](../electron/utils/enhancedTranscript.ts:30) file with:
-- Session metadata header
+This stage generates the final narrative text embedded in actions.json with:
+- Voice commentary with embedded action references
 - AI usage instructions (60+ lines)
 - Narrative with precisely placed action references
 - Action reference table
@@ -683,8 +683,8 @@ dodo-recorder/
 ---
 
 ## Output Format
+### 6.1 actions.json narrative field (Primary Output)
 
-### 6.1 transcript.txt (Primary Output)
 
 This is the main transcript file that combines voice commentary with embedded action references. It's optimized for both LLM consumption (for generating Playwright tests) and human readability.
 
@@ -822,8 +822,9 @@ flowchart TD
     H --> L
     J --> L
     K --> L
-    L --> M[Generate transcript.txt<br/>with embedded references]
-    L --> N[Write actions.json<br/>without voice data]
+    L --> M[Generate narrative text<br/>with embedded action references]
+    L --> N[Build actions.json v2<br/>with _meta + narrative + actions]
+    L --> O[Ensure INSTRUCTIONS.md exists]
 
     style A fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
     style B fill:#fff3e0,stroke:#f57c00,stroke-width:2px

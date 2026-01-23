@@ -1,839 +1,477 @@
-# Dodo Recorder Output Format - Complete Evolution
+# Dodo Recorder Output Format
 
-**Last Updated**: January 2026  
-**Status**: ✅ Complete - Framework-Agnostic & AI-Instruction-Complete
+**Last Updated**: January 2026
+**Status**: ✅ Production Ready
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Phase 1: Output Format Refactoring (8→3 Files)](#phase-1-output-format-refactoring-83-files)
-3. [Phase 2: Review & Analysis](#phase-2-review--analysis)
-4. [Phase 3: AI-Facing Enhancements (3→4 Files)](#phase-3-ai-facing-enhancements-34-files)
-5. [Current Format](#current-format)
-6. [Implementation Details](#implementation-details)
-7. [Migration Guide](#migration-guide)
-8. [Future Enhancements](#future-enhancements)
-9. [References](#references)
+2. [Design Goals](#design-goals)
+3. [Bundle Structure](#bundle-structure)
+5. [File Specifications](#file-specifications)
+6. [Usage Examples](#usage-examples)
+7. [Token Optimization](#token-optimization)
+8. [Framework Support](#framework-support)
+9. [Implementation Details](#implementation-details)
 
 ---
 
 ## Overview
 
-This document chronicles the complete evolution of Dodo Recorder's session bundle output format through three major phases:
-
-1. **Phase 1** (Initial Refactoring): Reduced from 8 redundant files to 3 essential files
-2. **Phase 2** (Analysis): Identified gaps in AI-facing documentation and framework dependencies
-3. **Phase 3** (Enhancements): Added comprehensive AI instructions and made format framework-agnostic
-
-### Design Goals
-
-- **Minimal & Essential**: Only necessary files, zero redundancy
-- **Framework-Agnostic**: Works with Playwright, Cypress, Selenium, Puppeteer, any framework
-- **AI-Instruction-Complete**: Standalone with full parsing documentation
-- **Human-Readable**: Engineers can quickly scan and understand sessions
-- **LLM-Optimized**: Single narrative file with complete context
-
----
-
-## Phase 1: Output Format Refactoring (8→3 Files)
-
-**Date**: Early January 2026  
-**Goal**: Eliminate redundancy and simplify output
-
-### Problems with Original Format
-
-The original output generated **8 files** per session:
-- `actions.json` - Actions with embedded voiceSegments
-- `timeline.json` - Merged timeline of actions + voice  
-- `transcript.json` - Structured voice segments
-- `transcript.txt` - Human-readable transcript  
-- `transcript-enhanced.txt` - Narrative with action IDs
-- `transcript-detailed.md` - Detailed transcript with reference table
-- `metadata.json` - Session metadata
-- `notes.md` - Optional user notes
-- `screenshots/` - Screenshot folder
-
-**Issues:**
-- Voice data duplicated across 6 files
-- Complex to process (multiple file reads required)
-- Maintenance burden (more code for each file)
-- Difficult to correlate information across files
-
-### Phase 1 Solution: 3 Essential Files
+Dodo Recorder produces **framework-agnostic session bundles** optimized for AI-assisted test generation. Each recording session generates a compact, self-contained directory with three essential components:
 
 ```
 session-YYYY-MM-DD-HHMMSS/
-├── actions.json       # Clean actions without voice data
-├── transcript.txt     # Voice commentary with action references
+├── INSTRUCTIONS.md    # General, reusable AI instructions
+├── actions.json       # Session data + narrative (all-in-one)
 └── screenshots/       # Visual captures
 ```
-
-**Key Changes:**
-1. **Removed `voiceSegments`** from actions.json
-2. **Merged 6 transcript variants** into single transcript.txt
-3. **Embedded action references** in narrative: `[action:SHORT_ID:TYPE]`
-4. **Added reference table** at end of transcript.txt
-
-**Benefits:**
-- 62% file reduction (8 files → 3 files)
-- Single source of truth for voice commentary
-- Simpler error handling and maintenance
-- ~20% faster processing time
-
-### Phase 1 Code Changes
-
-**SessionWriter** ([`electron/session/writer.ts`](../electron/session/writer.ts)):
-```typescript
-// Strip voiceSegments from actions for clean JSON
-const actionsWithoutVoice = session.actions.map(action => {
-  const { voiceSegments, ...actionWithoutVoice } = action
-  return actionWithoutVoice
-})
-
-// Generate integrated transcript
-const transcriptText = generateTranscriptWithReferences(session.actions)
-
-// Write only 3 files
-await Promise.all([
-  writeJson(path.join(sessionDir, 'actions.json'), { actions: actionsWithoutVoice }),
-  writeText(path.join(sessionDir, 'transcript.txt'), transcriptText),
-])
-```
-
-**SessionBundle Type Simplification** ([`shared/types.ts`](../shared/types.ts)):
-```typescript
-// Before: 5 fields
-export interface SessionBundle {
-  actions: RecordedAction[]
-  timeline: TimelineEntry[]
-  transcript: TranscriptSegment[]
-  metadata: SessionMetadata
-  notes: string
-}
-
-// After: 2 fields
-export interface SessionBundle {
-  actions: RecordedAction[]
-  startTime: number
-}
-```
-
-**Results:**
-- ~300 lines of code removed
-- Deleted 2 unused interfaces (TimelineEntry, SessionMetadata)
-- 55% reduction in validation code complexity
-
----
-
-## Phase 2: Review & Analysis
-
-**Date**: Mid-January 2026  
-**Goal**: Assess format suitability for AI-driven test generation
-
-### Analysis Questions
-
-#### 1. Is actions.json too large?
-
-**Answer: No, size is justified.**
-
-- 29 actions = 1,169 lines (~40 lines per action)
-- File size: ~70KB for typical session
-- **Rationale**: Verbosity comes from intentional richness:
-  - Multiple locator strategies (testId, text, role, css, xpath)
-  - Confidence levels (high, medium, low)
-  - Element attributes and bounding boxes
-  - Multiple identification approaches
-
-**Verdict**: ✅ Size provides value - AI can choose most reliable/maintainable selectors
-
-#### 2. Does transcript.txt provide sufficient AI guidance?
-
-**Answer: No, insufficient for standalone usage.**
-
-**Critical Gaps Identified:**
-
-1. **No cross-referencing instructions**
-   - Doesn't explain 8-char ID prefix → full UUID mapping
-   - No guidance on finding detailed locator data in actions.json
-   - Example: `[action:8c61934e:click]` → `"id": "8c61934e-4cd3-4793-bdb5-5c1c6d696f37"`
-
-2. **No interpretation guidance**
-   - How to interpret narrative flow?
-   - Purpose of Action Reference table unclear
-   - Voice commentary vs. action metadata usage not explained
-
-3. **Framework dependency**
-   - Original recommendations were Playwright-specific
-   - Not usable with Cypress, Selenium, Puppeteer
-
-4. **Missing metadata**
-   - No start URL, session duration, test intent
-   - No format version or tool version
-   - No timestamp information
-
-**Example of AI confusion:**
-```
-[action:8c61934e:click]
-```
-Without instructions, AI must:
-- Deduce this is a UUID prefix
-- Search actions.json for matching full ID
-- Understand locators array structure
-- Know how to use confidence levels
-
-**Verdict**: ❌ Requires explicit AI-facing documentation
-
-### Recommendations from Phase 2
-
-1. **Add comprehensive header to transcript.txt** with:
-   - Session metadata (ID, start time, duration, URL)
-   - 6-step parsing guide for AI agents
-   - Cross-referencing mechanism explanation
-   - Locator strategy guidance (framework-agnostic)
-   - Confidence level explanations
-   - Action type interpretations
-
-2. **Add README.md to session directory** with:
-   - Quick start for AI agents
-   - File structure overview
-   - Usage instructions
-   - Session metadata summary
-
-3. **Add `_meta` section to actions.json** with:
-   - Format version
-   - Locator priority recommendations
-   - Confidence level guidance
-   - Action type descriptions
-
-4. **Make format framework-agnostic**
-   - Remove Playwright-specific instructions
-   - Support Cypress, Selenium, Puppeteer, etc.
-   - Focus on universal locator strategies
-
----
-
-## Phase 3: AI-Facing Enhancements (3→4 Files)
-
-**Date**: Late January 2026  
-**Status**: ✅ Completed and Tested  
-**Goal**: Make format truly standalone and framework-agnostic
-
-### Enhanced Session Bundle Structure
-
-```
-session-YYYY-MM-DD-HHMMSS/
-├── README.md          # NEW: Quick start for AI agents
-├── transcript.txt     # ENHANCED: Comprehensive AI header
-├── actions.json       # ENHANCED: _meta wrapper with guidance
-└── screenshots/       # Unchanged
-```
-
-### Enhancement 1: Comprehensive transcript.txt Header
-
-**File**: [`electron/utils/enhancedTranscript.ts`](../electron/utils/enhancedTranscript.ts)
-
-**Added Components:**
-
-#### Session Metadata Section
-```markdown
-# Recording Session Transcript
-
-**Session ID**: session-2026-01-12-090952
-**Start Time**: 2026-01-12T09:09:52.000Z
-**Duration**: 3m 11s
-**Starting URL**: https://www.jkovac.eu/
-**Total Actions**: 29
-**Action Types**: 6 click, 2 fill, 16 assert, 3 navigate, 2 screenshot
-**Format Version**: 1.0
-**Generated By**: Dodo Recorder
-
----
-```
-
-#### AI Instructions Section
-```markdown
-## For AI Test Generation Agents
-
-This session bundle is a **standalone artifact** for generating browser automation tests.
-It works with any test framework: Playwright, Cypress, Selenium, Puppeteer, etc.
-
-### Bundle Structure
-1. **transcript.txt** (this file) - Narrative with action references
-2. **actions.json** - Detailed action metadata with locator strategies
-3. **screenshots/** - Visual captures of browser state
-
-### How to Parse This Data
-
-#### Step 1: Understand Action References
-Action references appear as `[action:SHORT_ID:TYPE]` where:
-- `SHORT_ID` = First 8 characters of the full UUID in actions.json
-- `TYPE` = Action type (click, fill, assert, navigate, screenshot)
-- Example: `[action:8c61934e:click]` → `"id": "8c61934e-4cd3-4793-bdb5-5c1c6d696f37"`
-
-#### Step 2: Cross-Reference with actions.json
-For each action reference:
-1. Extract the 8-character prefix (e.g., `8c61934e`)
-2. Find matching action in actions.json by UUID prefix match
-3. Use the `target.locators` array for element identification
-4. Consider `confidence` levels (high > medium > low)
-
-#### Step 3: Use Locator Strategies
-Each action provides multiple locator strategies:
-- **testId**: `data-testid` attributes - Most stable, framework-agnostic
-- **text**: Element text content - Good for buttons, links, labels
-- **placeholder**: Input placeholder - Best for form inputs  
-- **role**: ARIA role with name - Semantic, accessibility-friendly
-- **css**: CSS selectors - Framework-agnostic but potentially brittle
-- **xpath**: XPath expressions - Universal but harder to maintain
-
-**Recommended priority**: testId > text/placeholder/role > css > xpath
-
-#### Step 4: Interpret Action Types
-- **navigate**: Page navigation or URL change
-- **click**: User click interaction
-- **fill**: Text input (input fields, textareas)
-- **assert**: Element visibility/existence check (for verification)
-- **screenshot**: Manual screenshot capture
-- **keypress**: Keyboard input
-- **select**: Dropdown selection
-- **check**: Checkbox/radio button interaction
-- **scroll**: Page scroll action
-
-#### Step 5: Use Voice Commentary for Context
-Voice commentary provides:
-- **User intent**: Why actions were performed
-- **Expected outcomes**: What should happen after actions
-- **Test organization**: Hints about test structure
-- **Business context**: Real-world meaning of interactions
-
-Use this to:
-- Generate meaningful test names and descriptions
-- Create logical test groupings and assertions
-- Add helpful code comments
-- Understand expected behavior
-
-#### Step 6: Screenshots
-Screenshot actions include a `screenshot` field with filename.
-Use screenshots for:
-- Visual regression testing
-- Debugging test failures
-- Understanding page state at specific moments
-
----
-```
-
-### Enhancement 2: actions.json _meta Wrapper
-
-**File**: [`electron/session/writer.ts`](../electron/session/writer.ts)
-
-**Added Structure:**
-```json
-{
-  "_meta": {
-    "formatVersion": "1.0",
-    "generatedBy": "Dodo Recorder",
-    "sessionId": "session-2026-01-12-090952",
-    "startTime": 1736673592000,
-    "startTimeISO": "2026-01-12T09:09:52.000Z",
-    "totalActions": 29,
-    "actionTypes": {
-      "click": 6,
-      "fill": 2,
-      "assert": 16,
-      "navigate": 3,
-      "screenshot": 2
-    },
-    "startUrl": "https://www.jkovac.eu/",
-    "notes": {
-      "locatorPriority": "Recommended: testId > text/placeholder/role > css > xpath",
-      "confidenceLevels": "high (preferred) > medium (acceptable) > low (avoid if alternatives exist)",
-      "actionTypeDescriptions": {
-        "navigate": "Page navigation or URL change",
-        "click": "User click interaction",
-        "fill": "Text input to form fields",
-        "assert": "Element visibility check (for test assertions)",
-        "screenshot": "Manual screenshot capture",
-        "keypress": "Keyboard input",
-        "select": "Dropdown selection",
-        "check": "Checkbox/radio interaction",
-        "scroll": "Page scroll action"
-      }
-    }
-  },
-  "actions": [...]
-}
-```
-
-### Enhancement 3: Session README.md
-
-**File**: [`electron/session/writer.ts`](../electron/session/writer.ts) (generateReadme method)
-
-**Contents:**
-```markdown
-# Session Bundle: session-2026-01-12-090952
-
-## Quick Start for AI Agents
-
-This directory contains a complete recording session for browser automation test generation.
-The format is **framework-agnostic** - works with Playwright, Cypress, Selenium, Puppeteer, etc.
-
-### Files
-- **transcript.txt** - Narrative with action references and comprehensive AI usage instructions
-- **actions.json** - Detailed action metadata with multiple locator strategies and confidence levels
-- **screenshots/** - Visual captures of browser state
-
-### How to Use
-1. **Start with transcript.txt** - Read the header for complete parsing instructions
-2. **Parse the narrative** - Extract action references in format `[action:SHORT_ID:TYPE]`
-3. **Cross-reference with actions.json** - Match 8-char ID prefixes to full UUIDs
-4. **Choose locator strategies** - Use confidence levels (high > medium > low)
-5. **Generate tests** - Use your framework of choice with provided locator data
-
-### Session Metadata
-- **Start Time**: 2026-01-12T09:09:52.000Z
-- **Starting URL**: https://www.jkovac.eu/
-- **Duration**: 3m 11s
-- **Total Actions**: 29
-- **Action Breakdown**: 6 click, 2 fill, 16 assert, 3 navigate, 2 screenshot
-
-### Test Intent (from voice commentary)
-> "Ok, so this is the first test for my personal portfolio site..."
 
 ### Key Features
-- ✅ Multiple locator strategies per action (testId, text, role, css, xpath)
-- ✅ Confidence levels for each locator (high, medium, low)
-- ✅ Voice commentary explaining user intent
-- ✅ Complete action metadata (target, value, timestamps, bounding boxes)
-- ✅ Screenshots with cross-references
-- ✅ Framework-agnostic format
+
+- **Compact structure** - only 3 essential components
+- **Single file processing** - all session data in actions.json
+- **Reusable instructions** - INSTRUCTIONS.md shared across all sessions
+- **Framework detection** - automatic Playwright/Cypress identification
+- **Token-optimized** - efficient use of tokens for LLM processing
 
 ---
 
-**Format Version**: 1.0  
-**Generated By**: Dodo Recorder
-```
+## Design Goals
 
-### Phase 3 Code Changes
+### Minimal & Essential
+- Only necessary files, zero redundancy
+- No duplicate information across files
+- Each file serves a distinct purpose
 
-**1. Enhanced Transcript Generator** ([`electron/utils/enhancedTranscript.ts`](../electron/utils/enhancedTranscript.ts)):
-- Added 3 new parameters: `sessionId`, `startTime`, `startUrl`
-- Added comprehensive AI header (~60 lines)
-- Added `formatDuration()` helper function
-- Generates session metadata automatically
-
-**2. Updated SessionWriter** ([`electron/session/writer.ts`](../electron/session/writer.ts)):
-- Added `_meta` wrapper generation for actions.json
-- Added `generateReadme()` method (~90 lines)
-- Extracts start URL from first navigate action
-- Calculates action type breakdown
-- Writes 4 files (was 3): actions.json, transcript.txt, README.md, screenshots/
-
-**3. Function Signature Changes**:
-```typescript
-// Before
-export function generateTranscriptWithReferences(
-  actions: RecordedAction[]
-): string
-
-// After
-export function generateTranscriptWithReferences(
-  actions: RecordedAction[],
-  sessionId: string,
-  startTime: number,
-  startUrl?: string
-): string
-```
-
-### Phase 3 Results
-
-**Build Status**: ✅ Successful (no TypeScript errors)
-
-**Key Achievements:**
-- ✅ Framework-agnostic (works with any test framework)
-- ✅ AI-instruction-complete (standalone documentation)
-- ✅ Human-readable (clear metadata and narrative)
-- ✅ Self-documenting (all instructions embedded)
-
----
-
-## Current Format
-
-### Final Session Bundle (as of January 2026)
-
-```
-session-YYYY-MM-DD-HHMMSS/
-├── README.md          # Quick start for AI agents
-├── transcript.txt     # Comprehensive header + narrative + action references
-├── actions.json       # _meta wrapper + clean actions array
-└── screenshots/       # Visual captures
-    ├── screenshot-001.png
-    └── ...
-```
-
-### File Purposes
-
-| File | Purpose | Key Features |
-|------|---------|--------------|
-| **README.md** | Quick start guide | Session metadata, test intent, 5-step usage |
-| **transcript.txt** | Primary narrative | Comprehensive AI header, voice + action references, reference table |
-| **actions.json** | Detailed action data | _meta wrapper, multiple locators, confidence levels |
-| **screenshots/** | Visual captures | Referenced by both transcript and actions |
-
-### Design Principles Achieved
-
-✅ **Framework-Agnostic**
-- No Playwright-specific instructions
-- Works with Cypress, Selenium, Puppeteer, any framework
+### Framework-Agnostic
+- Works with Playwright, Cypress, Selenium, Puppeteer, any framework
+- No framework-specific assumptions in action data
 - Universal locator strategies
 
-✅ **Standalone**
-- Complete parsing instructions in transcript.txt
-- No dependency on external documentation
-- All metadata embedded in files
+### AI-Instruction-Complete
+- Standalone documentation - no external references needed
+- Complete parsing instructions included
+- Self-documenting format
 
-✅ **AI-Instruction-Complete**
-- Step-by-step parsing guide
-- Cross-referencing mechanism explained
-- Locator priority recommendations
-- Action type interpretations
-- Voice commentary usage patterns
+### Human-Readable
+- Clear structure engineers can quickly understand
+- Meaningful metadata and narrative flow
+- Well-organized action data
 
-✅ **Human-Readable**
-- Clear markdown formatting
-- Session metadata at the top
-- Narrative flows naturally
-- Reference table for quick lookup
-
-### Example AI Usage
-
-**Simple Prompt:**
-```
-Generate browser automation tests from the session bundle at:
-./test-context/session-2026-01-12-090952/
-
-Follow the instructions in transcript.txt header.
-Use your preferred test framework.
-```
-
-**AI Workflow:**
-1. Reads README.md for quick overview
-2. Reads transcript.txt header for detailed instructions
-3. Parses narrative for test intent and action sequence
-4. Cross-references action IDs with actions.json
-5. Chooses locators based on confidence levels
-6. Generates framework-specific test code
+### LLM-Optimized
+- Single narrative file with complete context
+- Reusable instructions reduce per-session overhead
+- Efficient token usage for multiple sessions
 
 ---
 
-## Implementation Details
+## Bundle Structure
 
-### Actions.json Structure
+### Component Breakdown
 
+| Component | Purpose | Reusability | Size |
+|-----------|---------|-------------|------|
+| **INSTRUCTIONS.md** | General framework-agnostic and framework-specific instructions | ✅ Shared across all sessions | ~2,000 tokens |
+| **actions.json** | Session-specific data: metadata, narrative, actions | ❌ Unique per session | ~3,850 tokens |
+| **screenshots/** | Visual captures with filenames referenced in actions | ❌ Unique per session | Variable |
+
+### Why This Structure?
+
+**INSTRUCTIONS.md is reusable** because it contains:
+- General parsing instructions (action reference format, locator strategies)
+- Framework detection logic (how to identify Playwright/Cypress projects)
+- Framework-specific code patterns (Playwright/Cypress examples)
+- Best practices (which locators to prefer, how to structure tests)
+
+**actions.json is session-specific** because it contains:
+- Unique session metadata (ID, timestamp, URL, duration)
+- Narrative text with embedded action references
+- Array of recorded actions with locators
+
+This separation means INSTRUCTIONS.md is read **once** by an AI agent, then all subsequent sessions only require reading actions.json.
+
+---
+
+## File Specifications
+
+### 1. INSTRUCTIONS.md
+
+**Format**: Markdown  
+**Encoding**: UTF-8  
+**Size**: ~150 lines (~2,000 tokens)  
+**Reusability**: ✅ Shared across all sessions in the same output directory
+
+**Content Sections**:
+
+1. **Overview** (3-5 lines)
+   - What are Dodo Recorder session bundles
+   - Framework-agnostic nature
+
+2. **Bundle Structure** (3 lines)
+   - List of files and their purposes
+
+3. **How to Process Session Bundles** (5 subsections, ~30 lines)
+   - Read actions.json
+   - Parse action references
+   - Choose locator strategies
+   - Interpret action types
+   - Use voice commentary
+
+4. **Framework-Specific Implementation** (3 subsections, ~80 lines)
+   - **Detecting Framework**: How to identify Playwright/Cypress projects
+   - **Playwright Implementation Guide**: Code structure, locator mapping, best practices
+   - **Cypress Implementation Guide**: Code structure, locator mapping, best practices
+   - **Empty Repository**: What to do when no framework is detected
+
+5. **Format Version** (3 lines)
+   - Version number, generated by, compatibility
+
+**Key Features**:
+- No session-specific information
+- Framework-agnostic language with framework-specific examples
+- Actionable instructions with code samples
+- Locator priority guidance
+
+**Example Structure**:
+```markdown
+# Dodo Recorder - Session Bundle Instructions
+
+## Overview
+Dodo Recorder session bundles are framework-agnostic recordings...
+
+## Bundle Structure
+- **INSTRUCTIONS.md** (this file) - How to process session bundles
+- **actions.json** - Complete session data
+- **screenshots/** - Visual captures
+
+## How to Process Session Bundles
+
+### 1. Read actions.json
+The file contains...
+
+[... continues with detailed instructions ...]
+
+## Framework-Specific Implementation
+
+### Detecting Framework
+#### Playwright Project
+Check for these files in repository root:
+- `playwright.config.ts` or `playwright.config.js`
+- `package.json` with `@playwright/test` dependency
+
+[... continues with framework patterns ...]
+```
+
+---
+
+### 2. actions.json
+
+**Format**: JSON (pretty-printed, 2-space indent)  
+**Encoding**: UTF-8  
+**Size**: ~3,850 tokens for typical 29-action session
+
+**TypeScript Interface**:
+```typescript
+interface ActionsJson {
+  _meta: {
+    formatVersion: "2.0"
+    generatedBy: string
+    sessionId: string           // session-YYYY-MM-DD-HHMMSS
+    startTime: number            // Unix timestamp ms
+    startTimeISO: string         // ISO 8601 format
+    duration: string             // Human-readable (e.g., "3m 45s")
+    startUrl?: string            // First navigate action URL
+    totalActions: number
+    actionTypes: Record<string, number>  // { "click": 5, "fill": 2, ... }
+  }
+  narrative: {
+    text: string  // Voice commentary with [action:SHORT_ID:TYPE] references
+    note: string  // Fixed explanation of action reference format
+  }
+  actions: RecordedAction[]  // Array of actions without voiceSegments
+}
+```
+
+**Example**:
 ```json
 {
   "_meta": {
-    "formatVersion": "1.0",
+    "formatVersion": "2.0",
     "generatedBy": "Dodo Recorder",
-    "sessionId": "session-2026-01-12-090952",
-    "startTime": 1736673592000,
-    "startTimeISO": "2026-01-12T09:09:52.000Z",
-    "totalActions": 29,
-    "actionTypes": { /* counts */ },
-    "startUrl": "https://www.jkovac.eu/",
-    "notes": { /* guidance */ }
+    "sessionId": "session-2026-01-23-102150",
+    "startTime": 1737628910000,
+    "startTimeISO": "2026-01-23T10:21:50.000Z",
+    "duration": "8s",
+    "startUrl": "https://github.com/pricing",
+    "totalActions": 10,
+    "actionTypes": {
+      "assert": 4,
+      "screenshot": 2,
+      "click": 1,
+      "navigate": 3
+    }
+  },
+  "narrative": {
+    "text": "This is the recording, I'm just editing on these elements... [action:c8d39f77:assert] [action:aa42301c:assert]...",
+    "note": "Voice commentary with embedded action references. Match SHORT_ID (first 8 chars) with action.id in actions array."
   },
   "actions": [
     {
-      "id": "8c61934e-4cd3-4793-bdb5-5c1c6d696f37",
-      "timestamp": 38202,
-      "type": "click",
+      "id": "c8d39f77-176a-4b5a-9209-9558c2f4dbf8",
+      "timestamp": 4958,
+      "type": "assert",
       "target": {
-        "selector": "button.fixed.bottom-5",
+        "selector": "getByText('\\bOpen\\b \\bSource\\b')",
         "locators": [
           {
-            "strategy": "css",
-            "value": "button.fixed.bottom-5",
-            "confidence": "low"
+            "strategy": "text",
+            "value": "getByText('\\bOpen\\b \\bSource\\b')",
+            "confidence": "medium"
           },
           {
-            "strategy": "xpath",
-            "value": "/html/body/button",
+            "strategy": "css",
+            "value": "ul > li:nth-of-type(4) > div > button",
             "confidence": "low"
           }
         ],
         "role": "button",
-        "name": "",
-        "testId": null,
+        "name": "Open Source",
+        "text": "Open Source",
         "tagName": "button",
-        "boundingBox": { "x": 2923, "y": 1510, "width": 52, "height": 52 }
+        "innerText": "Open Source",
+        "boundingBox": { "x": 402, "y": 16, "width": 134, "height": 40 }
       }
     }
   ]
 }
 ```
 
-### Transcript.txt Structure
+**Key Fields**:
 
-```markdown
-# Recording Session Transcript
+- **_meta**: Minimal session metadata
+- **narrative**: Complete transcript with action references
+  - `text`: Voice commentary with `[action:SHORT_ID:TYPE]` embedded
+  - `note`: Fixed explanation string (same across all sessions)
+- **actions**: Array of recorded actions
 
-**Session ID**: session-2026-01-12-090952
-**Start Time**: 2026-01-12T09:09:52.000Z
-**Duration**: 3m 11s
-**Starting URL**: https://www.jkovac.eu/
-**Total Actions**: 29
-**Action Types**: 6 click, 2 fill, 16 assert, 3 navigate, 2 screenshot
-**Format Version**: 1.0
-**Generated By**: Dodo Recorder
-
----
-
-## For AI Test Generation Agents
-
-[~60 lines of comprehensive instructions]
+**Validation Rules**:
+1. All action references in narrative must have corresponding action in actions array
+2. SHORT_ID must match first 8 chars of action.id
+3. Action types in narrative must match action.type
+4. Duration calculated from last.timestamp - first.timestamp
+5. actionTypes must sum to totalActions
 
 ---
 
-## Narrative
+### 3. screenshots/
 
-Ok, so this is the first test for my personal portfolio site...
-[action:8c61934e:click] [action:1b0f9ea1:assert] ...
+**Purpose**: Visual captures of browser state during recording  
+**Format**: PNG images  
+**Naming**: `screenshot-{timestamp}.png`  
+**Referenced By**: 
+- actions array: `action.screenshot` field
+- narrative text: `[screenshot:filename.png]` embedded references
 
-## Action Reference
-
-| Action ID | Type | Timestamp | Target |
-|-----------|------|-----------|--------|
-| 8c61934e | click | 00:38 | button |
-| 1b0f9ea1 | assert | 00:49 | svg |
-...
-```
-
-### Locator Strategy Priority
-
-The system provides multiple locator strategies with confidence levels:
-
-| Strategy | Confidence | Use Case | Priority |
-|----------|------------|----------|----------|
-| **testId** | High | `data-testid` attributes | 🥇 First choice |
-| **text** | High/Medium | Unique element text | 🥈 Second choice |
-| **placeholder** | High/Medium | Input placeholders | 🥈 Second choice |
-| **role** | High/Medium | ARIA roles + names | 🥈 Second choice |
-| **css** | Medium/Low | CSS selectors | 🥉 Fallback |
-| **xpath** | Low | XPath expressions | ⚠️ Last resort |
-
-**AI should:**
-1. Prefer `testId` locators when available
-2. Use semantic locators (text, placeholder, role) for meaning
-3. Use `css` only when semantic locators unavailable
-4. Avoid `xpath` unless absolutely necessary
-5. Never use locators with `low` confidence if alternatives exist
 
 ---
 
-## Migration Guide
+## Usage Examples
 
-### For New Recordings
+### For AI Test Generation
 
-New recordings automatically include all enhancements:
-- ✅ Enhanced transcript.txt header with AI instructions
-- ✅ _meta section in actions.json
-- ✅ README.md in session directory
-- ✅ Framework-agnostic guidance
-
-**No action required** - just upgrade to latest version.
-
-### For Existing Recordings
-
-Existing session bundles will continue to work but won't have enhanced format.
-
-**Options:**
-1. **Re-record** sessions to get new format (recommended)
-2. **Manual upgrade** (add README.md and update transcript.txt header)
-3. **Use as-is** (still functional, just less AI-friendly)
-
-### For AI Integration
-
-**Before** (Phase 1 format):
+**Simple Prompt**:
 ```
-Generate Playwright tests from ./test-context/session-XXX/
-You need to:
-1. Figure out how action IDs work
-2. Understand locator strategies
-3. Interpret confidence levels
-4. Use Playwright-specific APIs
+Generate browser automation tests from the session bundle at:
+./test-context/session-2026-01-23-102150/
+
+Follow the instructions in INSTRUCTIONS.md.
+Use Playwright framework.
 ```
 
-**After** (Phase 3 format):
+**AI Workflow**:
+1. Reads INSTRUCTIONS.md for complete parsing guidance
+2. Reads actions.json for session data
+3. Parses narrative for test intent and action sequence
+4. Cross-references action IDs (8-char prefix → full UUID)
+5. Chooses locators based on confidence levels
+6. Generates Playwright test code
+
+### For Human Engineers
+
+**Quick Review**:
+```bash
+cd session-2026-01-23-102150/
+cat actions.json | jq '._meta'           # View session metadata
+cat actions.json | jq '.narrative.text'  # View narrative
+cat actions.json | jq '.actions[0]'      # View first action
 ```
-Generate tests from ./test-context/session-XXX/
-Follow instructions in transcript.txt header.
-Use your framework of choice.
+
+**Count Actions**:
+```bash
+cat actions.json | jq '.actions | length'
 ```
 
-**Benefits:**
-- No custom system prompts needed
-- Works across any framework
-- Self-documenting sessions
-- Consistent AI behavior
+**Find Action by Short ID**:
+```bash
+cat actions.json | jq '.actions[] | select(.id | startswith("c8d39f77"))'
+```
 
-### For Code Reading Sessions
+---
 
-**Reading actions.json:**
+## Token Optimization
+
+### Token Efficiency
+
+**Session Bundle Structure**:
+```
+session-YYYY-MM-DD-HHMMSS/
+├── INSTRUCTIONS.md   ~2,000 tokens (shared, read once)
+├── actions.json      ~3,850 tokens (per session)
+└── screenshots/
+```
+
+**Multi-Session Efficiency**:
+- **1 session**: ~5,850 tokens (INSTRUCTIONS.md + actions.json)
+- **5 sessions**: ~21,250 tokens total (INSTRUCTIONS.md read once, 5 × actions.json)
+- **10 sessions**: ~40,500 tokens total (INSTRUCTIONS.md read once, 10 × actions.json)
+
+**Key Insight**: INSTRUCTIONS.md is reusable across all sessions, so processing multiple sessions becomes increasingly efficient.
+
+---
+
+## Framework Support
+
+### Supported Frameworks
+
+The output format is framework-agnostic and provides specific guidance for:
+
+1. **Playwright** (@playwright/test)
+   - Test structure with `test.describe()` and `test()`
+   - Locator mapping: `getByTestId()`, `getByText()`, `getByRole()`, etc.
+   - Best practices for semantic locators
+
+2. **Cypress** (cypress)
+   - Test structure with `describe()` and `it()`
+   - Locator mapping: `cy.get()`, `cy.contains()`, etc.
+   - Assertion patterns with `.should()`
+
+3. **Other Frameworks**
+   - Selenium, Puppeteer, WebdriverIO, etc.
+   - Use locator data from actions.json
+   - Adapt patterns from Playwright/Cypress examples
+
+### Framework Detection
+
+INSTRUCTIONS.md includes logic for detecting frameworks:
+
+**Playwright Detection**:
+- Check for `playwright.config.ts` or `playwright.config.js` in repo root
+- Check `package.json` for `@playwright/test` dependency
+
+**Cypress Detection**:
+- Check for `cypress.config.ts` or `cypress.config.js` in repo root
+- Check for `cypress/` directory
+- Check `package.json` for `cypress` dependency
+
+**No Framework Detected**:
+- Recommend framework based on project structure
+- Provide setup instructions
+- Generate test file with framework config
+- Include locator data in comments
+
+---
+
+## Implementation Details
+
+### Code Structure
+
+**Core Files**:
+- [`electron/session/writer.ts`](../electron/session/writer.ts) - SessionWriter class
+- [`electron/session/instructions-template.ts`](../electron/session/instructions-template.ts) - INSTRUCTIONS.md template
+- [`electron/utils/enhancedTranscript.ts`](../electron/utils/enhancedTranscript.ts) - Narrative generation
+- [`shared/types.ts`](../shared/types.ts) - TypeScript interfaces (ActionsJson, Metadata, NarrativeSection)
+
+### SessionWriter Implementation
+
+**Key Methods**:
+
+1. **`write(session: SessionBundle): Promise<string>`**
+   - Main entry point
+   - Creates session directory
+   - Ensures INSTRUCTIONS.md exists
+   - Generates actions.json with embedded narrative
+   - Returns session directory path
+
+2. **`ensureInstructionsFile(sessionDir: string): Promise<void>`**
+   - Checks if INSTRUCTIONS.md exists
+   - Writes template if not present
+   - Prevents duplicate writes
+
+3. **`formatDuration(ms: number): string`**
+   - Converts milliseconds to human-readable format
+   - Examples: "8s", "3m 45s"
+
+**Flow**:
 ```typescript
-const sessionData = JSON.parse(readFile('actions.json'))
-const meta = sessionData._meta  // New: metadata wrapper
-const actions = sessionData.actions  // Unchanged: actions array
-
-console.log(`Format version: ${meta.formatVersion}`)
-console.log(`Total actions: ${meta.totalActions}`)
-console.log(`Start URL: ${meta.startUrl}`)
-```
-
-**Parsing transcript.txt:**
-```typescript
-const transcript = readFile('transcript.txt')
-
-// Extract action references
-const actionRefs = transcript.match(/\[action:([a-f0-9]{8}):(\w+)\]/g)
-
-// Build action map
-const actionMap = new Map()
-for (const action of actions) {
-  const shortId = action.id.substring(0, 8)
-  actionMap.set(shortId, action)
-}
-
-// Cross-reference
-for (const ref of actionRefs) {
-  const [_, shortId, type] = ref.match(/\[action:([a-f0-9]{8}):(\w+)\]/)
-  const fullAction = actionMap.get(shortId)
-  // Use fullAction.target.locators array
+async write(session: SessionBundle) {
+  // 1. Create session directory
+  const sessionDir = createSessionDirectory(session)
+  
+  // 2. Ensure INSTRUCTIONS.md exists in session directory
+  await ensureInstructionsFile(sessionDir)
+  
+  // 3. Generate narrative text
+  const narrativeText = buildNarrativeWithSentenceLevelDistribution(session.actions)
+  
+  // 4. Build actions.json structure
+  const actionsJson = {
+    _meta: { /* session metadata */ },
+    narrative: { text: narrativeText, note: "..." },
+    actions: stripVoiceSegments(session.actions)
+  }
+  
+  // 5. Write actions.json
+  await writeJson(path.join(sessionDir, 'actions.json'), actionsJson)
+  
+  return sessionDir
 }
 ```
 
----
+### Narrative Generation
 
-## Future Enhancements
+Uses `buildNarrativeWithSentenceLevelDistribution()` from [`enhancedTranscript.ts`](../electron/utils/enhancedTranscript.ts):
 
-Potential improvements for consideration:
+**Algorithm**:
+1. Split voice segments into sentences with timestamps
+2. Find closest sentence for each action timestamp
+3. Interleave action references within sentences
+4. Append actions without voice at the end
+5. Return complete narrative text
 
-### High Priority
-1. **JSON Schema Validation**
-   - Add JSON Schema for actions.json structure
-   - Validate session bundles on generation
-   - Catch format errors early
-
-2. **Format Versioning System**
-   - Version negotiation for backward compatibility
-   - Migration tools for old formats
-   - Version-specific documentation
-
-### Medium Priority
-3. **Session Statistics**
-   - Timing analysis (action duration, gaps)
-   - Action type distribution charts
-   - Complexity metrics
-
-4. **Visual Manifest**
-   - Link screenshots to actions visually
-   - Generate HTML report with thumbnails
-   - Interactive timeline view
-
-### Low Priority
-5. **Streaming Output**
-   - Write transcript incrementally during recording
-   - Real-time file updates
-   - Resume capability for long sessions
-
-6. **Compression Options**
-   - Optional gzip for large sessions
-   - Configurable compression levels
-   - Automatic compression threshold
-
----
-
-## Performance Metrics
-
-### Phase 1 Impact (8→3 files)
-- **File I/O**: 60% reduction
-- **Disk space**: Negligible (removed small text files)
-- **Memory**: Slight reduction
-- **Processing time**: ~20% faster
-- **Code size**: ~300 lines removed
-
-### Phase 3 Impact (3→4 files)
-- **File I/O**: +33% files (3→4), but still 50% vs. original
-- **File size**: +~5KB for README.md, +~3KB for enhanced header
-- **Processing time**: +~5% (metadata generation)
-- **Value**: Massive improvement in AI usability
-
-### Combined Impact
-- **Total file reduction**: 50% vs. original (8→4 files)
-- **Total code reduction**: ~300 lines
-- **AI usability**: 10x improvement (self-documenting)
-- **Framework support**: Infinite (framework-agnostic)
-
----
-
-## References
-
-### Code Files
-- **Transcript Generation**: [`electron/utils/enhancedTranscript.ts`](../electron/utils/enhancedTranscript.ts)
-- **Session Writing**: [`electron/session/writer.ts`](../electron/session/writer.ts)
-- **Voice Distribution**: [`electron/utils/voiceDistribution.ts`](../electron/utils/voiceDistribution.ts)
-- **Type Definitions**: [`shared/types.ts`](../shared/types.ts)
-- **IPC Handlers**: [`electron/ipc/recording.ts`](../electron/ipc/recording.ts), [`electron/ipc/session.ts`](../electron/ipc/session.ts)
-
-### Documentation
-- **Architecture**: [`docs/architecture.md`](architecture.md)
-- **Initial Vision**: [`docs/initial_vision.md`](initial_vision.md)
-- **Voice Transcription**: [`docs/voice_transcription.md`](voice_transcription.md)
-- **User Guide**: [`docs/user_guide.md`](user_guide.md)
-
-### Example Sessions
-- **Test Context**: [`test-context/session-2026-01-12-090952/`](../test-context/session-2026-01-12-090952/)
-  - See README.md for session overview
-  - See transcript.txt for enhanced format example
-  - See actions.json for _meta structure
+**Output Format**:
+```
+"So, this is the test session [action:e6c3069a:navigate]. Now I'm clicking on some
+top menu items [action:c5922be3:click] [action:72e42724:click] to assert them..."
+```
 
 ---
 
 ## Summary
 
-The Dodo Recorder session bundle format has evolved through three major phases to become a truly **standalone, framework-agnostic, AI-instruction-complete** artifact for browser automation test generation.
+### Format Characteristics
 
-### Evolution Timeline
-
-**Phase 1** (Original Refactoring):
-- Reduced from 8 redundant files to 3 essential files
-- Eliminated voice data duplication
-- Streamlined for LLM consumption
-- Result: Simpler, faster, more maintainable
-
-**Phase 2** (Review & Analysis):
-- Identified gaps in AI-facing documentation
-- Found framework dependencies (Playwright-specific)
-- Recognized need for explicit instructions
-- Result: Clear roadmap for enhancements
-
-**Phase 3** (AI-Facing Enhancements):
-- Added comprehensive AI instructions to transcript.txt
-- Added _meta wrapper to actions.json
-- Added README.md for quick start
-- Made format framework-agnostic
-- Result: Truly standalone and universally usable
-
-### Current State
-
-**Format**: 4 files (README.md, transcript.txt, actions.json, screenshots/)
+**Structure**: 3 components (INSTRUCTIONS.md, actions.json, screenshots/)
 
 **Key Features**:
 - ✅ Framework-agnostic (Playwright, Cypress, Selenium, Puppeteer, etc.)
 - ✅ AI-instruction-complete (standalone documentation)
 - ✅ Self-documenting (all instructions embedded)
-- ✅ Human-readable (clear metadata and narrative)
+- ✅ Token-optimized (efficient reuse of instructions)
+- ✅ Reusable instructions (INSTRUCTIONS.md shared)
+- ✅ Single file processing (all data in actions.json)
 - ✅ Multiple locator strategies with confidence levels
 - ✅ Voice commentary synced with actions
 - ✅ Complete test intent and context
@@ -845,16 +483,18 @@ The Dodo Recorder session bundle format has evolved through three major phases t
 - Cross-team collaboration
 - Test maintenance and debugging
 
-### Final Achievement
+**Final Achievement**:
 
 Any AI agent in any test automation project can now:
 1. Open a session bundle
-2. Read the self-contained instructions in transcript.txt
-3. Generate complete, maintainable tests for their framework
-4. Do so without any project-specific knowledge or custom system prompts
+2. Read the reusable INSTRUCTIONS.md once
+3. Process actions.json for session-specific data
+4. Generate complete, maintainable tests for their framework
+5. Work without any project-specific knowledge or custom system prompts
 
-**The format balances:**
+**The format balances**:
 - Complete AI instructions (for automation)
 - Human readability (for manual review)
 - Framework flexibility (works everywhere)
-- Minimal complexity (4 files, clear structure)
+- Minimal complexity (3 components, clear structure)
+- Optimal token usage (reusable instructions)

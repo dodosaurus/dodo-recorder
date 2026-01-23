@@ -37,7 +37,6 @@ export interface ElectronAPI {
   onActionRecorded: (callback: (action: RecordedAction) => void) => () => void
   distributeVoiceSegments: (actions: RecordedAction[], segments: TranscriptSegment[], startTime: number) => Promise<IpcResult<{ actions: RecordedAction[] }>>
   generateFullTranscript: (segments: TranscriptSegment[]) => Promise<IpcResult<{ transcript: string }>>
-  generateTranscriptWithReferences: (actions: RecordedAction[], sessionId: string, startTime: number, startUrl?: string) => Promise<IpcResult<{ transcript: string }>>
   getUserPreferences: () => Promise<IpcResult<{ preferences: UserPreferences }>>
   updateUserPreferences: (preferences: Partial<UserPreferences>) => Promise<IpcResult<{ preferences: UserPreferences }>>
   getMicrophoneSettings: () => Promise<IpcResult<{ settings: MicrophoneSettings }>>
@@ -86,9 +85,6 @@ const electronAPI: ElectronAPI = {
 
   generateFullTranscript: (segments: TranscriptSegment[]) =>
     ipcRenderer.invoke('generate-full-transcript', segments),
-  
-  generateTranscriptWithReferences: (actions: RecordedAction[], sessionId: string, startTime: number, startUrl?: string) =>
-    ipcRenderer.invoke('generate-transcript-with-references', actions, sessionId, startTime, startUrl),
   
   getUserPreferences: () =>
     ipcRenderer.invoke('user-preferences-get'),

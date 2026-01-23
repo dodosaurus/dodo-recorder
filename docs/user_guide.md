@@ -64,12 +64,12 @@ During browser recording, use these keyboard shortcuts to control your session:
 
 ## Session Output Format
 
-Each recording session produces a streamlined folder with three essential components:
+Each recording session produces a compact, framework-agnostic folder with three essential components:
 
 ```
 session-YYYY-MM-DD-HHMMSS/
-├── actions.json                # All recorded browser interactions (clean, no voice data)
-├── transcript.txt              # Voice commentary with embedded action/screenshot references
+├── INSTRUCTIONS.md             # General AI instructions (reusable)
+├── actions.json                # Complete session data (all-in-one)
 └── screenshots/                # Screenshots captured during session
     ├── screenshot-14227.png
     ├── screenshot-21725.png
@@ -78,9 +78,37 @@ session-YYYY-MM-DD-HHMMSS/
 
 ### File Details
 
-**actions.json** - Contains all recorded actions with unique IDs:
+**INSTRUCTIONS.md** - Framework-agnostic and framework-specific instructions:
+- Reusable across all recording sessions
+- How to process session bundles (parsing, locators, action types)
+- Framework detection logic (Playwright, Cypress)
+- Framework-specific implementation guides with code examples
+- Best practices for test generation
+- Written once per output directory, not per session
+
+**actions.json** - All session data in one file with three main sections:
 ```json
 {
+  "_meta": {
+    "formatVersion": "2.0",
+    "generatedBy": "Dodo Recorder",
+    "sessionId": "session-2026-01-23-102150",
+    "startTime": 1737628910000,
+    "startTimeISO": "2026-01-23T10:21:50.000Z",
+    "duration": "8s",
+    "startUrl": "https://example.com",
+    "totalActions": 10,
+    "actionTypes": {
+      "click": 3,
+      "fill": 2,
+      "assert": 4,
+      "navigate": 1
+    }
+  },
+  "narrative": {
+    "text": "This is my test... [action:e6c3069a:click] clicking the button...",
+    "note": "Voice commentary with embedded action references. Match SHORT_ID (first 8 chars) with action.id in actions array."
+  },
   "actions": [
     {
       "id": "e6c3069a-1b2c-4d5e-6f7g-8h9i0j1k2l3m",
@@ -88,26 +116,43 @@ session-YYYY-MM-DD-HHMMSS/
       "type": "click",
       "target": {
         "selector": "button:has-text('Submit')",
+        "locators": [
+          {
+            "strategy": "testId",
+            "value": "submit-btn",
+            "confidence": "high"
+          },
+          {
+            "strategy": "text",
+            "value": "Submit",
+            "confidence": "high"
+          }
+        ],
         "role": "button",
         "name": "Submit",
-        "testId": "submit-btn",
-        "xpath": "//button[@data-testid='submit-btn']"
-      },
-      "url": "https://example.com",
-      "screenshot": "screenshot-14227.png"
+        "testId": "submit-btn"
+      }
     }
   ]
 }
 ```
 
-**transcript.txt** - Narrative transcript optimized for LLM and human consumption:
-- Natural voice transcription flow
-- Embedded action references: `[action:e6c3069a:click]`
-- Embedded screenshot references for screenshot actions: `[screenshot:screenshot-14227.png]`
-- ALL actions are referenced in the narrative
-- Includes an action reference table at the end
+**screenshots/** - Visual captures referenced in actions array
 
-This format is designed for:
-1. **LLM consumption**: Easy parsing to generate Playwright tests
-2. **Human readability**: Test automation engineers can quickly understand the session
-3. **Complete coverage**: Every action is documented
+### Format Benefits
+
+This format provides:
+1. **Token Efficiency**: Fewer tokens per session (INSTRUCTIONS.md is reused)
+2. **Single Source**: All session data in one JSON file
+3. **Framework Detection**: Automatic Playwright/Cypress project identification
+4. **AI-Ready**: Complete instructions embedded, no external documentation needed
+5. **Human Readable**: Clear structure that engineers can quickly understand
+6. **Framework-Agnostic**: Works with Playwright, Cypress, Selenium, Puppeteer, any framework
+
+### How AI Agents Use This
+
+1. **Read INSTRUCTIONS.md once** - Get complete parsing and implementation guidance
+2. **Process actions.json** - Extract metadata, narrative, and action data
+3. **Parse action references** - Match `[action:SHORT_ID:TYPE]` with full action data
+4. **Choose locators** - Use confidence levels (high > medium > low) to select best selectors
+5. **Generate tests** - Create framework-specific test code with proper structure and assertions

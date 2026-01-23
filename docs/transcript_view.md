@@ -602,8 +602,8 @@ If recording has no voice (voice recording disabled or no speech detected):
 
 ### Why Extract Only Narrative Section?
 
-The full transcript.txt contains:
-- Session metadata header
+The narrative field in actions.json contains:
+- Voice commentary with embedded action references
 - AI instructions (60+ lines)
 - Narrative section ← **What we show**
 - Action reference table
@@ -620,7 +620,7 @@ Full UUIDs are 36 characters (e.g., `43d16488-xxxx-xxxx-xxxx-xxxxxxxxxxxx`):
 8-character prefixes:
 - **Readable** in narrative flow
 - **Unique enough** (collision probability negligible for <10,000 actions)
-- **Matches** saved transcript.txt format
+- **Matches** saved narrative format in actions.json
 
 ### Why Inline Badges vs. Side References?
 

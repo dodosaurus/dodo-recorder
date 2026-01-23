@@ -471,9 +471,8 @@ Located at bottom of left sidebar. Contains primary recording actions.
 **Actions**:
 1. Creates session bundle with actions and metadata
 2. Writes files to output folder:
-   - `README.md`
-   - `transcript.txt`
-   - `actions.json`
+   - `INSTRUCTIONS.md` (once per directory)
+   - `actions.json` (with _meta + narrative + actions)
    - `screenshots/` folder
 3. Shows success state (green checkmark)
 4. Disables button to prevent duplicate saves

@@ -62,6 +62,33 @@ export interface SessionBundle {
   startTime: number
 }
 
+/**
+ * Format types for session output
+ */
+
+export interface MetadataV2 {
+  formatVersion: "2.0"
+  generatedBy: string
+  sessionId: string
+  startTime: number
+  startTimeISO: string
+  duration: string
+  startUrl?: string
+  totalActions: number
+  actionTypes: Record<string, number>
+}
+
+export interface NarrativeSection {
+  text: string
+  note: string
+}
+
+export interface ActionsJsonV2 {
+  _meta: MetadataV2
+  narrative: NarrativeSection
+  actions: Omit<RecordedAction, 'voiceSegments'>[]
+}
+
 export type RecordingStatus = 'idle' | 'recording' | 'paused' | 'processing' | 'saving'
 
 export type ActionType = RecordedAction['type']

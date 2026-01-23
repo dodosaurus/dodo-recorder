@@ -236,24 +236,37 @@ dodo-recorder/
 
 ## Session Output Format
 
-Each recording session produces a folder with 4 essential files:
+Each recording session produces a compact folder with 3 essential components:
 
 ```
 session-YYYY-MM-DD-HHMMSS/
-├── README.md          # Quick start for AI agents (session metadata, test intent)
-├── transcript.txt     # Comprehensive AI header + narrative with action references
-├── actions.json       # _meta wrapper + clean actions array (no voice data)
+├── INSTRUCTIONS.md    # General AI instructions (reusable across sessions)
+├── actions.json       # Complete session data (metadata + narrative + actions)
 └── screenshots/       # Visual captures
 ```
 
 **Key Characteristics:**
 - **Framework-Agnostic**: Works with Playwright, Cypress, Selenium, Puppeteer, etc.
-- **AI-Instruction-Complete**: Standalone with full parsing documentation in transcript.txt
+- **AI-Instruction-Complete**: Complete parsing documentation in INSTRUCTIONS.md
+- **Token-Optimized**: Few tokens per session (INSTRUCTIONS.md is reused)
+- **Single Source**: All session data in actions.json
 - **Self-Documenting**: All instructions embedded, no external docs needed
 - **Human-Readable**: Clear metadata and narrative flow
 
+**File Purposes:**
+- **INSTRUCTIONS.md**: Reusable framework-agnostic + framework-specific instructions
+  - Written once per output directory, shared across all sessions
+  - How to parse action references, choose locators, interpret action types
+  - Framework detection logic (Playwright/Cypress)
+  - Framework-specific implementation guides with code examples
+  
+- **actions.json**: Session-specific data with three sections:
+  - `_meta`: Session metadata (ID, timestamps, URL, duration, action counts)
+  - `narrative`: Voice commentary with embedded `[action:SHORT_ID:TYPE]` references
+  - `actions`: Array of recorded actions with multiple locator strategies
+
 **Action References Format:**
-- Actions referenced in transcript as `[action:SHORT_ID:TYPE]`
+- Actions referenced in narrative as `[action:SHORT_ID:TYPE]`
 - `SHORT_ID` = First 8 chars of full UUID in actions.json
 - Example: `[action:8c61934e:click]` → `"id": "8c61934e-4cd3-4793-bdb5-5c1c6d696f37"`
 

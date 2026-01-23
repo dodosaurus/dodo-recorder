@@ -47,12 +47,9 @@ export function TranscriptView() {
     }))
   )
 
-  // Extract only the Narrative section from transcript
+  // Transcript text is just the narrative (no headers or sections)
+  // So we can use it directly
   const extractNarrative = (text: string): string => {
-    const narrativeMatch = text.match(/## Narrative\s*\n\s*([\s\S]*?)(?:\n\n## Action Reference|$)/)
-    if (narrativeMatch && narrativeMatch[1]) {
-      return narrativeMatch[1].trim()
-    }
     return text
   }
 

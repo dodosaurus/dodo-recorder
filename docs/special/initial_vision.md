@@ -71,8 +71,8 @@ The final output is a **standard Playwright repository**:
 **Output: Session Bundle**
 ```
 session-YYYY-MM-DD-HHMMSS/
-├── actions.json      # All recorded actions (clean, with unique IDs)
-├── transcript.txt    # Voice commentary with embedded action references
+├── INSTRUCTIONS.md   # Framework-agnostic AI instructions (reusable)
+├── actions.json      # Complete session data (_meta + narrative + actions)
 └── screenshots/      # Screenshots captured during session
 ```
 
@@ -81,8 +81,8 @@ This bundle contains **facts only**, no interpretation.
 **Key design decisions:**
 - Minimal file output for simplicity
 - All actions have unique IDs
-- Voice commentary integrated into transcript.txt with inline references
-- Format optimized for both LLM consumption and human readability
+- Voice commentary integrated into actions.json narrative field with inline action references
+- Format optimized for LLM consumption (token-efficient) and human readability
 - All actions are referenced in the transcript
 
 ---
@@ -96,7 +96,8 @@ This bundle contains **facts only**, no interpretation.
   - `context.md`
   - `memory.md`
 - Engineer feeds session bundle(s) to AI via IDE, CLI, or scripted workflow
-- AI interprets the session (actions.json + transcript.txt)
+- AI reads INSTRUCTIONS.md for parsing guidance and framework detection
+- AI interprets the session data from actions.json (_meta + narrative + actions)
 - AI proposes code changes
 - Engineer reviews and commits
 

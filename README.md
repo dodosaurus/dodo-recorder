@@ -43,19 +43,29 @@ Dodo Recorder transforms manual browser testing into AI-ready session bundles. R
 
 ### 📦 Session Output
 
-Each recording produces a framework-agnostic session bundle:
+Each recording produces a framework-agnostic session bundle with just 3 components:
 
 ```
 session-YYYY-MM-DD-HHMMSS/
-├── README.md          # Quick start for AI agents
-├── transcript.txt     # Comprehensive narrative with action references
-├── actions.json       # Clean action data with metadata
+├── INSTRUCTIONS.md    # General AI instructions (reusable across sessions)
+├── actions.json       # Complete session data (metadata + narrative + actions)
 └── screenshots/       # Visual captures
 ```
 
-**Action Reference Format**: Actions are referenced in the transcript as `[action:SHORT_ID:TYPE]` where:
+**What's in each file:**
+- **INSTRUCTIONS.md**: Framework-agnostic + framework-specific instructions for AI agents. Written once per output directory, reused across all sessions.
+- **actions.json**: All session data in one file - metadata, voice narrative with embedded action references, and action array with multiple locator strategies.
+- **screenshots/**: PNG captures referenced by actions.
+
+**Action Reference Format**: Actions are referenced in the narrative as `[action:SHORT_ID:TYPE]` where:
 - `SHORT_ID` = First 8 characters of the UUID in actions.json
 - Example: `[action:8c61934e:click]` maps to `"id": "8c61934e-4cd3-4793-bdb5-5c1c6d696f37"`
+
+**Why this structure?**
+- ✅ **Token efficient**: Few tokens per session (INSTRUCTIONS.md is reused)
+- ✅ **Single source**: All session data in one JSON file
+- ✅ **Framework detection**: Includes Playwright/Cypress auto-detection logic
+- ✅ **AI-ready**: Complete instructions embedded, no external docs needed
 
 ### 🎮 Recording Controls
 

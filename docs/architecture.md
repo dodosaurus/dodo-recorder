@@ -236,24 +236,25 @@ const useRecordingStore = create((set) => ({
 ```
 
 ### 9. **Session Writer** ([`electron/session/writer.ts`](electron/session/writer.ts:1))
-Saves everything to disk in a streamlined, LLM-optimized format:
+Saves everything to disk in a compact, LLM-optimized format:
 
 **Output structure:**
 ```
 session-2026-01-05-095500/
-├── actions.json       # All browser actions with locators (clean, no voice data)
-├── transcript.txt     # Voice commentary with embedded action references
+├── INSTRUCTIONS.md    # General, reusable AI instructions (framework-agnostic)
+├── actions.json       # Complete session data (_meta + narrative + actions)
 └── screenshots/       # Screenshots captured during session
     ├── screenshot-14227.png
     └── ...
 ```
 
 **Design rationale:**
-- **Minimal output**: Only 3 essential components for clarity
-- **Clean actions.json**: Actions without embedded voice data, each with unique ID
-- **Integrated transcript.txt**: Voice commentary with embedded references to actions (and screenshot filenames for screenshot actions)
-- **LLM-optimized**: Format designed for AI consumption to generate Playwright tests
-- **Human-readable**: Test automation engineers can quickly understand the session
+- **Token-optimized**: Few tokens per session (INSTRUCTIONS.md reused)
+- **Single source**: All session data in actions.json (_meta + narrative + actions)
+- **Reusable instructions**: INSTRUCTIONS.md shared across all sessions in output directory
+- **Framework-agnostic**: Works with Playwright, Cypress, Selenium, Puppeteer, any framework
+- **AI-ready**: Complete instructions embedded, no external documentation needed
+- **Human-readable**: Clear structure engineers can quickly understand
 
 ---
 
@@ -292,8 +293,10 @@ Here's what happens when you record a session:
    - React calls `window.electron.distributeVoiceSegments()` to associate voice with actions
    - React calls `window.electron.saveSession()` with complete SessionBundle
    - [`SessionWriter`](electron/session/writer.ts:7) saves to disk:
-     - Strips voiceSegments from actions.json
-     - Generates transcript.txt with embedded references
+     - Ensures INSTRUCTIONS.md exists in session directory (writes once)
+     - Generates narrative text with embedded action references
+     - Strips voiceSegments from actions array
+     - Builds actions.json structure (_meta + narrative + actions)
      - Screenshots already saved to screenshots/ folder
 
 ---
