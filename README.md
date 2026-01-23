@@ -19,10 +19,10 @@
 ## 🖥️ Platform Support
 
 **Current Release:**
-- ✅ **macOS Apple Silicon (M1–M4)** — signed and notarized builds
-- ⏳ **macOS Intel (x64)** — build from source or use CI/CD
-- ⏳ **Windows** — build from source or use CI/CD
-- ⏳ **Linux** — build from source or use CI/CD
+- ✅ **macOS Apple Silicon (ARM64)** - tested
+- ✅ **macOS Intel (x64)** — not tested
+- ✅ **Windows** — not tested
+- ✅ **Linux** — not tested
 
 **CI/CD Builds:** Cross-platform builds are available via GitHub Actions. See [`docs/ci_cd.md`](docs/ci_cd.md) for details.
 
@@ -267,9 +267,6 @@ A: No. All transcription happens locally using Whisper.cpp. Your voice recording
 
 **Q: Why do I get "Playwright browser not installed" error?**
 A: Run `./build/install-playwright-browsers.sh` to download the Playwright Chromium browser. The `npm install` command should do this automatically via a postinstall script.
-
-**Q: Why is there only a macOS Apple Silicon build right now?**
-A: Initial development and testing focused on Apple Silicon (M1–M4). The app works on other platforms when building from source, but I want to complete testing and release signed builds for Intel Mac, Windows, and Linux before distributing them.
 
 ---
 

@@ -32,8 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session bundles optimized for AI test generation
 
 **Platform Support:**
-- macOS Apple Silicon (M1–M4)
-- macOS Intel, Windows, Linux — not supported yet (in development)
+- macOS (x64 and ARM64), Windows, Linux
 
 ### Known Limitations
 
