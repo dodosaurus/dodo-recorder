@@ -1,8 +1,9 @@
 import { useRecordingStore } from '@/stores/recordingStore'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogFooter } from '@/components/ui/dialog'
 import { useSettings } from '@/lib/useSettings'
-import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw, CheckCircle } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw, CheckCircle, AlertTriangle } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { RecordedAction, SessionBundle, TranscriptSegment } from '@/types/session'
 
@@ -80,6 +81,7 @@ export function RecordingControls() {
   const audioStreamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
+  const [showResetWarning, setShowResetWarning] = useState(false)
 
   // Use shared settings hook to reload preferences during reset
   const { reload: reloadSettings } = useSettings()
@@ -461,6 +463,12 @@ export function RecordingControls() {
   const resetSession = async () => {
     if (!window.electronAPI) return
 
+    // Show warning if session hasn't been saved
+    if (!sessionSaved && actions.length > 0) {
+      setShowResetWarning(true)
+      return
+    }
+
     // Save current voice settings
     const currentVoiceEnabled = isVoiceEnabled
     
@@ -472,6 +480,26 @@ export function RecordingControls() {
 
     // Reload all saved preferences (URL, output path, microphone settings)
     await reloadSettings()
+  }
+
+  const confirmReset = async () => {
+    setShowResetWarning(false)
+    
+    // Save current voice settings
+    const currentVoiceEnabled = isVoiceEnabled
+    
+    // Reset the recording state
+    reset()
+
+    // Restore voice enabled state
+    useRecordingStore.getState().setVoiceEnabled(currentVoiceEnabled)
+
+    // Reload all saved preferences (URL, output path, microphone settings)
+    await reloadSettings()
+  }
+
+  const cancelReset = () => {
+    setShowResetWarning(false)
   }
 
   const renderAudioStatus = () => {
@@ -526,8 +554,25 @@ export function RecordingControls() {
   }
 
   return (
-    <div className="p-4 border-t border-border space-y-3">
-      {renderAudioStatus()}
+    <>
+      <Dialog
+        open={showResetWarning}
+        onOpenChange={setShowResetWarning}
+        title="Unsaved Session"
+        description="You have unsaved changes. Are you sure you want to reset? This will clear all recorded actions and cannot be undone."
+      >
+        <DialogFooter>
+          <Button variant="outline" onClick={cancelReset}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={confirmReset}>
+            Reset Anyway
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      <div className="p-4 border-t border-border space-y-3">
+        {renderAudioStatus()}
 
       {status === 'idle' && actions.length === 0 && (
         <Button
@@ -610,6 +655,7 @@ export function RecordingControls() {
           Select an output folder
         </p>
       )}
-    </div>
+      </div>
+    </>
   )
 }
