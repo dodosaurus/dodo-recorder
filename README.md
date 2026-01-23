@@ -16,6 +16,14 @@
 
 ---
 
+## 🖥️ Platform Support
+
+**Current Release:**
+- ✅ **macOS Apple Silicon (M1–M4)** — signed and notarized builds
+- ⏳ **macOS Intel (x64)** — build from source (not yet released)
+- ⏳ **Windows** — build from source (not yet released)
+- ⏳ **Linux** — build from source (not yet released)
+
 ## 🎯 Overview
 
 Dodo Recorder transforms manual browser testing into AI-ready session bundles. Record your interactions, speak your test intentions, and let the app generate comprehensive documentation that AI agents can use to write tests automatically.
@@ -94,7 +102,8 @@ session-YYYY-MM-DD-HHMMSS/
 
 - **Node.js 18+** and npm
 - **Git**
-- **macOS, Windows, or Linux**
+- **macOS Apple Silicon (M1–M4)** for production builds
+- **macOS, Windows, or Linux** for development (build from source)
 
 ### Installation Steps
 
@@ -153,6 +162,8 @@ npm run build:prod
 ```
 
 Built apps are created in the `release/` folder for your current platform.
+
+> **⚠️ Production Builds:** Currently only macOS Apple Silicon (ARM64) builds are signed, notarized, and tested for distribution. Intel Mac, Windows, and Linux users should build from source using `npm run build` for local testing.
 
 > **Note for Maintainers:** See [`docs/code_signing.md`](docs/code_signing.md) for code signing and notarization setup. Contributors don't need code signing for development.
 
@@ -215,11 +226,19 @@ For debugging in development mode, the app provides comprehensive logging:
 
 ### Platform-Specific Issues
 
-**macOS:**
+**macOS Apple Silicon (M1–M4):**
 - If you see permission errors, you may need to grant microphone access in System Preferences → Security & Privacy → Microphone
+- Production builds (`.dmg`) are signed and notarized for secure installation
+
+**macOS Intel (x64):**
+- Production builds not currently available
+- Build from source using `npm run build` for local testing
 
 **Windows/Linux:**
+- Production builds not currently available
+- Build from source for local testing
 - Ensure FFmpeg is installed and accessible in your PATH for audio processing
+- Not extensively tested yet — contributions welcome
 
 ---
 
@@ -242,6 +261,9 @@ A: No. All transcription happens locally using Whisper.cpp. Your voice recording
 
 **Q: Why do I get "Playwright browser not installed" error?**
 A: Run `./build/install-playwright-browsers.sh` to download the Playwright Chromium browser. The `npm install` command should do this automatically via a postinstall script.
+
+**Q: Why is there only a macOS Apple Silicon build right now?**
+A: Initial development and testing focused on Apple Silicon (M1–M4). The app works on other platforms when building from source, but we want to complete testing and release signed builds for Intel Mac, Windows, and Linux before distributing them.
 
 ---
 
