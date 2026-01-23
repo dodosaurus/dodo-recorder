@@ -636,14 +636,13 @@ See [`docs/transcript_view.md`](transcript_view.md) for complete documentation.
 
 ## Audio Features
 
-### 1. Audio Level Meter (DEPRECATED - Moved to Browser Widget)
+### 1. Voice Recording Indicator
 
-**Previous Location**: [`RecordingControls.tsx`](../src/components/RecordingControls.tsx)  
-**New Location**: Browser widget (see [`docs/browser_widget.md`](browser_widget.md))
+When voice recording is enabled and a session is recording, the browser widget displays a small pulsing red dot to indicate active audio capture.
 
-Real-time audio level visualization has been moved to the browser widget for better visibility during recording. The recording controls now show only a simple recording indicator.
+**Implementation:** See [`docs/browser_widget.md`](browser_widget.md#3-voice-recording-indicator) for complete details.
 
-**Recording Indicator** ([`RecordingControls.tsx:433`](../src/components/RecordingControls.tsx:433)):
+**Recording Status** ([`RecordingControls.tsx:537`](../src/components/RecordingControls.tsx:537)):
 - Pulsing microphone icon
 - Recording duration counter
 - Red background to indicate active recording
@@ -691,26 +690,21 @@ try {
 - User sees notification: "Selected microphone not available, using default"
 - Recording continues without interruption
 
-### 4. Audio Level Visualization in Browser Widget (NEW)
+### 4. Voice Recording Indicator in Browser Widget
 
-During recording, the browser widget displays a compact 5-bar equalizer showing real-time audio levels.
+During recording, if voice recording is enabled, the browser widget displays a small pulsing red dot to indicate active audio capture.
 
 **Features:**
-- **Compact design**: 5-bar equalizer (~55px wide) fits alongside screenshot/assertion buttons
-- **Color-coded levels**:
-  - Green (0-50%): Normal speech
-  - Yellow (50-75%): Loud speech
-  - Red (75-100%): Very loud/potential clipping
-- **Animated bars**: Wave pattern creates engaging visual feedback
-- **Auto-hide**: Only visible during active voice recording
+- **Minimal design**: 10px red pulsing dot positioned after the assertion button
+- **Pulsing animation**: Smooth 1.5s pulse cycle for visibility
+- **Auto-show/hide**: Only visible during active voice recording
 
-**Data Flow**:
-1. RecordingControls analyzes MediaStream audio with AudioContext
-2. Sends level data (0-100) to main process via IPC every frame
-3. Main process updates browser page via Playwright's `page.evaluate()`
-4. Widget reads `window.__dodoAudioLevel` and animates equalizer bars
+**State Flow**:
+1. RecordingControls signals audio activity via IPC when recording starts
+2. Main process sets `window.__dodoAudioActive` via Playwright's `page.evaluate()`
+3. Widget checks state periodically and toggles indicator visibility
 
-See [`docs/browser_widget.md`](browser_widget.md) for complete implementation details.
+See [`docs/browser_widget.md#3-voice-recording-indicator`](browser_widget.md#3-voice-recording-indicator) for complete implementation details.
 
 ---
 

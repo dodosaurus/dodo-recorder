@@ -68,7 +68,7 @@ const shadow = widgetHost.attachShadow({ mode: 'closed' })
 **Feature Index:**
 1. Screenshot Button
 2. Assertion Button
-3. Audio Equalizer - 5-bar real-time level visualization
+3. Voice Recording Indicator
 4. Drag and Drop
 5. Edge Snapping
 
@@ -146,75 +146,63 @@ window.__dodoDisableAssertionMode = () => {
 }
 ```
 
-### 3. Audio Equalizer (NEW ✨)
+### 3. Voice Recording Indicator
 
 **Visual Design:**
-- Compact 5-bar equalizer visualization
-- Size: ~55px × 35px
-- Displays alongside screenshot and assertion buttons
-- Only visible during voice recording
+- Small red pulsing dot (10px diameter)
+- Positioned to the right of the assertion button
+- Simple, unobtrusive presence indicator
+- No tooltip (speaks for itself visually)
 
-**Interactions:**
-- **Auto-show**: Appears when audio recording starts
-- **Auto-hide**: Disappears when recording stops
-- **Real-time**: Updates 60fps based on microphone input
-- **Visual feedback**: Color changes based on audio level
+**Behavior:**
+- **Auto-show**: Appears when voice recording is active
+- **Auto-hide**: Disappears when recording stops or voice recording disabled
+- **Pulsing animation**: Smooth 1.5s pulse cycle for visibility
 
 **Implementation:**
 ```typescript
-// Equalizer structure (5 bars)
-<div class="audio-equalizer">
-  <div class="eq-bar" data-bar-index="0"></div>
-  <div class="eq-bar" data-bar-index="1"></div>
-  <div class="eq-bar" data-bar-index="2"></div>
-  <div class="eq-bar" data-bar-index="3"></div>
-  <div class="eq-bar" data-bar-index="4"></div>
-</div>
+// Voice indicator element
+<div class="voice-indicator"></div>
 
-// Animation loop reads global audio level
-const level = window.__dodoAudioLevel || 0
+// CSS animation
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+}
 
-// Each bar height varies with wave pattern for visual interest
-const variance = Math.sin(Date.now() / 200 + offset) * 0.3 + 0.7
-const barHeight = level * variance
+// Controlled by audio activity state
+const updateVoiceIndicator = () => {
+  const win = window as unknown as DodoWindow
+  const isActive = win.__dodoAudioActive === true
+  
+  if (isActive) {
+    voiceIndicator.classList.add('active')
+  } else {
+    voiceIndicator.classList.remove('active')
+  }
+}
+
+// Check audio activity state periodically
+setInterval(updateVoiceIndicator, 100)
 ```
 
-**Color Logic:**
-- **Green** (0-50%): `#22c55e` - Normal speech range
-- **Yellow** (50-75%): `#eab308` - Loud speech
-- **Red** (75-100%): `#ef4444` - Very loud/clipping risk
-
-**Data Bridge:**
-
-The equalizer receives audio level data through a three-layer bridge:
-
-```mermaid
-sequenceDiagram
-    participant RC as RecordingControls<br/>(Renderer)
-    participant MP as Main Process<br/>(IPC Handler)
-    participant PW as Playwright<br/>(page.evaluate)
-    participant WG as Browser Widget<br/>(Animation Loop)
-    
-    RC->>RC: Analyze MediaStream
-    RC->>MP: IPC: updateAudioLevel(75)
-    MP->>PW: page.evaluate(...)
-    PW->>WG: window.__dodoAudioLevel = 75
-    WG->>WG: Read & animate 5 bars
-```
-
-1. **RecordingControls** analyzes audio stream with AudioContext
-2. Calculates RMS level (0-100) every frame
-3. Sends via IPC to main process
-4. **Main process** uses Playwright's `page.evaluate()` to inject level
-5. **Widget** reads `window.__dodoAudioLevel` in animation loop
-6. Updates 5 bar heights and colors accordingly
+**State Management:**
+- Main process sets `window.__dodoAudioActive` via [`page.evaluate()`](../electron/browser/recorder.ts:247)
+- Widget checks state every 100ms via `setInterval()`
+- Indicator toggles `.active` class based on state
+- Persists across page navigations
 
 **Why this approach?**
-- Widget code must be self-contained (no imports)
-- Renderer and browser are separate windows
-- IPC + Playwright bridge provides real-time updates
-- Animation loop handles visual smoothing
-- 5 bars provide good balance between detail and compactness
+- Minimal visual distraction
+- Clear indication that audio is being captured
+- Self-contained widget code (no complex dependencies)
+- State synced via simple boolean flag
 
 ### 4. Drag and Drop
 

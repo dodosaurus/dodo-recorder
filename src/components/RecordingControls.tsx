@@ -43,7 +43,6 @@ export function RecordingControls() {
   const audioStreamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
-  const audioLevelUpdateRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!window.electronAPI) return
@@ -54,9 +53,9 @@ export function RecordingControls() {
   }, [addAction])
 
   const cleanupAudioMonitoring = () => {
-    if (audioLevelUpdateRef.current) {
-      cancelAnimationFrame(audioLevelUpdateRef.current)
-      audioLevelUpdateRef.current = null
+    if (audioContextRef.current) {
+      void audioContextRef.current.close()
+      audioContextRef.current = null
     }
 
     if (analyserRef.current) {
@@ -64,14 +63,8 @@ export function RecordingControls() {
       analyserRef.current = null
     }
 
-    if (audioContextRef.current) {
-      void audioContextRef.current.close()
-      audioContextRef.current = null
-    }
-
     if (window.electronAPI) {
       void window.electronAPI.updateAudioActivity(false)
-      void window.electronAPI.updateAudioLevel(0)
     }
   }
 
@@ -192,29 +185,8 @@ export function RecordingControls() {
         }
         
         if (stream) {
-          // Store stream for audio level meter
+          // Store stream reference
           audioStreamRef.current = stream
-
-          // Create audio context for level monitoring
-          const audioContext = new AudioContext()
-          audioContextRef.current = audioContext
-
-          // Resume audio context (may be suspended due to autoplay policy)
-          if (audioContext.state === 'suspended') {
-            await audioContext.resume()
-            console.log('🎤 AudioContext resumed from suspended state')
-          }
-          console.log('🎤 AudioContext state:', audioContext.state)
-
-          const source = audioContext.createMediaStreamSource(stream)
-          const analyser = audioContext.createAnalyser()
-          analyser.fftSize = 256
-          analyser.smoothingTimeConstant = 0.3
-          source.connect(analyser)
-          analyserRef.current = analyser
-
-          // NOTE: Audio level monitoring will start AFTER browser recording starts
-          // to avoid race condition where level updates are sent before browserRecorder exists
 
           mediaRecorderRef.current = new MediaRecorder(stream, {
             mimeType: 'audio/webm;codecs=opus',
@@ -276,42 +248,10 @@ export function RecordingControls() {
       console.log('✅ Recording started successfully')
       setStatus('recording')
 
-      // Now that browser is running, start audio monitoring and signal audio is active
-      if (isVoiceEnabled && audioStreamRef.current && analyserRef.current) {
-        // IMPORTANT: Await this to ensure audio activity is set BEFORE starting level updates
+      // Signal audio is active in the browser widget
+      if (isVoiceEnabled && audioStreamRef.current) {
         await window.electronAPI.updateAudioActivity(true)
         console.log('✅ Audio activity set to true in browser')
-        
-        // Start audio level monitoring NOW that browserRecorder is ready AND active
-        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
-        
-        const updateAudioLevel = () => {
-          if (!analyserRef.current) return
-
-          analyserRef.current.getByteFrequencyData(dataArray)
-
-          let sum = 0
-          for (let i = 0; i < dataArray.length; i++) {
-            sum += (dataArray[i] / 255) ** 2
-          }
-          const rms = Math.sqrt(sum / dataArray.length)
-          const level = Math.min(100, rms * 100 * 2)
-
-          // Log first few levels for debugging
-          if (audioLevelUpdateRef.current === null || Math.random() < 0.01) {
-            console.log('🎤 Audio level:', level.toFixed(2), '%, RMS:', rms.toFixed(4))
-          }
-
-          if (window.electronAPI) {
-            void window.electronAPI.updateAudioLevel(level)
-          }
-
-          audioLevelUpdateRef.current = requestAnimationFrame(updateAudioLevel)
-        }
-
-        // Start the animation loop
-        audioLevelUpdateRef.current = requestAnimationFrame(updateAudioLevel)
-        console.log('✅ Audio level monitoring animation loop started')
       }
     } catch (err) {
       console.error('❌ Exception during startRecording IPC call:', err)

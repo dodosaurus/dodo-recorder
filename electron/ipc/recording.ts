@@ -119,12 +119,6 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
     }, 'Failed to stop recording')
   })
 
-  ipcMain.handle('update-audio-level', async (_event, level: number) => {
-    if (browserRecorder && isRecording) {
-      await browserRecorder.updateAudioLevel(level)
-    }
-  })
-
   ipcMain.handle('update-audio-activity', async (_event, active: boolean) => {
     if (browserRecorder) {
       await browserRecorder.updateAudioActivity(active)
