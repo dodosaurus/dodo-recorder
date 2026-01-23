@@ -399,7 +399,7 @@ This project couldn't be a pure web app because it needs to:
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
 - **Playwright** - Browser automation
-- **Whisper.cpp** - Local voice transcription (via whisper-node)
+- **Whisper.cpp** - Local voice transcription (direct whisper.cpp calls)
 - **Zustand** - State management
 
 ---

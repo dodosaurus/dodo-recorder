@@ -35,6 +35,9 @@ models/*.bin
 # Playwright browsers (installed locally for bundling, platform-specific)
 playwright-browsers/
 
+# TypeScript build cache
+tsconfig.tsbuildinfo
+
 # Temp files
 *.tmp
 .temp/
