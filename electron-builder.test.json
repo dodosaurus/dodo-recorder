@@ -1,0 +1,69 @@
+{
+  "appId": "com.dodo.recorder",
+  "productName": "Dodo Recorder",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist",
+    "dist-electron"
+  ],
+  "mac": {
+    "target": [
+      "dmg",
+      "zip"
+    ],
+    "icon": "build/icon.icns",
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist",
+    "extendInfo": {
+      "NSMicrophoneUsageDescription": "Dodo Recorder needs microphone access to record voice commentary during browser recording sessions."
+    },
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false,
+    "category": "public.app-category.developer-tools",
+    "type": "development"
+  },
+  "win": {
+    "target": [
+      "nsis",
+      "portable"
+    ],
+    "icon": "build/icon.ico"
+  },
+  "linux": {
+    "target": [
+      "AppImage",
+      "deb"
+    ],
+    "icon": "build/icon.png",
+    "category": "Development"
+  },
+  "extraResources": [
+    {
+      "from": "models",
+      "to": "models",
+      "filter": [
+        "**/*"
+      ]
+    },
+    {
+      "from": "node_modules/ffmpeg-static",
+      "to": "ffmpeg-static",
+      "filter": [
+        "ffmpeg*"
+      ]
+    },
+    {
+      "from": "playwright-browsers",
+      "to": "playwright-browsers",
+      "filter": [
+        "**/*"
+      ]
+    }
+  ],
+  "asarUnpack": [
+    "**/*.node",
+    "resources/playwright-browsers/**/*"
+  ]
+}
