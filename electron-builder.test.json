@@ -14,8 +14,6 @@
       "zip"
     ],
     "icon": "build/icon.icns",
-    "entitlements": "build/entitlements.mac.plist",
-    "entitlementsInherit": "build/entitlements.mac.plist",
     "extendInfo": {
       "NSMicrophoneUsageDescription": "Dodo Recorder needs microphone access to record voice commentary during browser recording sessions."
     },
