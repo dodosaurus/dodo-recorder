@@ -8,6 +8,8 @@
     "build": "vite build && electron-builder --config electron-builder.test.json --mac --publish never -c.mac.identity=null",
     "build:prod": "dotenv -- vite build && dotenv -- electron-builder --mac",
     "postinstall": "./build/install-playwright-browsers.sh",
+    "install:browsers": "./build/install-playwright-browsers.sh",
+    "install:browsers:all": "./build/install-playwright-browsers-all-platforms.sh",
     "generate-icons": "./build/generate-icons.sh"
   },
   "keywords": [

@@ -2,13 +2,19 @@ import path from 'path'
 import fs from 'fs'
 import { app } from 'electron'
 
+// Import Playwright first
+import { chromium, Browser, Page, Frame } from 'playwright'
+import { EventEmitter } from 'events'
+import { randomUUID } from 'crypto'
+import { logger } from '../utils/logger'
+import type { RecordedAction } from '../../shared/types'
+import { getInjectionScript } from './injected-script'
+import { getWidgetScript, getWidgetInitScript } from './recording-widget'
+
 /**
  * Gets the path to the Playwright browsers directory
  * In development: uses project root's playwright-browsers
  * In production: uses app.asar's resources/playwright-browsers
- *
- * IMPORTANT: This must be called BEFORE importing Playwright because
- * Playwright reads PLAYWRIGHT_BROWSERS_PATH at module load time.
  */
 function getBrowsersPath(): string {
   if (app.isPackaged) {
@@ -19,19 +25,89 @@ function getBrowsersPath(): string {
   return path.join(process.cwd(), 'playwright-browsers')
 }
 
-// Set PLAYWRIGHT_BROWSERS_PATH BEFORE importing Playwright
-// Playwright reads this environment variable at module load time
-const browsersPath = getBrowsersPath()
-process.env.PLAYWRIGHT_BROWSERS_PATH = browsersPath
+/**
+ * Gets the path to the Chromium browser executable
+ * This constructs the path manually since Playwright ignores PLAYWRIGHT_BROWSERS_PATH
+ *
+ * Supports all platforms and architectures:
+ * - macOS ARM64: chrome-mac-arm64
+ * - macOS x64: chrome-mac-x64
+ * - Windows x64: chrome-win64
+ * - Linux x64: chrome-linux
+ */
+function getBrowserExecutablePath(): string {
+  const browsersPath = getBrowsersPath()
+  const chromiumVersion = 'chromium-1200'
+  const chromiumPath = path.join(browsersPath, chromiumVersion)
+  
+  if (process.platform === 'darwin') {
+    // macOS: Try ARM64 first (most common), then x64
+    const arm64Path = path.join(
+      chromiumPath,
+      'chrome-mac-arm64',
+      'Google Chrome for Testing.app',
+      'Contents',
+      'MacOS',
+      'Google Chrome for Testing'
+    )
+    if (fs.existsSync(arm64Path)) {
+      return arm64Path
+    }
+    
+    const x64Path = path.join(
+      chromiumPath,
+      'chrome-mac-x64',
+      'Google Chrome for Testing.app',
+      'Contents',
+      'MacOS',
+      'Google Chrome for Testing'
+    )
+    if (fs.existsSync(x64Path)) {
+      return x64Path
+    }
+    
+    // Fallback - return ARM64 path (will fail with helpful error)
+    return arm64Path
+  } else if (process.platform === 'win32') {
+    // Windows: Try chrome-win64 first, then chrome-win
+    const win64Path = path.join(chromiumPath, 'chrome-win64', 'chrome.exe')
+    if (fs.existsSync(win64Path)) {
+      return win64Path
+    }
+    
+    const winPath = path.join(chromiumPath, 'chrome-win', 'chrome.exe')
+    if (fs.existsSync(winPath)) {
+      return winPath
+    }
+    
+    // Fallback - return chrome-win64 path (will fail with helpful error)
+    return win64Path
+  } else {
+    // Linux: Try chrome-linux64 first, then chrome-linux
+    const linux64Path = path.join(chromiumPath, 'chrome-linux64', 'chrome')
+    if (fs.existsSync(linux64Path)) {
+      return linux64Path
+    }
+    
+    const linuxPath = path.join(chromiumPath, 'chrome-linux', 'chrome')
+    if (fs.existsSync(linuxPath)) {
+      return linuxPath
+    }
+    
+    // Fallback - return chrome-linux64 path (will fail with helpful error)
+    return linux64Path
+  }
+}
 
-// Now import Playwright after setting the environment variable
-import { chromium, Browser, Page, Frame } from 'playwright'
-import { EventEmitter } from 'events'
-import { randomUUID } from 'crypto'
-import { logger } from '../utils/logger'
-import type { RecordedAction } from '../../shared/types'
-import { getInjectionScript } from './injected-script'
-import { getWidgetScript, getWidgetInitScript } from './recording-widget'
+const browsersPath = getBrowsersPath()
+const browserExecutablePath = getBrowserExecutablePath()
+
+// Debug logging for browser path resolution
+logger.info(`[recorder.ts] app.isPackaged: ${app.isPackaged}`)
+logger.info(`[recorder.ts] process.resourcesPath: ${process.resourcesPath}`)
+logger.info(`[recorder.ts] process.cwd(): ${process.cwd()}`)
+logger.info(`[recorder.ts] browsersPath: ${browsersPath}`)
+logger.info(`[recorder.ts] browserExecutablePath: ${browserExecutablePath}`)
 
 export class BrowserRecorder extends EventEmitter {
   private browser: Browser | null = null
@@ -49,10 +125,29 @@ export class BrowserRecorder extends EventEmitter {
    */
   private async checkBrowserInstalled(): Promise<boolean> {
     try {
-      // Try to get browser executable path
-      const browserPath = chromium.executablePath()
-      return fs.existsSync(browserPath)
+      // Check if our manually constructed browser path exists
+      const exists = fs.existsSync(browserExecutablePath)
+      logger.info(`[checkBrowserInstalled] browserExecutablePath: ${browserExecutablePath}`)
+      logger.info(`[checkBrowserInstalled] fs.existsSync(browserExecutablePath): ${exists}`)
+      
+      // Also check if the browsers directory exists
+      const browsersDirExists = fs.existsSync(browsersPath)
+      logger.info(`[checkBrowserInstalled] browsersPath: ${browsersPath}`)
+      logger.info(`[checkBrowserInstalled] fs.existsSync(browsersPath): ${browsersDirExists}`)
+      
+      // List contents of browsers directory if it exists
+      if (browsersDirExists) {
+        try {
+          const contents = fs.readdirSync(browsersPath)
+          logger.info(`[checkBrowserInstalled] browsersPath contents: ${contents.join(', ')}`)
+        } catch (e) {
+          logger.info(`[checkBrowserInstalled] Failed to read browsersPath: ${e}`)
+        }
+      }
+      
+      return exists
     } catch (error) {
+      logger.info(`[checkBrowserInstalled] Exception: ${error}`)
       return false
     }
   }
@@ -71,21 +166,24 @@ export class BrowserRecorder extends EventEmitter {
     this.initialNavigationComplete = false
 
     // Log the Playwright browsers path (set at module load time)
-    logger.debug(`Playwright browsers path: ${browsersPath}`)
+    logger.info(`Playwright browsers path: ${browsersPath}`)
+    logger.info(`Browser executable path: ${browserExecutablePath}`)
 
     // Check if Playwright browsers are installed
     const browserInstalled = await this.checkBrowserInstalled()
     if (!browserInstalled) {
       const errorMessage =
         'Playwright Chromium browser is not installed.\n\n' +
-        `Expected location: ${browsersPath}\n\n` +
+        `Expected location: ${browserExecutablePath}\n\n` +
         'This should have been bundled with the app. Please reinstall the application.'
       logger.error('❌ Playwright browser not installed')
+      logger.error(`❌ Browser path check failed. See debug logs above for details.`)
       throw new Error(errorMessage)
     }
 
     this.browser = await chromium.launch({
       headless: false,
+      executablePath: browserExecutablePath,
       args: [
         '--start-maximized',
         '--disable-dev-shm-usage',
