@@ -87,15 +87,6 @@ jobs:
           mkdir -p models
           curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 
-      - name: Install Playwright browsers
-        shell: bash
-        run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            bash ./build/install-playwright-browsers.sh
-          else
-            ./build/install-playwright-browsers.sh
-          fi
-
       - name: Build (macOS arm64)
         if: |
           matrix.os == 'macos-latest' && matrix.arch == 'arm64' &&

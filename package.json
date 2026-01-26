@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "./build/generate-build-info.sh . && vite build && electron-builder --config electron-builder.test.json --mac --publish never -c.mac.identity=null",
     "build:prod": "dotenv -- ./build/generate-build-info.sh . && dotenv -- vite build && dotenv -- electron-builder --mac",
-    "postinstall": "./build/install-playwright-browsers.sh",
-    "install:browsers": "./build/install-playwright-browsers.sh",
+    "postinstall": "node ./build/install-playwright-browsers.js",
+    "install:browsers": "node ./build/install-playwright-browsers.js",
     "install:browsers:all": "./build/install-playwright-browsers-all-platforms.sh",
     "generate-icons": "./build/generate-icons.sh"
   },
