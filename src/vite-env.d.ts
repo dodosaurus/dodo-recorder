@@ -1,5 +1,16 @@
 /// <reference types="vite/client" />
 
+interface BuildInfo {
+  commitHash: string
+  commitFull: string
+  branch: string
+  isDirty: boolean
+  buildTime: string
+  nodeVersion: string
+}
+
+declare const __BUILD_INFO__: BuildInfo
+
 declare module '*.png' {
   const value: string
   export default value

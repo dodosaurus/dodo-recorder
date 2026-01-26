@@ -11,6 +11,18 @@ export interface MicrophoneSettings {
 }
 
 /**
+ * Build info interface
+ */
+export interface BuildInfo {
+  commitHash: string
+  commitFull: string
+  branch: string
+  isDirty: boolean
+  buildTime: string
+  nodeVersion: string
+}
+
+/**
  * Validates that data conforms to RecordedAction interface
  */
 function isValidRecordedAction(data: unknown): data is RecordedAction {
@@ -44,6 +56,7 @@ export interface ElectronAPI {
   getLogPath: () => Promise<string>
   openLogFile: () => Promise<IpcResult>
   openLogFolder: () => Promise<IpcResult>
+  getBuildInfo: () => Promise<BuildInfo | null>
   minimizeWindow: () => void
   maximizeWindow: () => void
   closeWindow: () => void
@@ -101,6 +114,7 @@ const electronAPI: ElectronAPI = {
   getLogPath: () => ipcRenderer.invoke('get-log-path'),
   openLogFile: () => ipcRenderer.invoke('open-log-file'),
   openLogFolder: () => ipcRenderer.invoke('open-log-folder'),
+  getBuildInfo: () => ipcRenderer.invoke('get-build-info'),
 
   minimizeWindow: () => ipcRenderer.send('window-minimize'),
   maximizeWindow: () => ipcRenderer.send('window-maximize'),

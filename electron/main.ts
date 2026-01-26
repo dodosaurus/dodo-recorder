@@ -13,6 +13,24 @@ const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 const isMac = process.platform === 'darwin'
 const ALLOWED_PERMISSIONS = ['media', 'microphone', 'audioCapture'] as const
 
+/**
+ * Read build info from build-info.json
+ */
+function getBuildInfo(): Record<string, string | boolean> | null {
+  const appPath = app.isPackaged ? process.resourcesPath : app.getAppPath()
+  const buildInfoPath = path.join(appPath, 'build-info.json')
+  
+  try {
+    if (fs.existsSync(buildInfoPath)) {
+      const content = fs.readFileSync(buildInfoPath, 'utf-8')
+      return JSON.parse(content)
+    }
+  } catch (e) {
+    logger.warn('Failed to read build info:', e)
+  }
+  return null
+}
+
 async function requestMicrophonePermission(): Promise<boolean> {
   if (isMac) {
     const status = systemPreferences.getMediaAccessStatus('microphone')
@@ -138,6 +156,16 @@ app.whenReady().then(async () => {
   // Log startup information
   logger.logStartupInfo()
   
+  // Log build information
+  const buildInfo = getBuildInfo()
+  if (buildInfo) {
+    logger.info(`📦 Build: ${buildInfo.commitHash}${buildInfo.isDirty ? ' (dirty)' : ''}`)
+    logger.info(`   Branch: ${buildInfo.branch}`)
+    logger.info(`   Built: ${buildInfo.buildTime}`)
+  } else {
+    logger.info('📦 Build: unknown')
+  }
+  
   // Check if Whisper components exist
   if (!checkWhisperComponents()) {
     app.quit()
@@ -226,4 +254,9 @@ ipcMain.handle('open-log-folder', async () => {
     logger.error('Failed to open log folder:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' }
   }
+})
+
+// Build info IPC handler
+ipcMain.handle('get-build-info', () => {
+  return getBuildInfo()
 })

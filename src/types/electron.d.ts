@@ -9,6 +9,15 @@ export interface MicrophoneSettings {
   selectedMicrophoneId?: string
 }
 
+export interface BuildInfo {
+  commitHash: string
+  commitFull: string
+  branch: string
+  isDirty: boolean
+  buildTime: string
+  nodeVersion: string
+}
+
 export interface ElectronAPI {
   selectOutputFolder: () => Promise<string | null>
   startRecording: (startUrl: string, outputPath: string, startTime: number) => Promise<IpcResult>
@@ -28,6 +37,7 @@ export interface ElectronAPI {
   getLogPath: () => Promise<string>
   openLogFile: () => Promise<IpcResult>
   openLogFolder: () => Promise<IpcResult>
+  getBuildInfo: () => Promise<BuildInfo | null>
   minimizeWindow?: () => void
   maximizeWindow?: () => void
   closeWindow?: () => void

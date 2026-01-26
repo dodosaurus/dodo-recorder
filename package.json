@@ -5,8 +5,8 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && electron-builder --config electron-builder.test.json --mac --publish never -c.mac.identity=null",
-    "build:prod": "dotenv -- vite build && dotenv -- electron-builder --mac",
+    "build": "./build/generate-build-info.sh . && vite build && electron-builder --config electron-builder.test.json --mac --publish never -c.mac.identity=null",
+    "build:prod": "dotenv -- ./build/generate-build-info.sh . && dotenv -- vite build && dotenv -- electron-builder --mac",
     "postinstall": "./build/install-playwright-browsers.sh",
     "install:browsers": "./build/install-playwright-browsers.sh",
     "install:browsers:all": "./build/install-playwright-browsers-all-platforms.sh",

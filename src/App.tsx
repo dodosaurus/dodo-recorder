@@ -2,11 +2,11 @@ import { RecordingControls } from '@/components/RecordingControls'
 import { ActionsList } from '@/components/ActionsList'
 import { SettingsPanel } from '@/components/SettingsPanel'
 import { StatusBar } from '@/components/StatusBar'
+import { DebugInfoWidget } from '@/components/DebugInfoWidget'
 import { TitleBar } from '@/components/TitleBar'
 import { TranscriptView } from '@/components/TranscriptView'
 import { useRecordingStore } from '@/stores/recordingStore'
-import saurusIcon from '@/assets/saurus.png'
-import { FileText, X } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useShallow } from 'zustand/react/shallow'
 
@@ -27,13 +27,10 @@ export default function App() {
     <div className="h-screen flex flex-col overflow-hidden select-none">
       <TitleBar />
       
-      <header className="flex-shrink-0 border-b border-border bg-card px-4 py-3">
+      <header className="flex-shrink-0 border-b border-border bg-card px-4 py-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src={saurusIcon} alt="Dodo Recorder" className="w-8 h-8 rounded-lg" />
-            <h1 className="text-sm font-semibold text-foreground">Dodo Recorder</h1>
-          </div>
           <StatusBar />
+          <DebugInfoWidget />
         </div>
       </header>
       
