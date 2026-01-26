@@ -2,27 +2,16 @@
 
 This document describes the GitHub Actions workflow for building Dodo Recorder across multiple platforms.
 
-## Workflow Triggers
+## Workflow Trigger
 
 The workflow runs on:
-- **Release creation** - Automatically builds all platforms when you create a GitHub release
-- **Manual trigger** - Build specific platforms on demand via workflow dispatch
+- **Manual trigger only** - Build specific platforms on demand via workflow dispatch
 
-### Building on Release
+**Note:** The workflow does NOT automatically run on release creation. You must manually trigger it via GitHub Actions UI.
 
-When you create a GitHub release (tag + release), the workflow automatically builds all platforms and attaches the artifacts to the release.
+## Building Manually (Platform Selection)
 
-```bash
-# Tag your commit
-git tag v1.0.0
-git push origin v1.0.0
-
-# Create release on GitHub web UI
-```
-
-### Building Manually (Platform Selection)
-
-To build specific platforms without creating a release:
+To build specific platforms:
 
 1. Go to **Actions** tab in your repository
 2. Select **Build Dodo Recorder** workflow
@@ -38,29 +27,32 @@ This is useful for:
 
 ## Workflow Jobs
 
-### Build Job
+The workflow consists of 4 separate build jobs and 1 optional upload job:
 
-Runs in parallel on multiple platforms:
-1. **macOS-latest** (Apple Silicon ARM64)
-2. **macOS-latest** (Intel x64)
-3. **Windows-latest**
-4. **Ubuntu-latest** (Linux)
+### Build Jobs (run conditionally based on platform selection)
 
-Each build:
-- Checks out the code
+1. **build-macos-arm64** - Runs on macOS-latest (Apple Silicon ARM64)
+2. **build-macos-x64** - Runs on macOS-latest (Intel x64)
+3. **build-windows** - Runs on Windows-latest
+4. **build-linux** - Runs on Ubuntu-latest
+
+Each job only runs if its platform is included in the `platforms` input. For example, if you select only "windows", only the `build-windows` job will run.
+
+**Each build job:**
+- Checks out the code (optionally at a specific tag)
 - Sets up Node.js 18
 - Caches npm dependencies and Playwright browsers
-- Installs dependencies
+- Installs dependencies with `npm ci`
 - Downloads the Whisper model
-- Installs Playwright browsers
-- Builds the application
-- Uploads build artifacts
+- Builds the application with `npm run build:prod`
+- Uploads build artifacts (retained for 30 days)
 
-### Release Job
+### Upload to Release Job (optional)
 
-Only runs when a GitHub release is created:
-- Downloads all build artifacts
-- Attaches them to the GitHub release
+The `upload-to-release` job only runs when you provide a `release_tag` input:
+- Depends on all 4 build jobs (runs even if some are skipped)
+- Downloads all available artifacts
+- Uploads them to the specified GitHub release
 
 ## Setup Instructions
 
@@ -128,23 +120,27 @@ Artifacts are retained for 30 days.
 
 To create a release with signed builds:
 
-1. Tag your commit:
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
+1. **Manually trigger the workflow** with a release tag:
+   - Go to **Actions** tab → **Build Dodo Recorder** workflow
+   - Click **Run workflow**
+   - Enter the release tag in the `release_tag` field (e.g., `v1.0.0`)
+   - Select platforms to build (default: all platforms)
+   - Click **Run workflow**
 
-2. Create a GitHub release on the web:
-   - Go to **Releases** → **Create a new release**
-   - Choose your tag
+2. **Wait for builds to complete:**
+   - Monitor the workflow progress
+   - Artifacts will be automatically uploaded to the specified release tag
+
+3. **Create or update the GitHub release:**
+   - Go to **Releases** → Create/edit release for your tag
    - Add release notes
-   - Click **Publish release**
+   - The workflow will have already attached the build artifacts
 
-3. The workflow will:
-   - Build all platforms automatically
-   - Upload artifacts to the release
+**Platform Selection:**
+- To build all platforms: Select "macos-arm64,macos-x64,windows,linux"
+- To build specific platforms: Choose the appropriate option (e.g., "windows" only)
 
-**Note:** Release builds include all platforms. If you want to release only specific platforms, use manual workflow dispatch and manually attach the artifacts to your release.
+**Important:** The workflow does NOT automatically run when you create a release. You must manually trigger it via the Actions tab.
 
 ## Local Testing
 

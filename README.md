@@ -165,14 +165,6 @@ npm run build:prod
 
 Built apps are created in the `release/` folder for your current platform.
 
-> **⚠️ Production Builds:** Currently only macOS Apple Silicon (ARM64) builds are signed, notarized, and tested for distribution. Intel Mac, Windows, and Linux users should build from source using `npm run build` for local testing.
-
-> **🔄 CI/CD Builds:** Use GitHub Actions to build for all platforms without needing a Windows or Linux machine. Builds run on releases or can be triggered manually with platform selection. See [`docs/ci_cd.md`](docs/ci_cd.md) for setup instructions.
-
-> **💰 GitHub Actions:** Free for public repositories (unlimited minutes) and 2,000 free minutes/month for private repos. See [`docs/ci_cd.md`](docs/ci_cd.md#github-actions-pricing) for details.
-
-> **Note for Maintainers:** See [`docs/code_signing.md`](docs/code_signing.md) for code signing and notarization setup. Contributors don't need code signing for development.
-
 ### Project Structure
 
 ```

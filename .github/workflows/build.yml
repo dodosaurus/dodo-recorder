@@ -24,36 +24,14 @@ on:
           - 'macos-x64'
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-        include:
-          - os: macos-latest
-            target: mac
-            arch: arm64
-            platform_key: macos-arm64
-          - os: macos-latest
-            target: mac
-            arch: x64
-            platform_key: macos-x64
-          - os: windows-latest
-            target: win
-            arch: x64
-            platform_key: windows
-          - os: ubuntu-latest
-            target: linux
-            arch: x64
-            platform_key: linux
-      fail-fast: false
-
-    runs-on: ${{ matrix.os }}
+  build-macos-arm64:
+    if: contains(github.event.inputs.platforms, 'macos-arm64')
+    runs-on: macos-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # Checkout the specific tag if provided
           ref: ${{ github.event.inputs.release_tag || github.ref }}
 
       - name: Setup Node.js
@@ -91,8 +69,7 @@ jobs:
           mkdir -p models
           curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 
-      - name: Build (macOS arm64)
-        if: matrix.os == 'macos-latest' && matrix.arch == 'arm64' && contains(github.event.inputs.platforms, 'macos-arm64')
+      - name: Build
         run: npm run build:prod
         env:
           CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
@@ -101,8 +78,61 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-      - name: Build (macOS x64)
-        if: matrix.os == 'macos-latest' && matrix.arch == 'x64' && contains(github.event.inputs.platforms, 'macos-x64')
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dodo-recorder-macos-arm64
+          path: |
+            release/*.dmg
+            release/*.zip
+          retention-days: 30
+
+  build-macos-x64:
+    if: contains(github.event.inputs.platforms, 'macos-x64')
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.release_tag || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: playwright-browsers
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-browsers-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Whisper model
+        shell: bash
+        run: |
+          mkdir -p models
+          curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
+
+      - name: Build
         run: npm run build:prod
         env:
           TARGET_ARCH: x64
@@ -112,27 +142,7 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-      - name: Build (Windows)
-        if: matrix.os == 'windows-latest' && contains(github.event.inputs.platforms, 'windows')
-        run: npm run build:prod
-        shell: bash
-
-      - name: Build (Linux)
-        if: matrix.os == 'ubuntu-latest' && contains(github.event.inputs.platforms, 'linux')
-        run: npm run build:prod
-
-      - name: Upload artifacts (macOS arm64)
-        if: matrix.os == 'macos-latest' && matrix.arch == 'arm64' && contains(github.event.inputs.platforms, 'macos-arm64')
-        uses: actions/upload-artifact@v4
-        with:
-          name: dodo-recorder-macos-arm64
-          path: |
-            release/*.dmg
-            release/*.zip
-          retention-days: 30
-
-      - name: Upload artifacts (macOS x64)
-        if: matrix.os == 'macos-latest' && matrix.arch == 'x64' && contains(github.event.inputs.platforms, 'macos-x64')
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dodo-recorder-macos-x64
@@ -141,16 +151,111 @@ jobs:
             release/*.zip
           retention-days: 30
 
-      - name: Upload artifacts (Windows)
-        if: matrix.os == 'windows-latest' && contains(github.event.inputs.platforms, 'windows')
+  build-windows:
+    if: contains(github.event.inputs.platforms, 'windows')
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.release_tag || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: playwright-browsers
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-browsers-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Whisper model
+        shell: bash
+        run: |
+          mkdir -p models
+          curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
+
+      - name: Build
+        run: npm run build:prod
+        shell: bash
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dodo-recorder-windows
           path: release/*.exe
           retention-days: 30
 
-      - name: Upload artifacts (Linux)
-        if: matrix.os == 'ubuntu-latest' && contains(github.event.inputs.platforms, 'linux')
+  build-linux:
+    if: contains(github.event.inputs.platforms, 'linux')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.release_tag || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: playwright-browsers
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-browsers-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Whisper model
+        shell: bash
+        run: |
+          mkdir -p models
+          curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
+
+      - name: Build
+        run: npm run build:prod
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dodo-recorder-linux
@@ -160,9 +265,9 @@ jobs:
           retention-days: 30
 
   upload-to-release:
-    needs: build
+    needs: [build-macos-arm64, build-macos-x64, build-windows, build-linux]
     runs-on: ubuntu-latest
-    if: github.event.inputs.release_tag != ''
+    if: always() && github.event.inputs.release_tag != ''
     permissions:
       contents: write
 
