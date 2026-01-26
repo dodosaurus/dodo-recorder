@@ -93,7 +93,7 @@ jobs:
 
       - name: Build (macOS arm64)
         if: matrix.os == 'macos-latest' && matrix.arch == 'arm64' && contains(github.event.inputs.platforms, 'macos-arm64')
-        run: npm run build
+        run: npm run build:prod
         env:
           CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
           CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -103,7 +103,7 @@ jobs:
 
       - name: Build (macOS x64)
         if: matrix.os == 'macos-latest' && matrix.arch == 'x64' && contains(github.event.inputs.platforms, 'macos-x64')
-        run: npm run build
+        run: npm run build:prod
         env:
           TARGET_ARCH: x64
           CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
@@ -114,12 +114,12 @@ jobs:
 
       - name: Build (Windows)
         if: matrix.os == 'windows-latest' && contains(github.event.inputs.platforms, 'windows')
-        run: npm run build
+        run: npm run build:prod
         shell: bash
 
       - name: Build (Linux)
         if: matrix.os == 'ubuntu-latest' && contains(github.event.inputs.platforms, 'linux')
-        run: npm run build
+        run: npm run build:prod
 
       - name: Upload artifacts (macOS arm64)
         if: matrix.os == 'macos-latest' && matrix.arch == 'arm64' && contains(github.event.inputs.platforms, 'macos-arm64')

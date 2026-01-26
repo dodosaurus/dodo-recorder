@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "node ./build/build.js",
-    "build:prod": "dotenv -- node ./build/generate-build-info.js . && dotenv -- vite build && dotenv -- electron-builder --mac",
+    "build:prod": "node ./build/build-prod.js",
     "postinstall": "node ./build/install-playwright-browsers.js",
     "install:browsers": "node ./build/install-playwright-browsers.js",
     "install:browsers:all": "./build/install-playwright-browsers-all-platforms.sh",

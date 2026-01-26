@@ -1,6 +1,7 @@
 {
   "appId": "com.dodo.recorder",
   "productName": "Dodo Recorder",
+  "publish": null,
   "directories": {
     "output": "release"
   },
