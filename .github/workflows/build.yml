@@ -1,12 +1,14 @@
 name: Build Dodo Recorder
 
 on:
-  release:
-    types: [created]
   workflow_dispatch:
     inputs:
+      release_tag:
+        description: 'Release tag to attach artifacts to (e.g., v0.1.0). Leave empty to only build artifacts without uploading to a release.'
+        required: false
+        type: string
       platforms:
-        description: 'Platforms to build (comma-separated: macos-arm64,macos-x64,windows,linux)'
+        description: 'Platforms to build'
         required: false
         default: 'macos-arm64,macos-x64,windows,linux'
         type: choice
@@ -46,11 +48,13 @@ jobs:
       fail-fast: false
 
     runs-on: ${{ matrix.os }}
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # Checkout the specific tag if provided
+          ref: ${{ github.event.inputs.release_tag || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -88,9 +92,7 @@ jobs:
           curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 
       - name: Build (macOS arm64)
-        if: |
-          matrix.os == 'macos-latest' && matrix.arch == 'arm64' &&
-          (github.event_name == 'release' || contains(github.event.inputs.platforms, 'macos-arm64'))
+        if: matrix.os == 'macos-latest' && matrix.arch == 'arm64' && contains(github.event.inputs.platforms, 'macos-arm64')
         run: npm run build
         env:
           CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
@@ -100,9 +102,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Build (macOS x64)
-        if: |
-          matrix.os == 'macos-latest' && matrix.arch == 'x64' &&
-          (github.event_name == 'release' || contains(github.event.inputs.platforms, 'macos-x64'))
+        if: matrix.os == 'macos-latest' && matrix.arch == 'x64' && contains(github.event.inputs.platforms, 'macos-x64')
         run: npm run build
         env:
           CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
@@ -113,22 +113,16 @@ jobs:
           TARGET_ARCH: x64
 
       - name: Build (Windows)
-        if: |
-          matrix.os == 'windows-latest' &&
-          (github.event_name == 'release' || contains(github.event.inputs.platforms, 'windows'))
+        if: matrix.os == 'windows-latest' && contains(github.event.inputs.platforms, 'windows')
         run: npm run build
         shell: bash
 
       - name: Build (Linux)
-        if: |
-          matrix.os == 'ubuntu-latest' &&
-          (github.event_name == 'release' || contains(github.event.inputs.platforms, 'linux'))
+        if: matrix.os == 'ubuntu-latest' && contains(github.event.inputs.platforms, 'linux')
         run: npm run build
 
       - name: Upload artifacts (macOS arm64)
-        if: |
-          matrix.os == 'macos-latest' && matrix.arch == 'arm64' &&
-          (github.event_name == 'release' || contains(github.event.inputs.platforms, 'macos-arm64'))
+        if: matrix.os == 'macos-latest' && matrix.arch == 'arm64' && contains(github.event.inputs.platforms, 'macos-arm64')
         uses: actions/upload-artifact@v4
         with:
           name: dodo-recorder-macos-arm64
@@ -138,9 +132,7 @@ jobs:
           retention-days: 30
 
       - name: Upload artifacts (macOS x64)
-        if: |
-          matrix.os == 'macos-latest' && matrix.arch == 'x64' &&
-          (github.event_name == 'release' || contains(github.event.inputs.platforms, 'macos-x64'))
+        if: matrix.os == 'macos-latest' && matrix.arch == 'x64' && contains(github.event.inputs.platforms, 'macos-x64')
         uses: actions/upload-artifact@v4
         with:
           name: dodo-recorder-macos-x64
@@ -150,9 +142,7 @@ jobs:
           retention-days: 30
 
       - name: Upload artifacts (Windows)
-        if: |
-          matrix.os == 'windows-latest' &&
-          (github.event_name == 'release' || contains(github.event.inputs.platforms, 'windows'))
+        if: matrix.os == 'windows-latest' && contains(github.event.inputs.platforms, 'windows')
         uses: actions/upload-artifact@v4
         with:
           name: dodo-recorder-windows
@@ -160,9 +150,7 @@ jobs:
           retention-days: 30
 
       - name: Upload artifacts (Linux)
-        if: |
-          matrix.os == 'ubuntu-latest' &&
-          (github.event_name == 'release' || contains(github.event.inputs.platforms, 'linux'))
+        if: matrix.os == 'ubuntu-latest' && contains(github.event.inputs.platforms, 'linux')
         uses: actions/upload-artifact@v4
         with:
           name: dodo-recorder-linux
@@ -171,16 +159,18 @@ jobs:
             release/*.deb
           retention-days: 30
 
-  release:
+  upload-to-release:
     needs: build
     runs-on: ubuntu-latest
-    if: github.event_name == 'release'
+    if: github.event.inputs.release_tag != ''
     permissions:
       contents: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.release_tag }}
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -193,10 +183,12 @@ jobs:
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ github.event.inputs.release_tag }}
           files: |
             artifacts/dodo-recorder-macos-arm64/*
             artifacts/dodo-recorder-macos-x64/*
             artifacts/dodo-recorder-windows/*
             artifacts/dodo-recorder-linux/*
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
