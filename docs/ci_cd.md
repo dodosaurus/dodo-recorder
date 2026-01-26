@@ -2,29 +2,6 @@
 
 This document describes the GitHub Actions workflow for building Dodo Recorder across multiple platforms.
 
-## GitHub Actions Pricing
-
-**Free Tier:**
-- **Public repositories**: Unlimited free minutes
-- **Private repositories**: 2,000 free minutes/month
-- **Storage**: 500 MB free for artifacts and caches
-
-**Typical build times:**
-- macOS: ~15-20 minutes (including notarization)
-- Windows: ~10-15 minutes
-- Linux: ~10-15 minutes
-
-For a typical release building all 4 platforms, you'll use approximately 50-70 minutes. This fits well within the free tier for private repositories.
-
-**Paid plans** (if needed): Pro ($4/month) includes 3,000 minutes, Enterprise ($21/user/month) includes 50,000 minutes.
-
-## Overview
-
-The workflow automatically builds Dodo Recorder for:
-- **macOS** (Apple Silicon ARM64 and Intel x64)
-- **Windows** (x64)
-- **Linux** (x64)
-
 ## Workflow Triggers
 
 The workflow runs on:
@@ -52,15 +29,6 @@ To build specific platforms without creating a release:
 3. Click **Run workflow** button
 4. Select branch (usually `main`)
 5. Choose platforms from dropdown:
-   - All platforms (default)
-   - macOS ARM64 + Windows
-   - macOS x64 + Windows
-   - Windows + Linux
-   - macOS ARM64 + macOS x64
-   - Windows only
-   - Linux only
-   - macOS ARM64 only
-   - macOS x64 only
 6. Click **Run workflow**
 
 This is useful for:
@@ -102,8 +70,6 @@ For **macOS code signing** (optional but recommended for distribution):
 
 | Secret Name | Description | How to Get |
 |-------------|-------------|------------|
-| `MACOS_CERTIFICATE` | Base64-encoded .p12 certificate | Export from Keychain Access |
-| `MACOS_CERTIFICATE_PASSWORD` | Certificate password | Set when exporting |
 | `APPLE_ID` | Your Apple ID email | Your Apple account |
 | `APPLE_APP_SPECIFIC_PASSWORD` | App-specific password | Generate at appleid.apple.com |
 | `APPLE_TEAM_ID` | Your Apple Developer Team ID | In Apple Developer portal |

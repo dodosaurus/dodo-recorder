@@ -44,3 +44,4 @@ tsconfig.tsbuildinfo
 
 test-sessions/
 
+build-info.json
