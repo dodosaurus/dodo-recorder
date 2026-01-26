@@ -19,10 +19,12 @@
 ## 🖥️ Platform Support
 
 **Current Release:**
-- ✅ **macOS Apple Silicon (M1–M4)** — signed and notarized builds
-- ⏳ **macOS Intel (x64)** — build from source (not yet released)
-- ⏳ **Windows** — build from source (not yet released)
-- ⏳ **Linux** — build from source (not yet released)
+- ✅ **macOS Apple Silicon (ARM64)** - tested
+- ✅ **macOS Intel (x64)** — not tested
+- ✅ **Windows** — not tested
+- ✅ **Linux** — not tested
+
+**CI/CD Builds:** Cross-platform builds are available via GitHub Actions. See [`docs/ci_cd.md`](docs/ci_cd.md) for details.
 
 ## 🎯 Overview
 
@@ -165,6 +167,10 @@ Built apps are created in the `release/` folder for your current platform.
 
 > **⚠️ Production Builds:** Currently only macOS Apple Silicon (ARM64) builds are signed, notarized, and tested for distribution. Intel Mac, Windows, and Linux users should build from source using `npm run build` for local testing.
 
+> **🔄 CI/CD Builds:** Use GitHub Actions to build for all platforms without needing a Windows or Linux machine. Builds run on releases or can be triggered manually with platform selection. See [`docs/ci_cd.md`](docs/ci_cd.md) for setup instructions.
+
+> **💰 GitHub Actions:** Free for public repositories (unlimited minutes) and 2,000 free minutes/month for private repos. See [`docs/ci_cd.md`](docs/ci_cd.md#github-actions-pricing) for details.
+
 > **Note for Maintainers:** See [`docs/code_signing.md`](docs/code_signing.md) for code signing and notarization setup. Contributors don't need code signing for development.
 
 ### Project Structure
@@ -262,15 +268,13 @@ A: No. All transcription happens locally using Whisper.cpp. Your voice recording
 **Q: Why do I get "Playwright browser not installed" error?**
 A: Run `./build/install-playwright-browsers.sh` to download the Playwright Chromium browser. The `npm install` command should do this automatically via a postinstall script.
 
-**Q: Why is there only a macOS Apple Silicon build right now?**
-A: Initial development and testing focused on Apple Silicon (M1–M4). The app works on other platforms when building from source, but I want to complete testing and release signed builds for Intel Mac, Windows, and Linux before distributing them.
-
 ---
 
 ## 📚 Documentation
 
 - **[User Guide](docs/user_guide.md)**: Complete feature documentation, keyboard shortcuts, and output format details
 - **[Architecture](docs/architecture.md)**: System design, data flow, and technical implementation
+- **[CI/CD Builds](docs/ci_cd.md)**: GitHub Actions workflow for cross-platform builds
 - **[Code Signing](docs/code_signing.md)**: macOS code signing setup and configuration
 - **[Voice Transcription](docs/voice_transcription.md)**: Deep dive into the local transcription system
 - **[Output Format](docs/output_format.md)**: Detailed explanation of session bundle structure

@@ -1,0 +1,197 @@
+name: Build Dodo Recorder
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Platforms to build (comma-separated: macos-arm64,macos-x64,windows,linux)'
+        required: false
+        default: 'macos-arm64,macos-x64,windows,linux'
+        type: choice
+        options:
+          - 'macos-arm64,macos-x64,windows,linux'
+          - 'macos-arm64,windows'
+          - 'macos-x64,windows'
+          - 'windows,linux'
+          - 'macos-arm64,macos-x64'
+          - 'windows'
+          - 'linux'
+          - 'macos-arm64'
+          - 'macos-x64'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+        include:
+          - os: macos-latest
+            target: mac
+            arch: arm64
+            platform_key: macos-arm64
+          - os: macos-latest
+            target: mac
+            arch: x64
+            platform_key: macos-x64
+          - os: windows-latest
+            target: win
+            arch: x64
+            platform_key: windows
+          - os: ubuntu-latest
+            target: linux
+            arch: x64
+            platform_key: linux
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+    if: |
+      github.event_name == 'release' ||
+      contains(github.event.inputs.platforms, matrix.platform_key)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: playwright-browsers
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-browsers-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Whisper model
+        shell: bash
+        run: |
+          mkdir -p models
+          curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
+
+      - name: Install Playwright browsers
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            bash ./build/install-playwright-browsers.sh
+          else
+            ./build/install-playwright-browsers.sh
+          fi
+
+      - name: Build (macOS arm64)
+        if: matrix.os == 'macos-latest' && matrix.arch == 'arm64'
+        run: npm run build
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Build (macOS x64)
+        if: matrix.os == 'macos-latest' && matrix.arch == 'x64'
+        run: npm run build
+        env:
+          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          TARGET_ARCH: x64
+
+      - name: Build (Windows)
+        if: matrix.os == 'windows-latest'
+        run: npm run build
+        shell: bash
+
+      - name: Build (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: npm run build
+
+      - name: Upload artifacts (macOS arm64)
+        if: matrix.os == 'macos-latest' && matrix.arch == 'arm64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dodo-recorder-macos-arm64
+          path: |
+            release/*.dmg
+            release/*.zip
+          retention-days: 30
+
+      - name: Upload artifacts (macOS x64)
+        if: matrix.os == 'macos-latest' && matrix.arch == 'x64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dodo-recorder-macos-x64
+          path: |
+            release/*.dmg
+            release/*.zip
+          retention-days: 30
+
+      - name: Upload artifacts (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dodo-recorder-windows
+          path: release/*.exe
+          retention-days: 30
+
+      - name: Upload artifacts (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dodo-recorder-linux
+          path: |
+            release/*.AppImage
+            release/*.deb
+          retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/dodo-recorder-macos-arm64/*
+            artifacts/dodo-recorder-macos-x64/*
+            artifacts/dodo-recorder-windows/*
+            artifacts/dodo-recorder-linux/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

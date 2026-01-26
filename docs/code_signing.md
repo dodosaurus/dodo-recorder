@@ -6,6 +6,8 @@
 
 Code signing prevents macOS Gatekeeper warnings ("app is damaged") when users install the app. Requires an Apple Developer account and certificate.
 
+> **CI/CD Builds:** For automated cross-platform builds using GitHub Actions, see [`docs/ci_cd.md`](ci_cd.md).
+
 ## Quick Setup (Maintainer Only)
 
 ### 1. Prerequisites
