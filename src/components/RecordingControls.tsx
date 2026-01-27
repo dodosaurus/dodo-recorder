@@ -6,42 +6,7 @@ import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw, CheckCircle, Alert
 import { useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { RecordedAction, SessionBundle, TranscriptSegment } from '@/types/session'
-
-// Helper function to generate narrative text locally (same logic as backend)
-function buildNarrativeText(actions: RecordedAction[]): string {
-  // This generates a simple narrative with action references
-  // In a production app, this would match the backend's buildNarrativeWithSentenceLevelDistribution
-  let narrative = ''
-  const processedSegments = new Set<string>()
-  
-  for (const action of actions) {
-    const voiceSegments = action.voiceSegments || []
-    
-    for (const segment of voiceSegments) {
-      const segmentKey = `${segment.id}-${segment.startTime}-${segment.endTime}`
-      if (!processedSegments.has(segmentKey)) {
-        if (narrative && !narrative.endsWith(' ')) {
-          narrative += ' '
-        }
-        narrative += segment.text.trim()
-        processedSegments.add(segmentKey)
-      }
-    }
-    
-    // Add action reference
-    if (narrative && !narrative.endsWith(' ')) {
-      narrative += ' '
-    }
-    const shortId = action.id.substring(0, 8)
-    narrative += `[action:${shortId}:${action.type}]`
-    if (action.type === 'screenshot' && action.screenshot) {
-      narrative += ` [screenshot:${action.screenshot}]`
-    }
-    narrative += ' '
-  }
-  
-  return narrative.trim()
-}
+import { buildNarrativeWithSentenceLevelDistribution } from '../../shared/narrativeBuilder'
 
 export function RecordingControls() {
   const {
@@ -367,8 +332,8 @@ export function RecordingControls() {
                 // We need to replace all actions with the new ones that have voice segments
                 const actionsWithVoice = distributionResult.actions
                 
-                // Generate narrative text locally for UI display
-                const narrativeText = buildNarrativeText(actionsWithVoice)
+                // Generate narrative text locally for UI display using shared builder
+                const narrativeText = buildNarrativeWithSentenceLevelDistribution(actionsWithVoice)
                 setTranscriptText(narrativeText)
                 console.log('Narrative text generated successfully for UI')
                 
@@ -428,8 +393,8 @@ export function RecordingControls() {
           actionsWithVoice = result.actions
           console.log('Voice segments distributed successfully')
           
-          // Generate narrative text locally for UI display
-          const narrativeText = buildNarrativeText(actionsWithVoice)
+          // Generate narrative text locally for UI display using shared builder
+          const narrativeText = buildNarrativeWithSentenceLevelDistribution(actionsWithVoice)
           setTranscriptText(narrativeText)
           console.log('Narrative text generated successfully for UI')
         } else if ('success' in result && !result.success) {

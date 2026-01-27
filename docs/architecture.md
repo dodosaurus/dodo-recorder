@@ -140,8 +140,8 @@ Converts voice recordings to text using **Whisper.cpp** (OpenAI's speech recogni
 Intelligently associates voice commentary with browser actions:
 
 **The challenge:** User might say "Now I'll click the submit button" 2 seconds before actually clicking. The algorithm:
-- Looks backward 10 seconds from each action
-- Looks forward 5 seconds from each action
+- Looks backward 4 seconds from each action
+- Looks forward 2 seconds from each action
 - Assigns voice segments to the nearest action
 - Handles overlapping segments (long commentary spanning multiple actions)
 
@@ -162,9 +162,9 @@ interface AppSettings {
     transcriptionTimeoutMs: number
   }
   voiceDistribution: {
-    lookbackMs: number        // 10 seconds default
-    lookaheadMs: number        // 5 seconds default
-    longSegmentThresholdMs: number  // 3 seconds default
+    lookbackMs: number        // 4 seconds default
+    lookaheadMs: number        // 2 seconds default
+    longSegmentThresholdMs: number  // 2 seconds default
   }
   output: {
     includeScreenshots: boolean

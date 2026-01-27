@@ -218,7 +218,7 @@ export class Transcriber {
         '-l', 'en',
         '-oj',  // Output JSON format
         '--print-progress',  // Show progress
-        '-ml', '0',  // max-len: no length limit
+        '-ml', '50',  // max-len: ~50 characters (1-2 second segments)
         '-sow',  // split-on-word: split on word boundaries
         '-bo', '5',  // best-of: use best of 5 candidates
         '-bs', '5',  // beam-size: beam search size
@@ -384,8 +384,9 @@ export class Transcriber {
       // Log final processed segments
       logger.info('📝 Final segments (after removing 1500ms padding offset):')
       segments.forEach(segment => {
-        logger.info(`  [${segment.id}] ${segment.startTime}ms -> ${segment.endTime}ms`)
-        logger.info(`      "${segment.text}"`)
+        const durationMs = segment.endTime - segment.startTime
+        logger.info(`  [${segment.id}] ${segment.startTime}ms -> ${segment.endTime}ms (${durationMs}ms)`)
+        logger.info(`      "${segment.text}" (${segment.text.length} chars)`)
       })
       logger.info('='.repeat(60))
 

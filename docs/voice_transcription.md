@@ -151,7 +151,7 @@ const command = [
   '-f', audioPath,
   '-l', 'en',
   '-oj',              // Output JSON
-  '-ml', '0',         // No max length
+  '-ml', '50',        // Max 50 characters (1-2 second segments)
   '-sow',             // Split on word boundaries
   '-bo', '5',         // Best of 5 candidates
   '-bs', '5',         // Beam size 5
@@ -313,7 +313,7 @@ Clean output, no false transcriptions in your session.
 | `-et` (entropy_threshold) | `2.0` | **Most important** - Lower value = more aggressive speech detection at beginning |
 | `-bo` (best_of) | `5` | Use best of 5 beam search candidates |
 | `-bs` (beam_size) | `5` | Beam search width for better accuracy |
-| `-ml` (max_len) | `0` | No length limit on segments |
+| `-ml` (max_len) | `50` | Max 50 characters per segment (1-2 second segments for phrase-level granularity) |
 | `-sow` (split_on_word) | flag | Split on word boundaries, not tokens |
 | `-lpt` (logprob_threshold) | `-1.0` | Default confidence threshold (stable across versions) |
 | `--prompt` | context string | Prime model with expected vocabulary (also used for hallucination detection) |
