@@ -152,11 +152,11 @@ export function TranscriptView() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="max-w-3xl mx-auto text-base leading-relaxed space-y-1">
+        <div className="max-w-3xl mx-auto text-base leading-relaxed">
           {parts.map((part, index) => {
             if (part.type === 'text') {
               return (
-                <span key={`text-${index}`} className="text-foreground/95 text-base leading-relaxed">
+                <span key={`text-${index}`} className="text-foreground/95 text-base leading-relaxed select-text">
                   {part.content}
                 </span>
               )
@@ -167,22 +167,22 @@ export function TranscriptView() {
               const colorClass = actionColors[part.actionType] || 'text-muted-foreground'
               
               return (
-                <button
+                <span
                   key={`action-${index}`}
                   onClick={() => handleActionClick(part.actionId!)}
                   className={cn(
                     'inline-flex items-center gap-1.5 px-2 py-1 mx-0.5 rounded-md',
                     'bg-secondary/50 hover:bg-secondary transition-colors',
-                    'cursor-pointer select-none align-middle',
+                    'cursor-pointer align-middle select-text',
                     colorClass
                   )}
                   title={`Click to highlight action ${part.actionId}`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
+                  <Icon className="w-3.5 h-3.5 pointer-events-none" />
                   <span className="text-xs font-mono font-medium">
                     {part.actionId}:{part.actionType}
                   </span>
-                </button>
+                </span>
               )
             }
 
