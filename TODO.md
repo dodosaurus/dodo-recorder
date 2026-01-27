@@ -1,6 +1,8 @@
-- [ ] add assertion mode where elements will on hover will be highlighted like with Playwright Codgene/dev tools insepcting elements - or we can have a mode that will be by default off, but we can turn that "inspection" mode on (it resembles also inspect from chrome dev tools)
+- [ ] fix bug then sometimes it is not rendered (it probably depends on initially loaded parent HTML, for ex. youtube.com is problematic)
+- [ ] make recording widget nicer - add more options there - think about what is needed, what for ex. Playwright Codegen has and we do not
 - [ ] after some change is made, Electron app running in dev mode, pops on top of all windows in my MacOS - maybe some live change watch is enabled and app is reloaded and jumps on top? I want live reload, but app should not pops on top of all my MacOS env
 
+- [x] add assertion mode where elements will on hover will be highlighted like with Playwright Codgene/dev tools insepcting elements - or we can have a mode that will be by default off, but we can turn that "inspection" mode on (it resembles also inspect from chrome dev tools)
 - [x] add more options for output format - user could configure what he wants to include
 - [x] add some panel in browser for assertion mode/taking screenshot, so we are not dependent on hotkeys (similar to Playwright Codegen)
 - [x] when writing in input a lot of events are recorded
