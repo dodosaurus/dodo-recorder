@@ -119,6 +119,7 @@ export class BrowserRecorder extends EventEmitter {
   private screenshotDir: string | null = null
   private initialNavigationComplete: boolean = false
   private audioActive: boolean = false
+  private lastRecordedUrl: string | null = null
 
   /**
    * Checks if Playwright Chromium browser is installed
@@ -165,6 +166,7 @@ export class BrowserRecorder extends EventEmitter {
     this.actions = []
     this.screenshotDir = screenshotDir || null
     this.initialNavigationComplete = false
+    this.lastRecordedUrl = url // Initialize with the start URL to avoid recording it as a navigation
 
     // Log the Playwright browsers path (set at module load time)
     logger.info(`Playwright browsers path: ${browsersPath}`)
@@ -253,10 +255,16 @@ export class BrowserRecorder extends EventEmitter {
           // Only record navigation if it's not the initial page load
           // The initial navigation is already recorded by the start() method
           if (this.initialNavigationComplete) {
-            this.recordAction({
-              type: 'navigate',
-              url: frame.url(),
-            })
+            const currentUrl = frame.url()
+            // Only record navigation if the URL is different from the last recorded one
+            // This prevents duplicate navigation events for the same URL
+            if (this.lastRecordedUrl !== currentUrl) {
+              this.lastRecordedUrl = currentUrl
+              this.recordAction({
+                type: 'navigate',
+                url: currentUrl,
+              })
+            }
           }
         }
       } catch (error) {
