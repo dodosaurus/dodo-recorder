@@ -250,6 +250,7 @@ export function getInjectionScript(): () => void {
       __dodoTakeScreenshot: () => Promise<string | null>
       __dodoAssertionMode?: () => boolean
       __dodoDisableAssertionMode?: () => void
+      __dodoCreateHighlighter?: () => void
     }
     const recordAction = (window as unknown as DodoWindow).__dodoRecordAction
     const takeScreenshot = (window as unknown as DodoWindow).__dodoTakeScreenshot

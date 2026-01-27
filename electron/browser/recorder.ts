@@ -10,6 +10,7 @@ import { logger } from '../utils/logger'
 import type { RecordedAction } from '../../shared/types'
 import { getInjectionScript } from './injected-script'
 import { getWidgetScript, getWidgetInitScript } from './recording-widget'
+import { getHighlighterScript, getHighlighterInitScript } from './hover-highlighter'
 
 /**
  * Gets the path to the Playwright browsers directory
@@ -238,6 +239,12 @@ export class BrowserRecorder extends EventEmitter {
     
     // Inject the widget initialization script
     await this.page.addInitScript(getWidgetInitScript())
+    
+    // Inject the hover highlighter creation function
+    await this.page.addInitScript('window.__dodoCreateHighlighter = ' + getHighlighterScript().toString())
+    
+    // Inject the highlighter initialization script (same pattern as widget)
+    await this.page.addInitScript(getHighlighterInitScript())
 
     // Setup frame navigation handler
     this.frameNavigatedHandler = (frame: Frame) => {

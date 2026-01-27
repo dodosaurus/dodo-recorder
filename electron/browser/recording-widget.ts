@@ -26,6 +26,7 @@ export function getWidgetScript(): () => void {
       __dodoAssertionMode: () => boolean
       __dodoDisableAssertionMode: () => void
       __dodoAudioActive: boolean
+      __dodoCreateHighlighter?: () => void
     }
 
     // Prevent duplicate widget creation
