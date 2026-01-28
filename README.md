@@ -138,7 +138,9 @@ curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp
 curl.exe -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 ```
 
-> ℹ️ The whisper.cpp binary is already included in the repository.
+> ℹ️ The whisper.cpp binary is already included in the repository:
+> - **Windows**: `models/win/Release/whisper-cli.exe`
+> - **macOS/Linux**: `models/unix/whisper`
 
 #### 3. Verify Setup
 
@@ -176,7 +178,11 @@ Built apps are created in the `release/` folder for your current platform.
 ```
 dodo-recorder/
 ├── models/                          # Whisper components
-│   ├── whisper                     # Whisper.cpp binary (committed)
+│   ├── unix/                       # Unix binary (macOS/Linux)
+│   │   └── whisper                # Whisper.cpp binary (committed)
+│   ├── win/                        # Windows binaries
+│   │   └── Release/
+│   │       └── whisper-cli.exe     # Whisper.cpp binary (committed)
 │   └── ggml-small.en.bin          # AI model (download manually)
 ├── electron/                        # Electron main process
 │   ├── main.ts                     # Entry point
@@ -220,12 +226,16 @@ Or download manually from [Hugging Face](https://huggingface.co/ggerganov/whispe
 
 ### "Whisper binary not found" Error
 
-**Problem:** Binary not found at `models/whisper`
+**Problem:** Binary not found
 
 **Solution:** The binary should be committed to git. Pull the latest code:
 ```bash
 git pull origin main
 ```
+
+The binary is located at:
+- **Windows**: `models/win/Release/whisper-cli.exe`
+- **macOS/Linux**: `models/unix/whisper`
 
 ### Debugging
 

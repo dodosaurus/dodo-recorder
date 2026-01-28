@@ -669,16 +669,20 @@ curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp
 
 ### 5.2 Model Location
 
-The model is stored in the [`models/`](../models/) folder:
+The model and binary are stored in the [`models/`](../models/) folder:
 ```
 dodo-recorder/
 ├── models/
-│   ├── whisper              # Whisper.cpp binary (committed to git)
-│   └── ggml-small.en.bin    # AI model weights (download manually, gitignored)
+│   ├── unix/               # Unix binary (macOS/Linux)
+│   │   └── whisper      # Whisper.cpp binary (committed to git)
+│   ├── win/                # Windows binaries
+│   │   └── Release/
+│   │       └── whisper-cli.exe  # Whisper.cpp binary (committed to git)
+│   └── ggml-small.en.bin  # AI model weights (download manually, gitignored)
 └── ...
 ```
 
-**Note:** The model file (`.bin`) is gitignored. Developers must manually download it once. The binary is committed to git.
+**Note:** The model file (`.bin`) is gitignored. Developers must manually download it once. The binaries are committed to git.
 
 ---
 
@@ -1033,9 +1037,12 @@ If you're still seeing hallucinations in your transcript:
 **Check**:
 1. Model file exists: `models/ggml-small.en.bin` (in project root)
 2. If model is missing, download it: `curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin`
-3. FFmpeg is working: Check logs for conversion errors
-4. Microphone permissions granted
-5. Audio chunks were recorded (check console logs)
+3. Binary exists:
+   - **Windows**: `models/win/Release/whisper-cli.exe`
+   - **macOS/Linux**: `models/unix/whisper`
+4. FFmpeg is working: Check logs for conversion errors
+5. Microphone permissions granted
+6. Audio chunks were recorded (check console logs)
 
 ### 8.5 Issue: Actions Misaligned with Voice
 
@@ -1147,11 +1154,12 @@ Potential improvements:
 
 ### 12.1 Implementation Files
 
-- **Transcription**: [`electron/audio/transcriber.ts`](../electron/audio/transcriber.ts)
+- **Transcription**: [`electron/audio/transcriber.ts`](../electron/audio/transcriber.ts) - Uses platform-specific binary paths
 - **Voice Distribution**: [`electron/utils/voiceDistribution.ts`](../electron/utils/voiceDistribution.ts)
 - **Transcript Generation**: [`electron/utils/enhancedTranscript.ts`](../electron/utils/enhancedTranscript.ts)
 - **IPC Handlers**: [`electron/ipc/recording.ts`](../electron/ipc/recording.ts)
 - **Session Writer**: [`electron/session/writer.ts`](../electron/session/writer.ts)
+- **Main Process**: [`electron/main.ts`](../electron/main.ts) - Validates Whisper binary on startup
 
 ### 12.2 Related Documentation
 

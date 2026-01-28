@@ -9,6 +9,24 @@ import type { TranscriptSegment } from '../../shared/types'
 const ffmpeg = require('fluent-ffmpeg')
 
 /**
+ * Get Whisper binary path based on platform
+ * - Windows: models/win/Release/whisper-cli.exe
+ * - macOS/Linux: models/unix/whisper
+ */
+function getWhisperBinaryPath(): string {
+  const appPath = app.isPackaged ? process.resourcesPath : app.getAppPath()
+  const modelsDir = path.join(appPath, 'models')
+  
+  if (process.platform === 'win32') {
+    // Windows: use whisper-cli.exe
+    return path.join(modelsDir, 'win', 'Release', 'whisper-cli.exe')
+  } else {
+    // Unix (macOS/Linux): use whisper binary
+    return path.join(modelsDir, 'unix', 'whisper')
+  }
+}
+
+/**
  * Get ffmpeg binary path, handling both development and production environments
  */
 function getFfmpegPath(): string {
@@ -189,18 +207,8 @@ export class Transcriber {
       logger.info(`Audio file: ${audioPath}`)
       logger.info('Model: small.en (bundled)')
       
-      // Get whisper binary path (now in models/ folder)
-      let whisperPath: string
-
-      if (app.isPackaged) {
-        // In production, binary is in Resources/models
-        const resourcesPath = process.resourcesPath
-        whisperPath = path.join(resourcesPath, 'models', 'whisper')
-      } else {
-        // In dev, binary is in models/whisper
-        const appPath = app.getAppPath()
-        whisperPath = path.join(appPath, 'models', 'whisper')
-      }
+      // Get whisper binary path based on platform
+      const whisperPath = getWhisperBinaryPath()
       
       const modelPath = this.getModelPath()
       const jsonOutputPath = `${audioPath}.json`
