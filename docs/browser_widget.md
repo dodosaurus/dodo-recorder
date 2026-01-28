@@ -2,40 +2,27 @@
 
 ## Overview
 
-The recording widget is a floating UI control that appears in the browser window during recording sessions. It provides quick access to screenshot capture and assertion mode, enhancing the recording experience without interfering with the page being tested.
+Floating UI control in browser window during recording sessions. Provides screenshot capture and assertion mode without interfering with page content.
 
-**Key Design Principles:**
-- **Non-intrusive**: Uses Shadow DOM to prevent CSS conflicts
-- **Isolated**: Widget interactions are never recorded as actions
-- **Accessible**: Draggable, snaps to edges, keyboard shortcut alternatives
-- **Visual feedback**: Hover states, active states, smooth animations
+**Design Principles:** Shadow DOM isolation, widget interactions never recorded, draggable with edge snapping, keyboard shortcut alternatives.
 
 ---
 
 ## Architecture
 
-### Injection Mechanism
+### Injection
 
-The widget is injected into every page via Playwright's [`page.addInitScript()`](../electron/browser/recorder.ts:83) during browser recording initialization:
+Widget injected via Playwright's [`page.addInitScript()`](../electron/browser/recorder.ts:83):
 
 ```typescript
-// In recorder.ts
+// Two-phase injection
 await this.page.addInitScript(`window.__dodoCreateWidget = ${getWidgetScript().toString()}`)
 await this.page.addInitScript(getWidgetInitScript())
 ```
 
-**Two-phase injection:**
-1. **Widget creation function** - Serialized and exposed as `window.__dodoCreateWidget`
-2. **Widget initialization script** - Calls the creation function when DOM is ready
-
-This approach ensures:
-- Widget code is available before page scripts load
-- Works with single-page applications (SPAs)
-- Survives page navigation (re-injected on each page load)
+Ensures widget code available before page scripts, works with SPAs, survives navigation.
 
 ### Shadow DOM Isolation
-
-The widget uses **closed Shadow DOM** to prevent styling conflicts:
 
 ```typescript
 const widgetHost = document.createElement('div')
@@ -43,20 +30,15 @@ widgetHost.id = '__dodo-recorder-widget-host'
 const shadow = widgetHost.attachShadow({ mode: 'closed' })
 ```
 
-**Benefits:**
-- Page CSS cannot affect widget styling
-- Widget CSS cannot leak to page
-- Complete encapsulation of widget internals
-- Protection from page JavaScript manipulation
+**Benefits:** Complete CSS isolation, page cannot affect widget styling, protection from page JavaScript.
 
 **Structure:**
 ```
-<div id="__dodo-recorder-widget-host">  ← Host in page DOM
-  #shadow-root (closed)                  ← Shadow boundary
-    <style>...</style>                   ← Widget styles
-    <div class="dodo-widget">            ← Widget container
-      <button class="widget-btn">...</button>
-      <button class="widget-btn">...</button>
+<div id="__dodo-recorder-widget-host">
+  #shadow-root (closed)
+    <style>...</style>
+    <div class="dodo-widget">
+      <button>...</button>
     </div>
 </div>
 ```
@@ -65,63 +47,27 @@ const shadow = widgetHost.attachShadow({ mode: 'closed' })
 
 ## Features
 
-**Feature Index:**
-1. Screenshot Button
-2. Assertion Button
-3. Voice Recording Indicator
-4. Drag and Drop
-5. Edge Snapping
-
 ### 1. Screenshot Button
 
-**Visual Design:**
-- Camera icon with detailed SVG styling
-- Dark gray camera body with lighter stroke
-- Multi-layered lens (outer circle + inner aperture)
-- Size: 22x22px
-
-**Interactions:**
-- **Click**: Captures screenshot immediately
-- **Flash animation**: Visual feedback on capture
-- **Tooltip**: Shows "Screenshot (Cmd+Shift+S)" on hover
+**Visual:** Camera icon (22x22px), dark gray body, multi-layered lens, flash animation on capture.
 
 **Implementation:**
 ```typescript
 screenshotBtn.addEventListener('click', async (e) => {
   e.stopPropagation()
-  
-  // Visual feedback
   screenshotBtn.classList.add('flash')
   setTimeout(() => screenshotBtn.classList.remove('flash'), 300)
   
-  // Capture screenshot
   const screenshotPath = await takeScreenshot()
   if (screenshotPath) {
-    recordAction(JSON.stringify({
-      type: 'screenshot',
-      screenshot: screenshotPath,
-    }))
+    recordAction(JSON.stringify({ type: 'screenshot', screenshot: screenshotPath }))
   }
 })
 ```
 
 ### 2. Assertion Button
 
-**Visual Design:**
-- Eye icon with detailed iris/pupil rendering
-- Multi-layered circles for depth (4 layers + highlight)
-- Very dark pupil with light reflection for realism
-- Active state: Blue-tinted theme
-
-**Interactions:**
-- **Click**: Toggles assertion mode on/off
-- **Active state**: Blue background + modified icon colors
-- **Tooltip**: Shows "Assertion Mode (Cmd+Click / Ctrl+Click)" on hover
-
-**Behavior:**
-- When active: All clicks on page become assertions
-- Auto-disables: After recording one assertion
-- Visual indicator: Button highlighted in blue when active
+**Visual:** Eye icon with iris/pupil rendering, blue-tinted when active.
 
 **State Management:**
 ```typescript
@@ -130,15 +76,10 @@ let assertionModeActive = false
 assertionBtn.addEventListener('click', (e) => {
   e.stopPropagation()
   assertionModeActive = !assertionModeActive
-  
-  if (assertionModeActive) {
-    assertionBtn.classList.add('active')
-  } else {
-    assertionBtn.classList.remove('active')
-  }
+  assertionBtn.classList.toggle('active', assertionModeActive)
 })
 
-// Expose to injected script for coordination
+// Expose to injected script
 window.__dodoAssertionMode = () => assertionModeActive
 window.__dodoDisableAssertionMode = () => {
   assertionModeActive = false
@@ -146,147 +87,77 @@ window.__dodoDisableAssertionMode = () => {
 }
 ```
 
+Auto-disables after recording one assertion.
+
 ### 3. Voice Recording Indicator
 
-**Visual Design:**
-- Small red pulsing dot (10px diameter)
-- Positioned to the right of the assertion button
-- Simple, unobtrusive presence indicator
-- No tooltip (speaks for itself visually)
-
-**Behavior:**
-- **Auto-show**: Appears when voice recording is active
-- **Auto-hide**: Disappears when recording stops or voice recording disabled
-- **Pulsing animation**: Smooth 1.5s pulse cycle for visibility
+**Visual:** 10px red pulsing dot, positioned after assertion button.
 
 **Implementation:**
 ```typescript
-// Voice indicator element
-<div class="voice-indicator"></div>
-
 // CSS animation
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(0.85);
-  }
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
 }
 
-// Controlled by audio activity state
+// State sync (checks every 100ms)
 const updateVoiceIndicator = () => {
-  const win = window as unknown as DodoWindow
-  const isActive = win.__dodoAudioActive === true
-  
-  if (isActive) {
-    voiceIndicator.classList.add('active')
-  } else {
-    voiceIndicator.classList.remove('active')
-  }
+  const isActive = (window as DodoWindow).__dodoAudioActive === true
+  voiceIndicator.classList.toggle('active', isActive)
 }
-
-// Check audio activity state periodically
 setInterval(updateVoiceIndicator, 100)
 ```
 
-**State Management:**
-- Main process sets `window.__dodoAudioActive` via [`page.evaluate()`](../electron/browser/recorder.ts:247)
-- Widget checks state every 100ms via `setInterval()`
-- Indicator toggles `.active` class based on state
-- Persists across page navigations
-
-**Why this approach?**
-- Minimal visual distraction
-- Clear indication that audio is being captured
-- Self-contained widget code (no complex dependencies)
-- State synced via simple boolean flag
+Main process sets `window.__dodoAudioActive` via [`page.evaluate()`](../electron/browser/recorder.ts:247).
 
 ### 4. Drag and Drop
 
-**User Experience:**
-- **Grab**: Click anywhere on widget to start dragging
-- **Drag**: Widget follows cursor smoothly
-- **Release**: Widget snaps to nearest screen edge
-- **Visual feedback**: Opacity changes during drag
-
-**Implementation Details:**
-
 ```typescript
 let isDragging = false
-let dragStartX = 0, dragStartY = 0
-let widgetStartX = 0, widgetStartY = 0
+let dragStartX, dragStartY, widgetStartX, widgetStartY
 
 widget.addEventListener('mousedown', (e) => {
   isDragging = true
   widget.classList.add('dragging')
-  
-  const pos = getWidgetPosition()
   dragStartX = e.clientX
   dragStartY = e.clientY
+  const pos = getWidgetPosition()
   widgetStartX = pos.x
   widgetStartY = pos.y
-  
   e.preventDefault()
 })
 
 document.addEventListener('mousemove', (e) => {
   if (!isDragging) return
-  
   const deltaX = e.clientX - dragStartX
   const deltaY = e.clientY - dragStartY
-  
-  setWidgetPosition(
-    widgetStartX + deltaX,
-    widgetStartY + deltaY
-  )
+  setWidgetPosition(widgetStartX + deltaX, widgetStartY + deltaY)
 })
 
 document.addEventListener('mouseup', () => {
   if (!isDragging) return
-  
   isDragging = false
   widget.classList.remove('dragging')
-  snapToEdge()  // Snap to nearest edge
+  snapToEdge()
 })
 ```
 
 ### 5. Edge Snapping
 
-After dragging, the widget automatically snaps to the nearest screen edge with smooth animation:
-
-**Algorithm:**
-1. Calculate distances to all four edges (top, right, bottom, left)
-2. Find minimum distance
-3. Animate widget to that edge with 20px padding
-4. Use cubic-bezier easing for natural feel
+After drag release, widget snaps to nearest edge (top/right/bottom/left) with 20px padding and cubic-bezier animation (0.3s).
 
 ```typescript
 const snapToEdge = () => {
   const pos = getWidgetPosition()
-  const viewportWidth = window.innerWidth
-  const viewportHeight = window.innerHeight
-  
-  // Calculate distances
-  const distToTop = pos.y
-  const distToBottom = viewportHeight - (pos.y + pos.height)
-  const distToLeft = pos.x
-  const distToRight = viewportWidth - (pos.x + pos.width)
-  
-  const minDist = Math.min(distToTop, distToBottom, distToLeft, distToRight)
-  
-  // Snap to nearest edge
-  const padding = 20
-  let newX = pos.x, newY = pos.y
-  
-  if (minDist === distToTop) newY = padding
-  else if (minDist === distToBottom) newY = viewportHeight - pos.height - padding
-  else if (minDist === distToLeft) newX = padding
-  else if (minDist === distToRight) newX = viewportWidth - pos.width - padding
-  
-  // Animate
+  const distances = {
+    top: pos.y,
+    bottom: window.innerHeight - (pos.y + pos.height),
+    left: pos.x,
+    right: window.innerWidth - (pos.x + pos.width)
+  }
+  const minDist = Math.min(...Object.values(distances))
+  // Position to edge with minDist
   widget.classList.add('snapping')
   setWidgetPosition(newX, newY)
   setTimeout(() => widget.classList.remove('snapping'), 300)
@@ -297,96 +168,22 @@ const snapToEdge = () => {
 
 ## Styling
 
-### Design System
-
 **Color Palette:**
-- Background: `rgba(10, 10, 11, 0.95)` - Nearly black with slight transparency
-- Border: `rgba(255, 255, 255, 0.1)` - Subtle white outline
-- Button background: `rgba(255, 255, 255, 0.05)` - Very subtle
-- Button hover: `rgba(255, 255, 255, 0.12)` - Slightly brighter
-- Active state: `rgba(59, 130, 246, 0.25)` - Blue tint
-- Shadow: `0 4px 12px rgba(0, 0, 0, 0.3)` - Soft elevation
+- Background: `rgba(10, 10, 11, 0.95)`
+- Border: `rgba(255, 255, 255, 0.1)`
+- Button hover: `rgba(255, 255, 255, 0.12)`
+- Active state: `rgba(59, 130, 246, 0.25)`
+- Shadow: `0 4px 12px rgba(0, 0, 0, 0.3)`
 
-**Typography:**
-- Font: System font stack (`-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`)
-- Size: 14px base, 12px tooltips
+**Spacing:** 8px widget padding, 8px button gap, 40x40px button minimum
 
-**Spacing:**
-- Widget padding: 8px
-- Button gap: 8px
-- Button padding: 8px 12px
-- Button size: 40x40px minimum
-
-**Transitions:**
-- Opacity: 0.2s ease
-- Snapping: 0.3s cubic-bezier(0.4, 0, 0.2, 1)
-- SVG colors: 0.2s ease
-- Button transform: Instant (scale on click)
-
-### SVG Icon Styling
-
-**Screenshot Icon (Camera):**
-```html
-<svg viewBox="0 0 24 24">
-  <!-- Camera body: dark gray with lighter stroke -->
-  <path fill="rgba(100, 116, 139, 0.8)" stroke="rgba(148, 163, 184, 0.9)" />
-  
-  <!-- Lens: darker circle -->
-  <circle fill="rgba(51, 65, 85, 0.9)" stroke="rgba(148, 163, 184, 0.9)" />
-  
-  <!-- Aperture: very dark center -->
-  <circle fill="rgba(30, 41, 59, 1)" />
-</svg>
-```
-
-**Assertion Icon (Eye):**
-```html
-<svg viewBox="0 0 24 24">
-  <!-- Eye shape: dark gray -->
-  <path fill="rgba(100, 116, 139, 0.7)" stroke="rgba(148, 163, 184, 0.9)" />
-  
-  <!-- Iris outer: layered for depth -->
-  <circle fill="rgba(71, 85, 105, 0.9)" stroke="rgba(148, 163, 184, 0.9)" />
-  
-  <!-- Iris inner: darker -->
-  <circle fill="rgba(30, 41, 59, 1)" stroke="rgba(51, 65, 85, 0.8)" />
-  
-  <!-- Pupil: very dark -->
-  <circle fill="rgba(15, 23, 42, 1)" />
-  
-  <!-- Highlight: light reflection -->
-  <circle fill="rgba(226, 232, 240, 0.8)" />
-</svg>
-```
-
-**Hover Effects:**
-- Outer shapes brighten (`rgba(120, 136, 159, 0.9)`)
-- Strokes become more visible
-
-**Active State (Assertion):**
-- Blue-tinted fills for all layers
-- More pronounced strokes
-
-### Tooltips
-
-**Design:**
-- Position: Above button, centered
-- Background: `rgba(0, 0, 0, 0.9)` - Solid black
-- Arrow: Pointing down to button
-- Delay: 0.5s before showing
-- Animation: Fade in with opacity
-
-**Keyboard Shortcuts:**
-- Automatically detects OS (Mac vs Windows/Linux)
-- Shows appropriate modifier key (Cmd vs Ctrl, Option vs Alt)
+**Transitions:** 0.2s opacity, 0.3s snap animation, 0.2s SVG colors
 
 ---
 
-## Integration with Recording System
+## Integration
 
 ### Preventing Widget Recording
-
-The widget uses a unique host ID to prevent its interactions from being recorded:
 
 ```typescript
 // In injected-script.ts
@@ -397,114 +194,58 @@ const isWithinWidget = (target: Element): boolean => {
   return !!(widgetHost && (widgetHost.contains(target) || widgetHost === target))
 }
 
-// Check before recording any action
+// All event listeners check before recording
 document.addEventListener('click', (e) => {
-  const target = e.target as Element
-  if (!target || isWithinWidget(target)) return  // Skip widget clicks
-  
-  // Record the action...
+  if (isWithinWidget(e.target as Element)) return
+  // Record action...
 })
 ```
 
-**All event listeners check `isWithinWidget()` before recording:**
-- Click events
-- Input events
-- Keyboard events
-- Selection events
+### Communication
 
-### Communication with Injected Script
-
-The widget exposes functions to `window` for coordination:
-
+**Widget → Injected Script:**
 ```typescript
-// Widget → Injected Script
 window.__dodoAssertionMode = () => assertionModeActive
-window.__dodoDisableAssertionMode = () => {
-  assertionModeActive = false
-  assertionBtn.classList.remove('active')
-}
-
-// Injected Script → Widget
-const win = window as unknown as DodoWindow
-const assertMode = win.__dodoAssertionMode && win.__dodoAssertionMode()
-if (assertMode && win.__dodoDisableAssertionMode) {
-  win.__dodoDisableAssertionMode()  // Auto-disable after assertion
-}
+window.__dodoDisableAssertionMode = () => { ... }
 ```
 
-### Accessing Exposed Functions
-
-The widget calls functions exposed by the recorder:
-
+**Widget → Recorder:**
 ```typescript
-// Exposed by recorder.ts via page.exposeFunction()
+// Exposed by recorder via page.exposeFunction()
 const recordAction = window.__dodoRecordAction
 const takeScreenshot = window.__dodoTakeScreenshot
-
-// Used in widget button handlers
-screenshotBtn.addEventListener('click', async () => {
-  const screenshotPath = await takeScreenshot()
-  if (screenshotPath) {
-    recordAction(JSON.stringify({
-      type: 'screenshot',
-      screenshot: screenshotPath,
-    }))
-  }
-})
 ```
 
 ---
 
-## Technical Considerations
+## Technical Requirements
 
 ### Self-Contained Code
 
-**Critical Requirement:** The widget code must be completely self-contained because it's serialized and injected as a string.
+Widget code serialized and injected as string, must be completely self-contained:
 
-**What's allowed:**
-- ES6+ syntax (arrow functions, const/let, template literals)
-- TypeScript interfaces (compiled away)
-- Window API access
-- DOM manipulation
+**✅ Allowed:**
+- ES6+ syntax, TypeScript interfaces (compiled away)
+- Window API, DOM manipulation
 
-**What's NOT allowed:**
+**❌ Not allowed:**
 - External imports (`import { x } from 'y'`)
 - Node.js modules
-- Module-level variables (must be inside function scope)
+- Module-level variables
 
-**Example of correct pattern:**
+**Correct pattern:**
 ```typescript
 export function getWidgetScript(): () => void {
   return () => {
-    // ✅ Constants INSIDE the function
+    // ✅ Constants INSIDE function
     const WIDGET_HOST_ID = '__dodo-recorder-widget-host'
-    
-    // ✅ All logic self-contained
-    interface DodoWindow extends Window {
-      __dodoRecordAction: (data: string) => void
-    }
-    
-    // ... rest of widget code
-  }
-}
-```
-
-**Example of incorrect pattern:**
-```typescript
-// ❌ Module-level constant (not serialized)
-const WIDGET_HOST_ID = '__dodo-recorder-widget-host'
-
-export function getWidgetScript(): () => void {
-  return () => {
-    // This will fail: WIDGET_HOST_ID is not defined in browser context
-    const widget = document.getElementById(WIDGET_HOST_ID)
+    interface DodoWindow extends Window { ... }
+    // All logic self-contained
   }
 }
 ```
 
 ### Duplicate Prevention
-
-The widget checks if it already exists before creating:
 
 ```typescript
 if (document.getElementById(WIDGET_HOST_ID)) {
@@ -513,97 +254,19 @@ if (document.getElementById(WIDGET_HOST_ID)) {
 }
 ```
 
-This prevents:
-- Multiple widgets on page reload
-- Conflicts with SPA route changes
-- Memory leaks from duplicate event listeners
-
-### React Page Compatibility
-
-To prevent React from interfering with the widget:
-
-```typescript
-widgetHost.setAttribute('data-dodo-recorder', 'true')
-```
-
-This signals to frameworks that this element is externally managed.
+Prevents multiple widgets on page reload, conflicts with SPA routes, memory leaks.
 
 ---
 
-## Files
-
-### Implementation Files
+## Implementation Files
 
 | File | Purpose | Lines |
 |------|---------|-------|
-| [`electron/browser/recording-widget.ts`](../electron/browser/recording-widget.ts) | Widget implementation and styling | ~400 |
-| [`electron/browser/injected-script.ts`](../electron/browser/injected-script.ts) | Event recording with widget exclusion | ~390 |
-| [`electron/browser/recorder.ts`](../electron/browser/recorder.ts) | Widget injection during recording start | ~170 |
+| [`electron/browser/recording-widget.ts`](../electron/browser/recording-widget.ts) | Widget implementation | ~400 |
+| [`electron/browser/injected-script.ts`](../electron/browser/injected-script.ts) | Event recording + exclusion | ~390 |
+| [`electron/browser/recorder.ts`](../electron/browser/recorder.ts) | Widget injection | ~170 |
 
-### Key Functions
-
-**Widget Creation:**
-- [`getWidgetScript()`](../electron/browser/recording-widget.ts:12) - Returns widget creation function
-- [`getWidgetInitScript()`](../electron/browser/recording-widget.ts:376) - Returns initialization wrapper
-
-**Exclusion Logic:**
-- [`isWithinWidget()`](../electron/browser/injected-script.ts:258) - Checks if element is inside widget
-
-**Injection:**
-- [`setupEventListeners()`](../electron/browser/recorder.ts:56) - Injects scripts into page
-
----
-
-## User Experience
-
-### First-Time Use
-
-1. User clicks "Start Recording" in Dodo Recorder app
-2. Browser launches with the target URL
-3. Widget appears in top-right corner (default position)
-4. User can immediately use widget or drag it to preferred location
-
-### Typical Workflow
-
-1. **Normal interaction**: Click page elements normally (recorded as clicks)
-2. **Assertion mode**: Click widget eye button → click elements → assertions recorded
-3. **Screenshots**: Click widget camera button or press Cmd+Shift+S
-4. **Repositioning**: Drag widget to different screen edge if it blocks content
-
-### Accessibility
-
-- **Draggable**: Widget can be moved away from important content
-- **Edge snapping**: Automatically positions at screen edges for consistency
-- **Tooltips**: Clear labels for all functions
-- **Keyboard shortcuts**: All widget functions have keyboard alternatives
-- **Visual feedback**: Clear states (hover, active, dragging)
-
----
-
-## Future Enhancements
-
-Potential improvements to consider:
-
-1. **Position persistence**: Remember widget position across sessions
-2. **Resize handle**: Allow users to make widget smaller/larger
-3. **Minimize button**: Collapse to small icon when not needed
-4. **Additional buttons**: Pause/resume, add comment, mark important moment
-5. **Status indicator**: Show recording status (active/paused)
-6. **Keyboard shortcut customization**: Let users configure shortcuts
-7. **Theme options**: Light/dark mode toggle
-8. **Transparency slider**: Adjust widget opacity
-
----
-
-## Summary
-
-The browser recording widget is a sophisticated UI component that enhances the recording experience while maintaining complete isolation from the page being tested. Its key strengths are:
-
-- **Shadow DOM encapsulation** prevents CSS conflicts
-- **Smart edge snapping** keeps widget accessible but unobtrusive  
-- **Visual feedback** makes interactions clear and satisfying
-- **Self-contained code** ensures reliable injection across all pages
-- **Careful exclusion logic** prevents widget interactions from being recorded
-- **Detailed SVG icons** improve visual distinction and usability
-
-The widget demonstrates how to build robust, isolated UI components in a browser automation context while providing a polished user experience.
+**Key Functions:**
+- [`getWidgetScript()`](../electron/browser/recording-widget.ts:12) - Widget creation
+- [`getWidgetInitScript()`](../electron/browser/recording-widget.ts:376) - Initialization wrapper
+- [`isWithinWidget()`](../electron/browser/injected-script.ts:258) - Exclusion check

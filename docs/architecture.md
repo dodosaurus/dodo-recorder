@@ -1,53 +1,39 @@
-# Dodo Recorder - Architecture Documentation
+# Architecture
 
-## Architecture Overview (Electron Parallels to React/Next.js)
+## Two-Process Model
 
-### **Two-Process Architecture**
+Electron applications run in two isolated processes:
 
-Unlike a web app that runs entirely in the browser, Electron has **two separate processes**:
+1. **Main Process** ([`electron/main.ts`](electron/main.ts:1))
+   - Node.js backend with full OS access
+   - Manages application lifecycle, windows, IPC handlers
+   - Cannot access DOM
 
-1. **Main Process** ([`electron/main.ts`](electron/main.ts:1)) - Like a Node.js backend server
-   - Has full access to Node.js APIs (file system, native OS features)
-   - Manages application lifecycle and windows
-   - Cannot directly access the DOM
-   - Similar to Next.js API routes, but more powerful
+2. **Renderer Process** ([`src/App.tsx`](src/App.tsx:1))
+   - React UI running in Chromium
+   - Sandboxed, no direct Node.js access
+   - Standard React application
 
-2. **Renderer Process** ([`src/App.tsx`](src/App.tsx:1)) - Like your React frontend
-   - Runs your React UI code
-   - Sandboxed for security (no direct Node.js access)
-   - Exactly like a normal React app in the browser
-
-### **Communication Bridge: IPC (Inter-Process Communication)**
-
-Since these processes are isolated, they communicate via **IPC channels** - think of it like API calls between frontend and backend:
-
-- **Frontend → Backend**: [`window.electron.startRecording()`](electron/preload.ts:1)
-- **Backend → Frontend**: [`mainWindow.webContents.send('action-recorded')`](electron/main.ts:141)
-
-The [`preload.ts`](electron/preload.ts:1) file acts as a secure bridge, exposing only specific functions to the renderer (like an API gateway).
+**Communication:** IPC (Inter-Process Communication) via [`preload.ts`](electron/preload.ts:1)
+- Renderer → Main: `window.electronAPI.startRecording()`
+- Main → Renderer: `mainWindow.webContents.send('action-recorded')`
 
 ---
 
-## Core Components Breakdown
+## Core Components
 
-### 1. **Main Process** ([`electron/main.ts`](electron/main.ts:1))
-The "backend server" that orchestrates everything:
+### 1. Main Process ([`electron/main.ts`](electron/main.ts:1))
 
-**Key responsibilities:**
-- Creates the BrowserWindow (the app UI)
-- Initializes application settings
-- Requests microphone permissions
+**Responsibilities:**
+- Creates BrowserWindow
+- Initializes settings and permissions
 - Registers IPC handlers via [`registerAllHandlers()`](electron/ipc/handlers.ts:12)
 - Cleans up temporary files on startup
 - Handles window controls (minimize, maximize, close)
-- Provides simple IPC handlers (file dialogs, permission checks)
 
-**Architecture note:** The main process delegates most IPC handling to specialized modules rather than implementing everything directly.
+### 2. IPC Handlers ([`electron/ipc/`](electron/ipc/))
 
-### 2. **IPC Handler Organization** ([`electron/ipc/`](electron/ipc/))
-IPC handlers are organized into separate modules for better maintainability:
-
-**[`handlers.ts`](electron/ipc/handlers.ts:1)** - Central registration point:
+**[`handlers.ts`](electron/ipc/handlers.ts:1)** - Central registration:
 ```typescript
 export function registerAllHandlers(mainWindow: BrowserWindow | null) {
   registerRecordingHandlers(mainWindow)
@@ -56,50 +42,29 @@ export function registerAllHandlers(mainWindow: BrowserWindow | null) {
 }
 ```
 
-**[`recording.ts`](electron/ipc/recording.ts:1)** - Recording-related IPC handlers:
-- `start-recording` - Initializes BrowserRecorder, Transcriber, and SessionWriter
-- `stop-recording` - Stops browser recording and returns actions
-- `transcribe-audio` - Transcribes audio buffer using Whisper
-- `distribute-voice-segments` - Associates voice commentary with actions
-- `generate-full-transcript` - Generates timestamped transcript text
+**[`recording.ts`](electron/ipc/recording.ts:1)** - Recording handlers:
+- `start-recording` - Initializes BrowserRecorder, Transcriber, SessionWriter
+- `stop-recording` - Stops browser recording, returns actions
+- `transcribe-audio` - Transcribes audio via Whisper
+- `distribute-voice-segments` - Associates voice with actions
+- `generate-full-transcript` - Generates timestamped transcript
 
-**[`session.ts`](electron/ipc/session.ts:1)** - Session and settings IPC handlers:
+**[`session.ts`](electron/ipc/session.ts:1)** - Session & settings handlers:
 - `save-session` - Saves session bundle to disk
-- `settings-get-all` - Retrieves all application settings
-- `settings-update` - Updates settings (partial updates supported)
-- `settings-reset` - Resets settings to defaults
-- `user-preferences-get` - Retrieves user preferences (startUrl, outputPath)
-- `user-preferences-update` - Updates user preferences
+- `settings-get-all`, `settings-update`, `settings-reset`
+- `user-preferences-get`, `user-preferences-update`
 
-**Design benefits:**
-- Clear separation of concerns
-- Easier testing and maintenance
-- Prevents duplicate registration on hot reload
-- Better code organization for complex IPC logic
+### 3. Browser Recorder ([`electron/browser/recorder.ts`](electron/browser/recorder.ts:1))
 
-### 3. **Browser Recorder** ([`electron/browser/recorder.ts`](electron/browser/recorder.ts:1))
-The most complex component - launches a Chromium browser and captures user actions:
-
-**How it works:**
-1. **Launches Playwright browser** (Line 16-19):
-   ```typescript
-   this.browser = await chromium.launch({ headless: false })
-   ```
-
-2. **Injects tracking code** into every page (Lines 48-294):
-   - Uses [`page.addInitScript()`](electron/browser/recorder.ts:48) to inject JavaScript before page loads
-   - This injected code listens for DOM events (click, input, keypress)
-   - When events occur, it calls [`__dodoRecordAction()`](electron/browser/recorder.ts:39) to send data back to Electron
-
-3. **Captures rich locator information** (Lines 122-198):
-   - For each element interacted with, generates multiple selector strategies:
-     - `data-testid` attributes (highest priority)
-     - `id` attributes
-     - ARIA roles and labels
-     - Text content
-     - CSS selectors
-     - XPath (fallback)
-   - This gives AI models multiple ways to locate elements when generating tests
+**Process:**
+1. Launches Playwright Chromium browser (headless: false)
+2. Injects tracking code via `page.addInitScript()` before page loads
+3. Injected script listens for DOM events (click, input, keypress)
+4. Events call `window.__dodoRecordAction()` to send data to Electron
+5. Captures rich locator information for each element:
+   - `data-testid`, `id`, ARIA roles/labels
+   - Text content, CSS selectors, XPath
+   - Multiple strategies with confidence levels
 
 **Example captured action:**
 ```json
@@ -119,52 +84,59 @@ The most complex component - launches a Chromium browser and captures user actio
 }
 ```
 
-### 4. **Audio Transcriber** ([`electron/audio/transcriber.ts`](electron/audio/transcriber.ts:1))
-Converts voice recordings to text using **Whisper.cpp** (OpenAI's speech recognition model running locally):
+### 4. Audio Transcriber ([`electron/audio/transcriber.ts`](electron/audio/transcriber.ts:1))
 
-**Process flow:**
-1. Receives audio buffer from renderer (WebM format)
-2. Converts to WAV using FFmpeg (Lines 71-88):
-   ```typescript
-   ffmpeg(inputPath)
-     .audioFrequency(16000)  // 16kHz sample rate
-     .audioChannels(1)        // Mono
-     .audioCodec('pcm_s16le') // PCM format
-   ```
-3. Runs Whisper model (Lines 101-155) - produces timestamped text segments
-4. Returns structured segments with start/end times
+Converts voice recordings to text using Whisper.cpp (local, no cloud):
 
-**Why local processing?** Privacy and speed - no data sent to cloud services.
+```
+WebM Buffer → FFmpeg (16kHz mono WAV + 1.5s silence padding) 
+  → Whisper.cpp CLI → JSON output → Timestamped segments
+```
 
-### 5. **Voice Distribution Algorithm** ([`electron/utils/voiceDistribution.ts`](electron/utils/voiceDistribution.ts:1))
-Intelligently associates voice commentary with browser actions:
+**FFmpeg conversion:**
+```typescript
+ffmpeg(inputPath)
+  .audioFrequency(16000)  // 16kHz sample rate
+  .audioChannels(1)        // Mono
+  .audioCodec('pcm_s16le') // PCM format
+  .audioFilters([
+    'apad=pad_dur=1.5',   // Padding technique for early speech detection
+    'areverse',
+    'apad=pad_dur=1.5',
+    'areverse'
+  ])
+```
 
-**The challenge:** User might say "Now I'll click the submit button" 2 seconds before actually clicking. The algorithm:
-- Looks backward 4 seconds from each action
-- Looks forward 2 seconds from each action
-- Assigns voice segments to the nearest action
-- Handles overlapping segments (long commentary spanning multiple actions)
+**Whisper parameters:**
+- Model: `small.en` (466MB)
+- Entropy threshold: `2.0` (aggressive early detection)
+- Beam search: 5 candidates
+- Max segment length: 50 characters
+- Split on word boundaries
 
-This ensures AI models understand the user's intent for each action.
+### 5. Voice Distribution ([`electron/utils/voiceDistribution.ts`](electron/utils/voiceDistribution.ts:1))
 
-### 6. **Settings System** ([`electron/settings/store.ts`](electron/settings/store.ts:1))
-Persistent settings management with JSON file storage:
+Associates voice commentary with browser actions using temporal proximity:
 
-**SettingsStore class features:**
-- Persists settings to user data directory (`~/Library/Application Support/dodo-recorder/settings.json` on macOS)
-- Automatically merges with defaults for missing fields
-- Provides type-safe access to settings
+**Algorithm:**
+- Lookback window: 4 seconds (speech precedes action)
+- Lookahead window: 2 seconds (confirmations)
+- Assigns voice segments to nearest actions
+- Handles long commentary spanning multiple actions
 
-**Settings structure:**
+### 6. Settings System ([`electron/settings/store.ts`](electron/settings/store.ts:1))
+
+Persistent JSON file storage in user data directory:
+
 ```typescript
 interface AppSettings {
   whisper: {
     transcriptionTimeoutMs: number
   }
   voiceDistribution: {
-    lookbackMs: number        // 4 seconds default
-    lookaheadMs: number        // 2 seconds default
-    longSegmentThresholdMs: number  // 2 seconds default
+    lookbackMs: number        // 4000ms
+    lookaheadMs: number        // 2000ms
+    longSegmentThresholdMs: number  // 2000ms
   }
   output: {
     includeScreenshots: boolean
@@ -174,130 +146,85 @@ interface AppSettings {
     startUrl: string
     outputPath: string
   }
+  audio: {
+    selectedMicrophoneId?: string
+  }
 }
 ```
 
-**Usage:**
-- Settings loaded on app startup
-- Voice distribution windows updated dynamically when settings change
-- User preferences remembered between sessions
-- Model is hard-coded to `small.en` (no user selection)
-
-### 7. **Utility Modules** ([`electron/utils/`](electron/utils/))
-Shared utility functions for common operations:
+### 7. Utility Modules ([`electron/utils/`](electron/utils/))
 
 **[`fs.ts`](electron/utils/fs.ts:1)** - File system helpers:
-- `ensureDir()` - Creates directories recursively
-- `writeJson()` - Writes formatted JSON files
-- `writeText()` - Writes text files
-- `cleanupOldTempFiles()` - Removes temporary files older than specified age
+- `ensureDir()`, `writeJson()`, `writeText()`, `cleanupOldTempFiles()`
 
 **[`ipc.ts`](electron/utils/ipc.ts:1)** - IPC response helpers:
-- `handleIpc()` - Wraps async operations with error handling
-- `ipcSuccess()` - Creates success response
-- `ipcError()` - Creates error response
+- `handleIpc()`, `ipcSuccess()`, `ipcError()`
 
 **[`logger.ts`](electron/utils/logger.ts:1)** - Environment-aware logging:
-- Sanitizes sensitive data (paths, tokens) in production
-- Supports debug, info, warn, error levels
-- Timestamp formatting
-- Development mode shows full output
+- Uses electron-log with sanitization
+- Levels: debug, info, warn, error
 
 **[`validation.ts`](electron/utils/validation.ts:1)** - Input validation:
-- `validateUrl()` - Ensures valid HTTP/HTTPS URLs
-- `validateOutputPath()` - Prevents path traversal attacks
-- `validateAudioBuffer()` - Checks buffer size and format
-- `sanitizeSessionId()` - Cleans session identifiers
+- `validateUrl()`, `validateOutputPath()`, `validateAudioBuffer()`, `sanitizeSessionId()`
 
-### 8. **React UI** ([`src/App.tsx`](src/App.tsx:1))
-Standard React application with Tailwind CSS:
+### 8. React UI ([`src/App.tsx`](src/App.tsx:1))
 
-**Component structure:**
 ```
 App
-├── TitleBar (custom window controls)
-├── Header (app branding)
+├── TitleBar (window controls)
+├── Header (branding + StatusBar)
 ├── Sidebar
-│   ├── SettingsPanel (URL input, output folder)
-│   └── RecordingControls (start/stop buttons, voice toggle)
-└── ActionsList (live feed of recorded actions)
+│   ├── SettingsPanel
+│   └── RecordingControls
+└── Main (ActionsList or ActionsList + TranscriptView)
 ```
 
-**State management:** Uses [Zustand](src/stores/recordingStore.ts:1) (simpler alternative to Redux):
-```typescript
-const useRecordingStore = create((set) => ({
-  status: 'idle',
-  actions: [],
-  transcriptSegments: [],
-  addAction: (action) => set((state) => ({ 
-    actions: [...state.actions, action] 
-  }))
-}))
-```
+**State:** Zustand store ([`src/stores/recordingStore.ts`](src/stores/recordingStore.ts:1))
 
-### 9. **Session Writer** ([`electron/session/writer.ts`](electron/session/writer.ts:1))
-Saves everything to disk in a compact, LLM-optimized format:
+### 9. Session Writer ([`electron/session/writer.ts`](electron/session/writer.ts:1))
 
-**Output structure:**
-```
-session-2026-01-05-095500/
-├── INSTRUCTIONS.md    # General, reusable AI instructions (framework-agnostic)
-├── actions.json       # Complete session data (_meta + narrative + actions)
-└── screenshots/       # Screenshots captured during session
-    ├── screenshot-14227.png
-    └── ...
-```
+Saves sessions to disk in LLM-optimized format:
 
-**Design rationale:**
-- **Token-optimized**: Few tokens per session (INSTRUCTIONS.md reused)
-- **Single source**: All session data in actions.json (_meta + narrative + actions)
-- **Reusable instructions**: INSTRUCTIONS.md shared across all sessions in output directory
-- **Framework-agnostic**: Works with Playwright, Cypress, Selenium, Puppeteer, any framework
-- **AI-ready**: Complete instructions embedded, no external documentation needed
-- **Human-readable**: Clear structure engineers can quickly understand
+```
+session-YYYY-MM-DD-HHMMSS/
+├── INSTRUCTIONS.md    # Reusable AI instructions (framework-agnostic)
+├── actions.json       # _meta + narrative + actions (all-in-one)
+└── screenshots/       # PNG files
+```
 
 ---
 
-## Data Flow Example
+## Data Flow
 
-Here's what happens when you record a session:
+**Recording lifecycle:**
 
-1. **User clicks "Start Recording"** in React UI
-   - React calls `window.electron.startRecording(url, outputPath, startTime)`
-   
-2. **IPC message** sent to main process
-   - Handled by [`recording.ts:start-recording`](electron/ipc/recording.ts:48)
-   
-3. **Recording handler initializes subsystems:**
-   - Gets settings from [`SettingsStore`](electron/settings/store.ts:58)
-   - Creates [`BrowserRecorder`](electron/browser/recorder.ts:6) → launches Chromium
-   - Creates [`SessionWriter`](electron/session/writer.ts:7) → prepares output directory
-   - Creates [`Transcriber`](electron/audio/transcriber.ts:20) → initializes Whisper model
-   - Sets up event listener to forward actions to React
-   
-4. **User interacts with browser:**
-   - Injected script captures click → sends to recorder
-   - Recorder emits 'action' event → forwarded to React via IPC
-   - React updates UI with new action in real-time
-   
-5. **User speaks into microphone:**
-   - React captures audio chunks via Web Audio API
-   - Audio accumulated in renderer process memory
-   - No streaming to main process (sent all at once at end)
-   
-6. **User clicks "Stop Recording":**
-   - React calls `window.electron.stopRecording()`
+1. **Start Recording**
+   - React: `window.electronAPI.startRecording(url, outputPath, startTime)`
+   - IPC: [`recording.ts:start-recording`](electron/ipc/recording.ts:48)
+   - Main: Creates BrowserRecorder, SessionWriter, Transcriber
+   - Browser: Launches Chromium, injects scripts
+
+2. **User Interactions**
+   - Browser: Injected script captures events → `__dodoRecordAction()`
+   - Recorder: Emits 'action' event → forwarded to React via IPC
+   - React: Updates UI with new action in real-time
+
+3. **Voice Recording**
+   - React: Captures audio chunks via MediaRecorder (WebM, 16kHz)
+   - Audio accumulated in renderer memory (not streamed)
+
+4. **Stop Recording**
+   - React: `window.electronAPI.stopRecording()`
    - Browser closes, actions collected
-   - React sends complete audio buffer via `window.electron.transcribeAudio()`
-   - Transcriber converts audio and returns timestamped segments
-   - React calls `window.electron.distributeVoiceSegments()` to associate voice with actions
-   - React calls `window.electron.saveSession()` with complete SessionBundle
-   - [`SessionWriter`](electron/session/writer.ts:7) saves to disk:
-     - Ensures INSTRUCTIONS.md exists in session directory (writes once)
-     - Generates narrative text with embedded action references
-     - Strips voiceSegments from actions array
-     - Builds actions.json structure (_meta + narrative + actions)
-     - Screenshots already saved to screenshots/ folder
+   - React: `window.electronAPI.transcribeAudio(buffer)`
+   - Transcriber: Converts audio, returns timestamped segments
+   - React: `window.electronAPI.distributeVoiceSegments()`
+   - React: `window.electronAPI.generateTranscriptWithReferences()`
+   - Transcript available for viewing
+
+5. **Save Session**
+   - React: `window.electronAPI.saveSession(bundle)`
+   - SessionWriter: Writes INSTRUCTIONS.md (once), actions.json, screenshots/
 
 ---
 
@@ -305,185 +232,101 @@ Here's what happens when you record a session:
 
 ```
 dodo-recorder/
-├── electron/                    # Main process (Node.js backend)
-│   ├── main.ts                 # App entry point, window creation
-│   ├── preload.ts              # IPC bridge (secure API exposure)
+├── electron/                    # Main process
+│   ├── main.ts                 # Entry point
+│   ├── preload.ts              # IPC bridge
 │   ├── audio/
 │   │   └── transcriber.ts      # Whisper.cpp integration
 │   ├── browser/
-│   │   └── recorder.ts         # Playwright browser recording
-│   ├── ipc/                    # ⚡ IPC handlers organized by domain
+│   │   ├── recorder.ts         # Playwright recording
+│   │   ├── recording-widget.ts # Browser widget
+│   │   ├── injected-script.ts  # Event tracking
+│   │   └── hover-highlighter.ts # Assertion highlighting
+│   ├── ipc/
 │   │   ├── handlers.ts         # Central registration
-│   │   ├── recording.ts        # Recording-related handlers
-│   │   └── session.ts          # Session & settings handlers
+│   │   ├── recording.ts        # Recording handlers
+│   │   └── session.ts          # Session/settings handlers
 │   ├── session/
-│   │   └── writer.ts           # Session output to disk
-│   ├── settings/               # ⚡ Settings persistence
-│   │   └── store.ts            # Settings store with JSON file
-│   └── utils/                  # ⚡ Shared utilities
+│   │   ├── writer.ts           # Session output
+│   │   └── instructions-template.ts # INSTRUCTIONS.md template
+│   ├── settings/
+│   │   └── store.ts            # Settings persistence
+│   └── utils/
 │       ├── enhancedTranscript.ts # Transcript generation
 │       ├── voiceDistribution.ts  # Voice-to-action association
-│       ├── fs.ts               # File system helpers
-│       ├── ipc.ts              # IPC response helpers
-│       ├── logger.ts           # Environment-aware logging
-│       └── validation.ts       # Input validation & sanitization
-├── src/                        # Renderer process (React frontend)
+│       ├── fs.ts, ipc.ts, logger.ts, validation.ts
+├── src/                        # Renderer process
 │   ├── App.tsx                 # Main React app
-│   ├── components/             # React components
-│   │   ├── RecordingControls.tsx
-│   │   ├── ActionsList.tsx
-│   │   ├── SettingsPanel.tsx
-│   │   └── ...
+│   ├── components/
+│   │   ├── RecordingControls.tsx, ActionsList.tsx
+│   │   ├── SettingsPanel.tsx, TranscriptView.tsx
+│   │   ├── MicrophoneSelector.tsx, AudioLevelMeter.tsx
+│   │   ├── StatusBar.tsx, TitleBar.tsx
+│   │   └── ui/ (button, input, select, switch, dialog)
 │   ├── stores/
-│   │   └── recordingStore.ts   # Zustand state management
+│   │   └── recordingStore.ts   # Zustand state
+│   ├── lib/
+│   │   └── audioDevices.ts     # Microphone enumeration
 │   └── types/
 │       ├── electron.d.ts       # Electron API types
 │       └── session.ts          # Type re-exports
-├── shared/                     # ⚡ Types shared between main & renderer
-│   └── types.ts                # RecordedAction, SessionBundle, etc.
-├── docs/                       # Documentation
+├── shared/
+│   └── types.ts                # Shared types (RecordedAction, SessionBundle, etc.)
 ├── models/                     # Whisper components
-│   ├── unix/                  # Unix binary (macOS/Linux)
-│   │   └── whisper          # Whisper.cpp binary (committed to git)
-│   ├── win/                   # Windows binaries
-│   │   └── whisper-cli.exe   # Whisper.cpp binary (committed to git)
-│   └── ggml-small.en.bin      # AI model weights (download manually, gitignored)
-└── shared/                     # Types shared between main & renderer
-    └── types.ts                # RecordedAction, SessionBundle, etc.
-
-⚡ = Added/reorganized since initial architecture
+│   ├── unix/whisper            # macOS/Linux binary (committed)
+│   ├── win/whisper-cli.exe     # Windows binary (committed)
+│   └── ggml-small.en.bin      # Model weights (download manually, gitignored)
+└── docs/                       # Documentation
 ```
-
----
-
-## Key Technologies
-
-| Technology | Purpose | Web Equivalent |
-|------------|---------|----------------|
-| **Electron** | Desktop app framework | N/A (wraps web tech in native app) |
-| **Playwright** | Browser automation | Puppeteer/Selenium |
-| **Whisper.cpp** | Local speech-to-text | Google Speech API (but local) |
-| **Zustand** | State management | Redux/Context API |
-| **IPC (Inter-Process Communication)** | Frontend ↔ Backend | REST API / WebSocket |
-| **Vite** | Build tool | Webpack/Next.js bundler |
-
----
-
-## Electron vs Next.js Mental Model
-
-| Concept | Next.js | Electron |
-|---------|---------|----------|
-| **Backend** | API routes (`/api/*`) | Main process ([`main.ts`](electron/main.ts:1)) |
-| **Frontend** | Pages/Components | Renderer process ([`App.tsx`](src/App.tsx:1)) |
-| **Communication** | `fetch('/api/...')` | IPC (`ipcMain.handle` / `ipcRenderer.invoke`) |
-| **Server** | Node.js server | Main process (Node.js) |
-| **Client** | Browser | BrowserWindow (Chromium) |
-| **Development** | Next.js dev server | `npm run dev` (Vite + Electron) |
-
----
-
-## Why Electron for This Project?
-
-1. **Native OS access** - File system, microphone permissions, system dialogs
-2. **Controlled browser** - Playwright needs to launch/control Chromium
-3. **Local processing** - Whisper runs locally (no cloud dependencies)
-4. **Desktop UX** - Native window controls, always-on-top widget potential
-5. **Cross-platform** - One codebase → macOS, Windows, Linux apps
-
-This project couldn't be a pure web app because it needs to:
-- Launch and control a separate browser instance
-- Access the file system to save sessions
-- Run CPU-intensive ML models locally (Whisper)
-- Request native OS permissions (microphone)
 
 ---
 
 ## Tech Stack
 
-- **Electron** - Cross-platform desktop framework
-- **React** - UI library
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
-- **Playwright** - Browser automation
-- **Whisper.cpp** - Local voice transcription (direct whisper.cpp calls)
-- **Zustand** - State management
+| Technology | Purpose |
+|------------|---------|
+| **Electron** | Desktop app framework |
+| **Playwright** | Browser automation |
+| **Whisper.cpp** | Local speech-to-text (OpenAI's Whisper via C++ port) |
+| **React 18** | UI library |
+| **TypeScript** | Type safety |
+| **Tailwind CSS** | Styling |
+| **Zustand** | State management |
+| **Vite** | Build tool |
+| **electron-log** | Production logging |
 
 ---
 
-## Whisper Model Choice: Why ggerganov/whisper.cpp?
+## Whisper Integration
 
-### The Models Are The Same - Just Different Implementations
+### Why whisper.cpp (ggerganov port)?
 
-**Important:** The `ggerganov/whisper.cpp` models ARE OpenAI's Whisper models. They're the exact same neural network weights that OpenAI trained and released. The difference is in how they're executed:
+Uses OpenAI's Whisper model (same weights, same accuracy) but runs locally via C++ implementation:
 
-| Implementation | What It Is | Use Case |
-|----------------|------------|----------|
-| **OpenAI Whisper API** | Cloud service (API calls) | Web apps, no local processing needed |
-| **OpenAI whisper (Python)** | Original Python implementation | Research, server-side processing |
-| **whisper.cpp (ggerganov)** | C++ port of Whisper | Desktop apps, embedded systems, privacy-focused |
+**Benefits:**
+- **Privacy:** No cloud API calls, no audio uploaded
+- **No costs:** Free after model download
+- **Performance:** Faster than Python, optimized for CPU
+- **Offline:** No internet required
+- **Desktop integration:** Easy to bundle
 
-### Why We Use whisper.cpp (ggerganov's port)
-
-1. **Runs Locally (Privacy)**
-   - No audio data sent to OpenAI servers
-   - No API keys needed
-   - No internet connection required
-   - User's voice recordings stay on their machine
-
-2. **No API Costs**
-   - OpenAI Whisper API charges per minute of audio
-   - whisper.cpp is free once downloaded
-   - Important for a tool users might run frequently
-
-3. **Performance**
-   - C++ implementation is faster than Python
-   - Optimized for CPU inference (no GPU required)
-   - Lower memory footprint
-
-4. **Desktop Integration**
-   - Easy to bundle with Electron app
-   - No external dependencies at runtime
-
-5. **Same Accuracy**
-   - Uses identical model weights from OpenAI
-   - Same transcription quality as OpenAI's API
-   - Just runs locally instead of in the cloud
-
-### The GGML Format
-
-The `.bin` file (`ggml-small.en.bin`) contains:
-- OpenAI's Whisper model weights
-- Converted to GGML format (Georgi Gerganov's ML format)
-- Optimized for CPU inference
-- Quantized for smaller file sizes and faster processing
-
-### Bundled Model: small.en
+### Model: small.en
 
 **Characteristics:**
 - Size: 466 MB disk, ~1.0 GB RAM during transcription
-- Quality: Better accuracy, especially for technical terms (LinkedIn, GitHub, etc.)
-- Speed: Medium (~2-3x real-time - 10 seconds of audio transcribes in 3-5 seconds)
-- Reliability: Better early speech detection with optimized parameters
+- Speed: ~2-3x real-time (10s audio → 3-5s transcription)
+- Quality: Better accuracy for technical terms (LinkedIn, GitHub)
+- Early speech detection: Reliable with optimized parameters
 
-**Why small.en?**
-- Best balance of accuracy, speed, and size for production use
-- Captures early speech reliably (critical for recording sessions)
-- No model selection complexity - one model that works well for all users
+**Location:**
+```
+models/
+├── unix/whisper            # Binary (committed)
+├── win/whisper-cli.exe     # Binary (committed)
+└── ggml-small.en.bin      # Weights (download manually)
+```
 
-### Alternative Approaches (Not Used)
-
-**Why not OpenAI API?**
-- Requires API key and internet
-- Costs money per use
-- Privacy concerns (audio sent to cloud)
-- Latency from network calls
-
-**Why not Python whisper?**
-- Requires Python runtime bundled with app
-- Slower than C++ implementation
-- Larger app size
-- More complex deployment
-
-### Summary
-
-We're using **OpenAI's Whisper small.en model**, running it locally via the `whisper.cpp` implementation instead of calling OpenAI's cloud API. It's the same AI, different execution environment - optimized for desktop apps that need privacy, offline capability, and no recurring costs.
+**Download command:**
+```bash
+curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
+```
