@@ -69,11 +69,26 @@ jobs:
           mkdir -p models
           curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 
+      - name: Import Code Signing Certificate
+        shell: bash
+        run: |
+          # Create variables directory
+          mkdir -p ~/variables
+
+          # Decode the certificate from base64
+          echo "${{ secrets.MACOS_CERTIFICATE }}" | base64 --decode > ~/variables/certificate.p12
+
+          # Import certificate to keychain
+          security create-keychain -p actions build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p actions build.keychain
+          security import ~/variables/certificate.p12 -k build.keychain -P "${{ secrets.MACOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k actions build.keychain
+          security list-keychains -s build.keychain
+
       - name: Build
         run: npm run build:prod
         env:
-          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
-          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -132,12 +147,27 @@ jobs:
           mkdir -p models
           curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 
+      - name: Import Code Signing Certificate
+        shell: bash
+        run: |
+          # Create variables directory
+          mkdir -p ~/variables
+
+          # Decode the certificate from base64
+          echo "${{ secrets.MACOS_CERTIFICATE }}" | base64 --decode > ~/variables/certificate.p12
+
+          # Import certificate to keychain
+          security create-keychain -p actions build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p actions build.keychain
+          security import ~/variables/certificate.p12 -k build.keychain -P "${{ secrets.MACOS_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k actions build.keychain
+          security list-keychains -s build.keychain
+
       - name: Build
         run: npm run build:prod
         env:
           TARGET_ARCH: x64
-          CSC_LINK: ${{ secrets.MACOS_CERTIFICATE }}
-          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}

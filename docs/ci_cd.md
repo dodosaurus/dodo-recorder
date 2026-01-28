@@ -40,10 +40,12 @@ GitHub Actions workflow for building Dodo Recorder across multiple platforms.
 
 ## GitHub Secrets (macOS Code Signing)
 
-Optional but recommended for distribution:
+Required for signed + notarized builds:
 
 | Secret | Description |
 |--------|-------------|
+| `MACOS_CERTIFICATE` | Base64-encoded Developer ID Application certificate (.p12) |
+| `MACOS_CERTIFICATE_PASSWORD` | Password for the .p12 certificate |
 | `APPLE_ID` | Apple ID email |
 | `APPLE_APP_SPECIFIC_PASSWORD` | Generate at appleid.apple.com |
 | `APPLE_TEAM_ID` | From Apple Developer portal |
@@ -51,6 +53,25 @@ Optional but recommended for distribution:
 **Setup:** Settings → Secrets and variables → Actions → New repository secret
 
 **Without secrets:** macOS builds unsigned (testing only).
+
+### Export Certificate to Base64
+
+To set up the `MACOS_CERTIFICATE` secret:
+
+1. Export your Developer ID Application certificate from Keychain Access:
+   - Open Keychain Access
+   - Select "login" keychain
+   - Find your "Developer ID Application" certificate
+   - Right-click → Export → Save as .p12 file
+   - Set a password (you'll need this for `MACOS_CERTIFICATE_PASSWORD`)
+
+2. Convert the .p12 file to base64:
+   ```bash
+   base64 -i certificate.p12 | pbcopy
+   ```
+
+3. Add the base64 string to GitHub Secrets as `MACOS_CERTIFICATE`
+4. Add the certificate password to GitHub Secrets as `MACOS_CERTIFICATE_PASSWORD`
 
 ### Generate App-Specific Password
 
@@ -96,9 +117,16 @@ npm run build
 - Check Playwright installation logs
 
 **macOS code signing fails:**
-- Verify all secrets correct
+- Verify all secrets are set correctly
 - Check `APPLE_TEAM_ID` matches certificate
 - Ensure certificate includes "Developer ID Application"
+- Verify `MACOS_CERTIFICATE` is valid base64-encoded .p12 content
+- Verify `MACOS_CERTIFICATE_PASSWORD` matches the password used when exporting the certificate
+
+**Error: "not a file" during build:**
+- This indicates `MACOS_CERTIFICATE` secret is not set or is invalid
+- Ensure you exported the certificate as .p12 and converted to base64
+- Check the secret value doesn't have extra whitespace or newlines
 
 **Build timeout:**
 - Increase timeout in workflow file
@@ -113,4 +141,4 @@ npm run build
 
 **Windows:** NSIS installer + portable exe, no code signing, requires Git Bash for scripts
 
-**Linux:** AppImage + deb, no code signing, tested on Ubuntu
+**Linux:** AppImage + deb, no code signing

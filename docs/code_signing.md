@@ -4,7 +4,7 @@
 
 Code signing prevents macOS Gatekeeper warnings. Requires Apple Developer account and certificate.
 
-> **CI/CD builds:** See [`docs/ci_cd.md`](ci_cd.md) for automated builds.
+> **CI/CD builds:** See [`docs/ci_cd.md`](ci_cd.md) for automated builds with certificate setup instructions.
 
 ---
 
