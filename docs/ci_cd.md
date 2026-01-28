@@ -121,8 +121,6 @@ npm run build
 - The `models/` directory contains Windows (`models/win/`) and Unix (`models/unix/`) binaries
 - Electron-builder filters exclude these for macOS builds (see `electron-builder.json`)
 - Verify the filter is correctly excluding platform-specific files
-- Entitlements in `build/entitlements.mac.plist` must be minimal - `com.apple.security.cs.disable-library-validation` was removed as it often causes rejection
-- To debug rejection, use: `xcrun notarytool log <submission-id>` with the ID from the error message
 
 **macOS code signing fails:**
 - Verify all secrets are set correctly
