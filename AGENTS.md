@@ -231,7 +231,12 @@ dodo-recorder/
 │   └── assets/           # Images, fonts
 ├── shared/               # Code shared between main and renderer
 │   └── types.ts          # Shared type definitions
-└── models/               # Whisper.cpp binary and model
+└── models/               # Whisper.cpp binaries and AI model
+    ├── unix/             # Unix binary (macOS/Linux)
+    │   └── whisper        # Whisper.cpp binary (committed to git)
+    ├── win/              # Windows binaries
+    │   └── whisper-cli.exe # Whisper.cpp binary (committed to git)
+    └── ggml-small.en.bin # AI model weights (download manually, gitignored)
 ```
 
 ## Session Output Format
@@ -351,6 +356,12 @@ See [`docs/logs_and_debugging.md`](docs/logs_and_debugging.md) for comprehensive
 ## Important Notes
 
 - **Whisper Model:** The 466MB `models/ggml-small.en.bin` file must be downloaded manually (not in git). The app shows an error dialog if missing.
+- **Whisper Binaries:** Platform-specific Whisper.cpp binaries are committed to git:
+  - **Windows**: `models/win/whisper-cli.exe`
+  - **macOS/Linux**: `models/unix/whisper`
+  - These are compiled from the [ggerganov/whisper.cpp](https://github.com/ggerganov/whisper.cpp) project
+  - When updating Whisper binaries, ensure they are compiled for the target platforms and placed in the appropriate `models/` subdirectory
+  - The app uses the `small.en` model (466MB) for a balance of accuracy, speed, and size
 - **Path Alias:** Use `@/*` to import from `src/` directory
 - **Tailwind:** Dark mode only (`darkMode: 'class'`), custom color scheme defined in `tailwind.config.js`
 - **Security:** Validate all IPC inputs (see `electron/utils/validation.ts` for patterns)

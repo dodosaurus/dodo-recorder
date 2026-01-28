@@ -676,8 +676,7 @@ dodo-recorder/
 │   ├── unix/               # Unix binary (macOS/Linux)
 │   │   └── whisper      # Whisper.cpp binary (committed to git)
 │   ├── win/                # Windows binaries
-│   │   └── Release/
-│   │       └── whisper-cli.exe  # Whisper.cpp binary (committed to git)
+│   │   └── whisper-cli.exe  # Whisper.cpp binary (committed to git)
 │   └── ggml-small.en.bin  # AI model weights (download manually, gitignored)
 └── ...
 ```
@@ -1038,7 +1037,7 @@ If you're still seeing hallucinations in your transcript:
 1. Model file exists: `models/ggml-small.en.bin` (in project root)
 2. If model is missing, download it: `curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin`
 3. Binary exists:
-   - **Windows**: `models/win/Release/whisper-cli.exe`
+   - **Windows**: `models/win/whisper-cli.exe`
    - **macOS/Linux**: `models/unix/whisper`
 4. FFmpeg is working: Check logs for conversion errors
 5. Microphone permissions granted

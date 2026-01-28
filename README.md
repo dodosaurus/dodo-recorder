@@ -139,7 +139,7 @@ curl.exe -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper
 ```
 
 > ℹ️ The whisper.cpp binary is already included in the repository:
-> - **Windows**: `models/win/Release/whisper-cli.exe`
+> - **Windows**: `models/win/whisper-cli.exe`
 > - **macOS/Linux**: `models/unix/whisper`
 
 #### 3. Verify Setup
@@ -181,8 +181,7 @@ dodo-recorder/
 │   ├── unix/                       # Unix binary (macOS/Linux)
 │   │   └── whisper                # Whisper.cpp binary (committed)
 │   ├── win/                        # Windows binaries
-│   │   └── Release/
-│   │       └── whisper-cli.exe     # Whisper.cpp binary (committed)
+│   │   └── whisper-cli.exe         # Whisper.cpp binary (committed)
 │   └── ggml-small.en.bin          # AI model (download manually)
 ├── electron/                        # Electron main process
 │   ├── main.ts                     # Entry point
@@ -234,7 +233,7 @@ git pull origin main
 ```
 
 The binary is located at:
-- **Windows**: `models/win/Release/whisper-cli.exe`
+- **Windows**: `models/win/whisper-cli.exe`
 - **macOS/Linux**: `models/unix/whisper`
 
 ### Debugging

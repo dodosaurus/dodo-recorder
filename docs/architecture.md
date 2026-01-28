@@ -346,8 +346,7 @@ dodo-recorder/
 │   ├── unix/                  # Unix binary (macOS/Linux)
 │   │   └── whisper          # Whisper.cpp binary (committed to git)
 │   ├── win/                   # Windows binaries
-│   │   └── Release/
-│   │       └── whisper-cli.exe # Whisper.cpp binary (committed to git)
+│   │   └── whisper-cli.exe   # Whisper.cpp binary (committed to git)
 │   └── ggml-small.en.bin      # AI model weights (download manually, gitignored)
 └── shared/                     # Types shared between main & renderer
     └── types.ts                # RecordedAction, SessionBundle, etc.

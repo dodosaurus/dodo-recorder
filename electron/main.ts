@@ -16,7 +16,7 @@ const ALLOWED_PERMISSIONS = ['media', 'microphone', 'audioCapture'] as const
 
 /**
  * Get Whisper binary path based on platform
- * - Windows: models/win/Release/whisper-cli.exe
+ * - Windows: models/win/whisper-cli.exe
  * - macOS/Linux: models/unix/whisper
  */
 function getWhisperBinaryPath(): string {
@@ -25,7 +25,7 @@ function getWhisperBinaryPath(): string {
   
   if (isWindows) {
     // Windows: use whisper-cli.exe
-    return path.join(modelsDir, 'win', 'Release', 'whisper-cli.exe')
+    return path.join(modelsDir, 'win', 'whisper-cli.exe')
   } else {
     // Unix (macOS/Linux): use whisper binary
     return path.join(modelsDir, 'unix', 'whisper')
@@ -90,7 +90,7 @@ function checkWhisperComponents(): boolean {
   // Check binary
   if (!fs.existsSync(binaryPath)) {
     const binaryName = isWindows ? 'whisper-cli.exe' : 'whisper'
-    const platformFolder = isWindows ? 'models\\win\\Release\\' : 'models/unix/'
+    const platformFolder = isWindows ? 'models\\win\\' : 'models/unix/'
     logger.error('❌ Whisper binary not found at:', binaryPath)
     
     dialog.showMessageBoxSync({
