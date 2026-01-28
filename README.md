@@ -128,8 +128,14 @@ npm install
 
 The Whisper model file (466 MB) is not in the repository. Download it once:
 
+**macOS/Linux:**
 ```bash
 curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
+```
+
+**Windows (PowerShell):**
+```powershell
+curl.exe -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 ```
 
 > ℹ️ The whisper.cpp binary is already included in the repository.
@@ -199,8 +205,15 @@ Found a bug or have a feature request? Please open an issue on [GitHub Issues](h
 **Problem:** App can't find `models/ggml-small.en.bin`
 
 **Solution:**
+
+**macOS/Linux:**
 ```bash
 curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
+```
+
+**Windows (PowerShell):**
+```powershell
+curl.exe -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 ```
 
 Or download manually from [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp/tree/main) and place in `models/ggml-small.en.bin`
