@@ -1,9 +1,10 @@
 import * as React from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { ChevronDown } from 'lucide-react'
 
 const selectVariants = cva(
-  'flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+  'flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 appearance-none',
   {
     variants: {
       selectSize: {
@@ -33,18 +34,21 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     }
 
     return (
-      <select
-        className={cn(selectVariants({ selectSize, className }))}
-        ref={ref}
-        onChange={handleChange}
-        {...props}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative flex-1">
+        <select
+          className={cn(selectVariants({ selectSize, className }), 'pr-10')}
+          ref={ref}
+          onChange={handleChange}
+          {...props}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none text-muted-foreground" />
+      </div>
     )
   }
 )

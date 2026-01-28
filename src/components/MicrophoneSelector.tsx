@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Mic, RefreshCw, Volume2 } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { enumerateAudioDevices, type AudioDevice } from '@/lib/audioDevices'
@@ -13,8 +13,6 @@ interface MicrophoneSelectorProps {
 export function MicrophoneSelector({ disabled, onDeviceChange, selectedDeviceId }: MicrophoneSelectorProps) {
   const [devices, setDevices] = useState<AudioDevice[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [isTesting, setIsTesting] = useState(false)
-  const [testResult, setTestResult] = useState<'idle' | 'success' | 'error'>('idle')
 
   // Load devices on mount
   useEffect(() => {
@@ -49,52 +47,6 @@ export function MicrophoneSelector({ disabled, onDeviceChange, selectedDeviceId 
   const handleDeviceSelect = (value: string) => {
     const deviceId = value === 'default' ? undefined : value
     onDeviceChange?.(deviceId)
-    setTestResult('idle')
-  }
-
-  const handleTest = async () => {
-    if (!selectedDeviceId && devices.length === 0) {
-      return
-    }
-
-    setIsTesting(true)
-    setTestResult('idle')
-
-    try {
-      // Try to get a stream with the selected device
-      const constraints: MediaStreamConstraints = {
-        audio: selectedDeviceId
-          ? { deviceId: { exact: selectedDeviceId } }
-          : true
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
-      
-      // Check if we got audio tracks
-      const audioTracks = stream.getAudioTracks()
-      if (audioTracks.length > 0) {
-        // Check if track is enabled
-        const track = audioTracks[0]
-        if (track.enabled) {
-          setTestResult('success')
-          console.log('✅ Microphone test successful')
-        } else {
-          setTestResult('error')
-          console.warn('⚠️ Microphone track is not enabled')
-        }
-      } else {
-        setTestResult('error')
-        console.warn('⚠️ No audio tracks in stream')
-      }
-
-      // Stop the stream after testing
-      stream.getTracks().forEach(track => track.stop())
-    } catch (error) {
-      setTestResult('error')
-      console.error('❌ Microphone test failed:', error)
-    } finally {
-      setIsTesting(false)
-    }
   }
 
   const selectOptions = [
@@ -118,7 +70,6 @@ export function MicrophoneSelector({ disabled, onDeviceChange, selectedDeviceId 
           onValueChange={handleDeviceSelect}
           options={selectOptions}
           disabled={disabled || isLoading}
-          className="flex-1"
         />
         <Button
           variant="secondary"
@@ -129,29 +80,7 @@ export function MicrophoneSelector({ disabled, onDeviceChange, selectedDeviceId 
         >
           <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
         </Button>
-        <Button
-          variant="secondary"
-          size="icon"
-          onClick={handleTest}
-          disabled={disabled || isTesting || devices.length === 0}
-          title="Test microphone"
-        >
-          {isTesting ? (
-            <Volume2 className="h-4 w-4 animate-pulse" />
-          ) : (
-            <Mic className="h-4 w-4" />
-          )}
-        </Button>
       </div>
-
-      {/* Test result feedback */}
-      {testResult === 'success' && (
-        <p className="text-xs text-emerald-500 text-center">✓ Microphone working</p>
-      )}
-      {testResult === 'error' && (
-        <p className="text-xs text-red-500 text-center">✗ Microphone test failed</p>
-      )}
-
     </div>
   )
 }
