@@ -80,6 +80,16 @@ Takes 3-15 minutes for Apple's notarization servers. Requires internet connectio
 - Double-check Team ID matches account
 - Try `CSC_IDENTITY_AUTO_DISCOVERY=false` in `.env`
 
+### Notarization rejected by Apple
+
+**Cause:** Entitlements are too permissive or app contains unsigned binaries.
+
+**Solutions:**
+1. Check `build/entitlements.mac.plist` - it should only include minimum required entitlements
+2. The `com.apple.security.cs.disable-library-validation` entitlement is often rejected by Apple
+3. To debug rejection, use: `xcrun notarytool log <submission-id>` with ID from error message
+4. Ensure all binaries in app bundle are signed (electron-builder does this automatically with `sign: "default"`)
+
 ---
 
 ## Verification
