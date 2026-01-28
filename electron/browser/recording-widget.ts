@@ -203,16 +203,12 @@ export function getWidgetScript(): () => void {
 
         /* Voice recording indicator */
         .voice-indicator {
-          display: none;
+          display: block;
           width: 10px;
           height: 10px;
           background: #ef4444;
           border-radius: 50%;
           animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        .voice-indicator.active {
-          display: block;
         }
 
         @keyframes pulse {
@@ -430,21 +426,6 @@ export function getWidgetScript(): () => void {
       assertionModeActive = false
       assertionBtn.classList.remove('active')
     }
-
-    // Voice indicator update function
-    const updateVoiceIndicator = () => {
-      const win = window as unknown as DodoWindow
-      const isActive = win.__dodoAudioActive === true
-      
-      if (isActive) {
-        voiceIndicator.classList.add('active')
-      } else {
-        voiceIndicator.classList.remove('active')
-      }
-    }
-
-    // Check audio activity state periodically
-    setInterval(updateVoiceIndicator, 100)
 
     console.log('[Dodo Recorder] Widget initialized')
   }
