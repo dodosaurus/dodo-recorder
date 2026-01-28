@@ -43,7 +43,7 @@ execSync('node ./build/generate-build-info.js .', { stdio: 'inherit' });
 
 // Build frontend with Vite
 console.log('🏗️  Building frontend...');
-execSync('vite build', { stdio: 'inherit' });
+execSync('npx vite build', { stdio: 'inherit' });
 
 // Determine platform-specific electron-builder arguments
 let builderArgs = '--config electron-builder.json --publish never';
@@ -94,7 +94,7 @@ if (platform === 'darwin') {
 // Run electron-builder
 console.log(`🚀 Running electron-builder with args: ${builderArgs}`);
 try {
-  execSync(`electron-builder ${builderArgs}`, {
+  execSync(`npx electron-builder ${builderArgs}`, {
     stdio: 'inherit',
     env: process.env  // Explicitly pass environment variables
   });

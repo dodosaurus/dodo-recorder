@@ -14,14 +14,14 @@ execSync('node ./build/generate-build-info.js .', { stdio: 'inherit' });
 
 // Build frontend with Vite
 console.log('🏗️  Building frontend...');
-execSync('vite build', { stdio: 'inherit' });
+execSync('npx vite build', { stdio: 'inherit' });
 
 // Build for macOS ARM64 without signing
 const builderArgs = '--config electron-builder.test.json --mac --arm64 --publish never -c.mac.identity=null';
 
 console.log(`🔨 Building for macOS ARM64 (test build)...`);
 try {
-  execSync(`electron-builder ${builderArgs}`, { stdio: 'inherit' });
+  execSync(`npx electron-builder ${builderArgs}`, { stdio: 'inherit' });
   console.log('✅ Test build completed successfully!');
 } catch (error) {
   console.error('❌ Build failed');

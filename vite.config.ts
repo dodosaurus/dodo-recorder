@@ -11,7 +11,7 @@ if (!fs.existsSync(buildInfoPath)) {
   // Generate build info if it doesn't exist
   const { execSync } = require('child_process')
   try {
-    execSync('./build/generate-build-info.sh .', { stdio: 'inherit' })
+    execSync('node ./build/generate-build-info.js .', { stdio: 'inherit' })
   } catch (e) {
     console.warn('Failed to generate build info:', e)
   }
