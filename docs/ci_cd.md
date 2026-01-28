@@ -116,6 +116,12 @@ npm run build
 - Verify script executable
 - Check Playwright installation logs
 
+**macOS notarization rejected:**
+- This often happens when platform-specific binaries are included in the bundle
+- The `models/` directory contains Windows (`models/win/`) and Unix (`models/unix/`) binaries
+- Electron-builder filters exclude these for macOS builds (see `electron-builder.json`)
+- Verify the filter is correctly excluding platform-specific files
+
 **macOS code signing fails:**
 - Verify all secrets are set correctly
 - Check `APPLE_TEAM_ID` matches certificate

@@ -26,7 +26,25 @@
     "type": "distribution",
     "notarize": {
       "teamId": "L7PUGF6Q28"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "models",
+        "to": "models",
+        "filter": [
+          "**/*",
+          "!**/win/**",
+          "!**/unix/**"
+        ]
+      },
+      {
+        "from": "models/unix",
+        "to": "models",
+        "filter": [
+          "whisper"
+        ]
+      }
+    ]
   },
   "win": {
     "target": [
@@ -35,7 +53,25 @@
     ],
     "icon": "build/icon.ico",
     "sign": null,
-    "signAndEditExecutable": false
+    "signAndEditExecutable": false,
+    "extraResources": [
+      {
+        "from": "models",
+        "to": "models",
+        "filter": [
+          "**/*",
+          "!**/win/**",
+          "!**/unix/**"
+        ]
+      },
+      {
+        "from": "models/win",
+        "to": "models",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
   },
   "linux": {
     "target": [
@@ -43,16 +79,27 @@
       "deb"
     ],
     "icon": "build/icon.png",
-    "category": "Development"
+    "category": "Development",
+    "extraResources": [
+      {
+        "from": "models",
+        "to": "models",
+        "filter": [
+          "**/*",
+          "!**/win/**",
+          "!**/unix/**"
+        ]
+      },
+      {
+        "from": "models/unix",
+        "to": "models",
+        "filter": [
+          "whisper"
+        ]
+      }
+    ]
   },
   "extraResources": [
-    {
-      "from": "models",
-      "to": "models",
-      "filter": [
-        "**/*"
-      ]
-    },
     {
       "from": "node_modules/ffmpeg-static",
       "to": "ffmpeg-static",
