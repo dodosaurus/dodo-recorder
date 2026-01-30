@@ -78,7 +78,17 @@ if (platform === 'darwin') {
   console.log(`   APPLE_ID: ${process.env.APPLE_ID ? '✅ Set' : '❌ Not set'}`);
   console.log(`   APPLE_APP_SPECIFIC_PASSWORD: ${process.env.APPLE_APP_SPECIFIC_PASSWORD ? '✅ Set' : '❌ Not set'}`);
   console.log(`   APPLE_TEAM_ID: ${process.env.APPLE_TEAM_ID ? '✅ Set' : '❌ Not set'}`);
-  console.log(`   CSC_LINK: ${process.env.CSC_LINK ? '✅ Set (p12 file)' : '⚠️  Not set (will use Keychain)'}`);
+  
+  // Code signing method detection
+  if (process.env.CSC_LINK) {
+    console.log(`   CSC_LINK: ✅ Set (explicit .p12 certificate)`);
+    console.log(`   CSC_KEY_PASSWORD: ${process.env.CSC_KEY_PASSWORD ? '✅ Set' : '❌ Not set'}`);
+  } else if (process.env.CSC_NAME) {
+    console.log(`   CSC_NAME: ✅ Set (explicit certificate: ${process.env.CSC_NAME})`);
+  } else {
+    console.log(`   CSC_LINK/CSC_NAME: ⚠️  Not set (will auto-discover from Keychain)`);
+    console.log(`   ⚠️  If signing fails, set CSC_LINK + CSC_KEY_PASSWORD in .env`);
+  }
   
   if (!process.env.APPLE_ID || !process.env.APPLE_APP_SPECIFIC_PASSWORD || !process.env.APPLE_TEAM_ID) {
     console.error('\n❌ ERROR: Missing Apple credentials for notarization!');
