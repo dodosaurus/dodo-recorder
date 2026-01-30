@@ -30,3 +30,15 @@
   }
 }
 
+/* Fix for Windows select dropdown styling - force dark mode for options */
+@layer components {
+  select {
+    color-scheme: dark;
+  }
+  
+  select option {
+    background-color: #18181b; /* muted color from tailwind config */
+    color: #fafafa; /* foreground color from tailwind config */
+  }
+}
+
