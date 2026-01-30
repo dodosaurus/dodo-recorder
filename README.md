@@ -22,8 +22,6 @@
 - ✅ **macOS Apple Silicon (ARM64)**
 - ✅ **Windows x64**
 
-**CI/CD Builds:** Builds are available via GitHub Actions. See [`docs/ci_cd.md`](docs/ci_cd.md) for details.
-
 ## 🎯 Overview
 
 Dodo Recorder transforms manual browser testing into AI-ready session bundles. Record your interactions, speak your test intentions, and let the app generate comprehensive documentation that AI agents can use to write tests automatically.
@@ -34,20 +32,11 @@ Dodo Recorder transforms manual browser testing into AI-ready session bundles. R
 - 🎭 **Framework-Agnostic Output**: Works with Playwright, Cypress, Selenium, Puppeteer, or any testing framework
 - 🤖 **AI-Optimized**: Session bundles include complete instructions for AI agents—no external documentation needed
 - 📸 **Smart Locators**: Multiple locator strategies (testId, text, role, css, xpath) with confidence levels
-- ✅ **Assertion Mode**: Record visual assertions with Alt/Option + Click
-- 🪟 **Non-Intrusive Widget**: Floating controls that never interfere with your recording
+- ✅ **Assertion Mode**: Record visual assertions with Cmd/Ctrl + Click
 
 ---
 
 ## ✨ Key Features
-
-### 🎬 Recording Capabilities
-
-- **🖱️ Interaction Capture**: Automatically records clicks, typing, navigation, and form interactions
-- **📸 Screenshot Management**: Take screenshots manually or automatically at key moments
-- **🎤 Voice Commentary**: Local transcription using Whisper.cpp (fully offline, no cloud services)
-- **✅ Assertion Recording**: Toggle assertion mode to verify element existence
-- **🔍 Multi-Locator Strategy**: Each action includes multiple ways to locate elements with confidence scores
 
 ### 📦 Session Output
 
@@ -72,7 +61,7 @@ session-YYYY-MM-DD-HHMMSS/
 **Why this structure?**
 - ✅ **Token efficient**: Few tokens per session (INSTRUCTIONS.md is reused)
 - ✅ **Single source**: All session data in one JSON file
-- ✅ **Framework detection**: Includes Playwright/Cypress auto-detection logic
+- ✅ **Framework detection**: INSTRUCTIONS.md includes Playwright/Cypress auto-detection logic
 - ✅ **AI-ready**: Complete instructions embedded, no external docs needed
 
 ### 🎮 Recording Controls
@@ -98,77 +87,22 @@ session-YYYY-MM-DD-HHMMSS/
 
 ## 🛠️ Development Setup
 
-### Prerequisites
+For detailed build instructions, see [`docs/building.md`](docs/building.md).
 
-- **Node.js 18+** and npm
-- **Git**
-- **macOS Apple Silicon (M1–M4)** or **Windows x64** for development
-
-### Installation Steps
-
-#### 1. Clone and Install Dependencies
+### Quick Start
 
 ```bash
+# Clone and install dependencies
 git clone https://github.com/dodosaurus/dodo-recorder.git
 cd dodo-recorder
 npm install
-```
 
-> **Note:** The `npm install` command automatically installs Playwright Chromium browser to a local `playwright-browsers/` directory via a postinstall script.
->
-> If you encounter issues, you can manually install the browsers with:
-> ```bash
-> ./build/install-playwright-browsers.sh
-> ```
-
-#### 2. Download Whisper Model (REQUIRED)
-
-The Whisper model file (466 MB) is not in the repository. Download it once:
-
-**macOS:**
-```bash
+# Download Whisper model (466 MB, required)
 curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
-```
 
-**Windows (PowerShell):**
-```powershell
-curl.exe -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
-```
-
-> ℹ️ The whisper.cpp binary is already included in the repository:
-> - **Windows**: `models/win/whisper-cli.exe`
-> - **macOS**: `models/unix/whisper`
-
-#### 3. Verify Setup
-
-```bash
-ls -lh models/ggml-small.en.bin
-```
-
-Expected output: `-rw-r--r--  models/ggml-small.en.bin` (~466M file size)
-
-### Running the App
-
-**Development Mode:**
-```bash
+# Run in development mode
 npm run dev
 ```
-
-This starts the Vite dev server and Electron in watch mode. The app will automatically reload when you make changes.
-
-### Building
-
-**Unsigned build** (for local testing):
-```bash
-npm run build
-```
-
-**Signed and notarized build** (for distribution):
-```bash
-npm run build:prod
-```
-
-Built apps are created in the `release/` folder for your current platform.
 
 ### Project Structure
 
@@ -202,56 +136,25 @@ Found a bug or have a feature request? Please open an issue on [GitHub Issues](h
 
 ## 🔧 Troubleshooting
 
-### "Whisper model not found" Error
+For comprehensive troubleshooting guides, see [`docs/building.md`](docs/building.md) and [`docs/logs_and_debugging.md`](docs/logs_and_debugging.md).
 
-**Problem:** App can't find `models/ggml-small.en.bin`
+### Common Issues
 
-**Solution:**
-
-**macOS:**
+**"Whisper model not found" Error:**
 ```bash
+# Download the model (466 MB)
 curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 ```
 
-**Windows (PowerShell):**
-```powershell
-curl.exe -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
-```
-
-Or download manually from [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp/tree/main) and place in `models/ggml-small.en.bin`
-
-### "Whisper binary not found" Error
-
-**Problem:** Binary not found
-
-**Solution:** The binary should be committed to git. Pull the latest code:
-```bash
-git pull origin main
-```
-
-The binary is located at:
-- **Windows**: `models/win/whisper-cli.exe`
-- **macOS**: `models/unix/whisper`
+**"Whisper binary not found" Error:**
+- Pull the latest code: `git pull origin main`
+- The binary is located at `models/unix/whisper` (macOS) or `models/win/whisper-cli.exe` (Windows)
 
 ### Debugging
-
-For debugging in development mode, the app provides comprehensive logging:
 
 - **Console logs**: Visible in terminal when running `npm run dev`
 - **DevTools**: Press `Cmd+Option+I` (Mac) or `Ctrl+Shift+I` (Windows) to open browser DevTools
 - **Log files** (production builds): See [`docs/logs_and_debugging.md`](docs/logs_and_debugging.md)
-
-### Platform-Specific Issues
-
-**macOS Apple Silicon (ARM64):**
-- If you see permission errors, you may need to grant microphone access in System Preferences → Security & Privacy → Microphone
-- Production builds (`.dmg`) are signed and notarized for secure installation
-
-**Windows x64:**
-- Production builds not currently available
-- Build from source for local testing
-- Ensure FFmpeg is installed and accessible in your PATH for audio processing
-- Not extensively tested yet
 
 ---
 
@@ -263,7 +166,7 @@ A: It's 466 MB—too large for git repositories. Download it once manually.
 **Q: Can I use a different Whisper model?**
 A: The app is hard-coded to use `small.en` for consistency and performance.
 
-**Q: Do I need to download the model for every clone?**
+**Q: Do I need to download the model for every clone of repository?**
 A: Yes, but only once per machine. The file persists across npm installs.
 
 **Q: Does this work with frameworks other than Playwright?**
@@ -272,22 +175,17 @@ A: Yes! The session output is framework-agnostic. AI agents can generate tests f
 **Q: Is my voice data sent to the cloud?**
 A: No. All transcription happens locally using Whisper.cpp. Your voice recordings never leave your machine.
 
-**Q: Why do I get "Playwright browser not installed" error?**
-A: Run `./build/install-playwright-browsers.sh` to download the Playwright Chromium browser. The `npm install` command should do this automatically via a postinstall script.
-
 ---
 
 ## 📚 Documentation
 
 - **[User Guide](docs/user_guide.md)**: Complete feature documentation, keyboard shortcuts, and output format details
 - **[Architecture](docs/architecture.md)**: System design, data flow, and technical implementation
-- **[CI/CD Builds](docs/ci_cd.md)**: GitHub Actions workflow for builds
 - **[Code Signing](docs/code_signing.md)**: macOS code signing setup and configuration
 - **[Voice Transcription](docs/voice_transcription.md)**: Deep dive into the local transcription system
 - **[Output Format](docs/output_format.md)**: Detailed explanation of session bundle structure
 - **[Logging and Debugging](docs/logs_and_debugging.md)**: How to access logs and debug issues
 - **[Agent Guidelines](AGENTS.md)**: Coding standards and guidelines for AI agents (for reference)
-- **[Initial Vision](docs/special/initial_vision.md)**: Original project goals and design principles
 
 ---
 
