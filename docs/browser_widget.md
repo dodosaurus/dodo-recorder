@@ -12,11 +12,11 @@ Floating UI control in browser window during recording sessions. Provides screen
 
 ### Injection
 
-Widget injected via Playwright's [`page.addInitScript()`](../electron/browser/recorder.ts:83):
+Widget injected via Playwright's [`page.addInitScript()`](../electron/browser/recorder.ts:215):
 
 ```typescript
-// Two-phase injection
-await this.page.addInitScript(`window.__dodoCreateWidget = ${getWidgetScript().toString()}`)
+// Two-phase injection (string concatenation to avoid nested template literal issues)
+await this.page.addInitScript('window.__dodoCreateWidget = ' + getWidgetScript().toString())
 await this.page.addInitScript(getWidgetInitScript())
 ```
 
@@ -27,6 +27,8 @@ Ensures widget code available before page scripts, works with SPAs, survives nav
 ```typescript
 const widgetHost = document.createElement('div')
 widgetHost.id = '__dodo-recorder-widget-host'
+widgetHost.style.cssText = 'position: fixed; z-index: 2147483647; pointer-events: none;'
+widgetHost.setAttribute('data-dodo-recorder', 'true')  // Mark as non-React element
 const shadow = widgetHost.attachShadow({ mode: 'closed' })
 ```
 
@@ -34,11 +36,13 @@ const shadow = widgetHost.attachShadow({ mode: 'closed' })
 
 **Structure:**
 ```
-<div id="__dodo-recorder-widget-host">
+<div id="__dodo-recorder-widget-host" style="position: fixed; z-index: 2147483647; pointer-events: none;">
   #shadow-root (closed)
     <style>...</style>
-    <div class="dodo-widget">
-      <button>...</button>
+    <div class="dodo-widget" style="position: fixed; top: 20px; right: 20px;">
+      <button id="screenshot-btn" class="widget-btn">...</button>
+      <button id="assertion-btn" class="widget-btn">...</button>
+      <div id="voice-indicator" class="voice-indicator"></div>
     </div>
 </div>
 ```
@@ -55,15 +59,25 @@ const shadow = widgetHost.attachShadow({ mode: 'closed' })
 ```typescript
 screenshotBtn.addEventListener('click', async (e) => {
   e.stopPropagation()
+
   screenshotBtn.classList.add('flash')
   setTimeout(() => screenshotBtn.classList.remove('flash'), 300)
-  
-  const screenshotPath = await takeScreenshot()
-  if (screenshotPath) {
-    recordAction(JSON.stringify({ type: 'screenshot', screenshot: screenshotPath }))
+
+  try {
+    const screenshotPath = await takeScreenshot()
+    if (screenshotPath) {
+      recordAction(JSON.stringify({
+        type: 'screenshot',
+        screenshot: screenshotPath,
+      }))
+    }
+  } catch (error) {
+    console.error('[Dodo Widget] Screenshot failed:', error)
   }
 })
 ```
+
+**Keyboard shortcut:** Cmd/Ctrl+Shift+S (handled in injected-script.ts)
 
 ### 2. Assertion Button
 
@@ -76,7 +90,12 @@ let assertionModeActive = false
 assertionBtn.addEventListener('click', (e) => {
   e.stopPropagation()
   assertionModeActive = !assertionModeActive
-  assertionBtn.classList.toggle('active', assertionModeActive)
+
+  if (assertionModeActive) {
+    assertionBtn.classList.add('active')
+  } else {
+    assertionBtn.classList.remove('active')
+  }
 })
 
 // Expose to injected script
@@ -87,58 +106,74 @@ window.__dodoDisableAssertionMode = () => {
 }
 ```
 
-Auto-disables after recording one assertion.
+**Keyboard shortcut:** Cmd/Ctrl+Click (handled in injected-script.ts)
 
 ### 3. Voice Recording Indicator
 
 **Visual:** 10px red pulsing dot, positioned after assertion button.
 
 **Implementation:**
-```typescript
-// CSS animation
+```css
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(0.85); }
 }
 
-// State sync (checks every 100ms)
-const updateVoiceIndicator = () => {
-  const isActive = (window as DodoWindow).__dodoAudioActive === true
-  voiceIndicator.classList.toggle('active', isActive)
+.voice-indicator {
+  width: 10px;
+  height: 10px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
 }
-setInterval(updateVoiceIndicator, 100)
 ```
 
-Main process sets `window.__dodoAudioActive` via [`page.evaluate()`](../electron/browser/recorder.ts:247).
+**State sync:** Main process sets `window.__dodoAudioActive` via [`page.evaluate()`](../electron/browser/recorder.ts:306-317). The indicator shows/hides based on this global variable - no polling interval.
 
 ### 4. Drag and Drop
 
 ```typescript
 let isDragging = false
-let dragStartX, dragStartY, widgetStartX, widgetStartY
+let dragStartX = 0
+let dragStartY = 0
+let widgetStartX = 0
+let widgetStartY = 0
 
 widget.addEventListener('mousedown', (e) => {
+  // Only start drag if clicking on widget body, not buttons
+  if (e.target !== widget && !widget.contains(e.target as Node)) return
+
   isDragging = true
   widget.classList.add('dragging')
+
+  const pos = getWidgetPosition()
   dragStartX = e.clientX
   dragStartY = e.clientY
-  const pos = getWidgetPosition()
   widgetStartX = pos.x
   widgetStartY = pos.y
+
   e.preventDefault()
 })
 
 document.addEventListener('mousemove', (e) => {
   if (!isDragging) return
+
   const deltaX = e.clientX - dragStartX
   const deltaY = e.clientY - dragStartY
-  setWidgetPosition(widgetStartX + deltaX, widgetStartY + deltaY)
+
+  const newX = widgetStartX + deltaX
+  const newY = widgetStartY + deltaY
+
+  setWidgetPosition(newX, newY)
 })
 
 document.addEventListener('mouseup', () => {
   if (!isDragging) return
+
   isDragging = false
   widget.classList.remove('dragging')
+
+  // Snap to nearest edge
   snapToEdge()
 })
 ```
@@ -150,17 +185,40 @@ After drag release, widget snaps to nearest edge (top/right/bottom/left) with 20
 ```typescript
 const snapToEdge = () => {
   const pos = getWidgetPosition()
-  const distances = {
-    top: pos.y,
-    bottom: window.innerHeight - (pos.y + pos.height),
-    left: pos.x,
-    right: window.innerWidth - (pos.x + pos.width)
+  const viewportWidth = window.innerWidth
+  const viewportHeight = window.innerHeight
+
+  // Calculate distances to each edge
+  const distToTop = pos.y
+  const distToBottom = viewportHeight - (pos.y + pos.height)
+  const distToLeft = pos.x
+  const distToRight = viewportWidth - (pos.x + pos.width)
+
+  // Find minimum distance
+  const minDist = Math.min(distToTop, distToBottom, distToLeft, distToRight)
+
+  // Snap to nearest edge with padding
+  const padding = 20
+  let newX = pos.x
+  let newY = pos.y
+
+  if (minDist === distToTop) {
+    newY = padding
+  } else if (minDist === distToBottom) {
+    newY = viewportHeight - pos.height - padding
+  } else if (minDist === distToLeft) {
+    newX = padding
+  } else if (minDist === distToRight) {
+    newX = viewportWidth - pos.width - padding
   }
-  const minDist = Math.min(...Object.values(distances))
-  // Position to edge with minDist
+
+  // Apply snapping animation
   widget.classList.add('snapping')
   setWidgetPosition(newX, newY)
-  setTimeout(() => widget.classList.remove('snapping'), 300)
+
+  setTimeout(() => {
+    widget.classList.remove('snapping')
+  }, 300)
 }
 ```
 
@@ -174,10 +232,83 @@ const snapToEdge = () => {
 - Button hover: `rgba(255, 255, 255, 0.12)`
 - Active state: `rgba(59, 130, 246, 0.25)`
 - Shadow: `0 4px 12px rgba(0, 0, 0, 0.3)`
+- Voice indicator: `#ef4444` (red)
 
 **Spacing:** 8px widget padding, 8px button gap, 40x40px button minimum
 
-**Transitions:** 0.2s opacity, 0.3s snap animation, 0.2s SVG colors
+**Transitions:** 0.2s opacity, 0.3s snap animation (cubic-bezier), 0.2s SVG colors
+
+**Tooltips:**
+- Appear on hover with 0.5s delay
+- Black background with white text
+- Positioned below buttons
+
+---
+
+## Hover Highlighter
+
+The hover highlighter provides visual feedback during assertion mode, showing element boundaries and selector information.
+
+### Features
+
+**Dual Trigger Mode:**
+- Widget button toggle (persistent mode)
+- Cmd/Ctrl modifier key (transient mode)
+
+**Visual Feedback:**
+- Semi-transparent blue overlay (`rgba(59, 130, 246, 0.2)`)
+- Solid border outline for clear boundaries
+- Label showing element selector (testId, id, role, type, name, or text)
+
+**Performance Optimizations:**
+- RAF (requestAnimationFrame) throttling for overlay updates
+- Passive event listeners for mousemove
+- Scroll handler to update overlay position during scroll
+
+### Implementation
+
+**Shadow DOM Isolation:**
+```typescript
+const highlightHost = document.createElement('div')
+highlightHost.id = '__dodo-highlight-overlay-host'
+highlightHost.style.cssText = `
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2147483646;
+`
+const shadow = highlightHost.attachShadow({ mode: 'closed' })
+```
+
+**Assertion Mode Check:**
+```typescript
+function isAssertionModeActive(): boolean {
+  const widgetMode = win.__dodoAssertionMode?.() || false
+  const keyMode = isCommandKeyPressed
+  return widgetMode || keyMode
+}
+```
+
+**Event Handlers:**
+- `mousemove` - Shows overlay on hover when assertion mode is active
+- `keydown` - Activates transient mode on Cmd/Ctrl press
+- `keyup` - Deactivates transient mode on key release
+- `blur` - Cleans up key state on window focus loss
+- `scroll` - Updates overlay position during scroll
+- Periodic check (100ms) - Ensures overlay state matches assertion mode
+
+**Element Label Generation:**
+Priority order for selector display:
+1. `[data-testid="..."]` - Test ID attributes
+2. `#id` - Element ID
+3. `tagName[role="..."]` - ARIA role
+4. `input[type="..."]` - Input type
+5. `[name="..."]` - Name attribute
+6. `tagName:text("...")` - Text content (buttons, links)
+7. `tagName` - Fallback to tag name
 
 ---
 
@@ -201,6 +332,30 @@ document.addEventListener('click', (e) => {
 })
 ```
 
+The hover highlighter also checks for widget exclusion:
+
+```typescript
+function isWithinWidget(element: Element): boolean {
+  let current: Element | null = element
+  while (current) {
+    if (
+      current.id === '__dodo-recorder-widget-host' ||
+      current.id === '__dodo-highlight-overlay-host'
+    ) {
+      return true
+    }
+    // Check shadow host
+    const root = current.getRootNode()
+    if (root instanceof ShadowRoot) {
+      current = root.host as Element
+    } else {
+      current = current.parentElement
+    }
+  }
+  return false
+}
+```
+
 ### Communication
 
 **Widget → Injected Script:**
@@ -214,6 +369,23 @@ window.__dodoDisableAssertionMode = () => { ... }
 // Exposed by recorder via page.exposeFunction()
 const recordAction = window.__dodoRecordAction
 const takeScreenshot = window.__dodoTakeScreenshot
+```
+
+**Recorder → Widget:**
+```typescript
+// Audio activity state
+await this.page.evaluate((isActive) => {
+  const win = window as any
+  win.__dodoAudioActive = isActive
+
+  if (isActive && typeof win.__dodoShowEqualizer === 'function') {
+    win.__dodoShowEqualizer()
+  }
+
+  if (!isActive && typeof win.__dodoHideEqualizer === 'function') {
+    win.__dodoHideEqualizer()
+  }
+}, active)
 ```
 
 ---
@@ -248,13 +420,55 @@ export function getWidgetScript(): () => void {
 ### Duplicate Prevention
 
 ```typescript
+// Widget
 if (document.getElementById(WIDGET_HOST_ID)) {
   console.log('[Dodo Recorder] Widget already exists, skipping creation')
+  return
+}
+
+// Hover highlighter
+if (document.getElementById('__dodo-highlight-overlay-host')) {
+  if (DEBUG) console.log('[Dodo Highlighter] Already initialized, skipping')
   return
 }
 ```
 
 Prevents multiple widgets on page reload, conflicts with SPA routes, memory leaks.
+
+### Initialization Timing
+
+Both widget and highlighter use a two-stage initialization pattern:
+
+```typescript
+export function getWidgetInitScript(): () => void {
+  return () => {
+    const initWidget = () => {
+      try {
+        const checkBodyAndCreate = () => {
+          if (document.body && typeof (window as any).__dodoCreateWidget === 'function') {
+            (window as any).__dodoCreateWidget()
+          } else {
+            setTimeout(checkBodyAndCreate, 50)
+          }
+        }
+
+        // Small delay to ensure page scripts have loaded
+        setTimeout(checkBodyAndCreate, 100)
+      } catch (error) {
+        console.error('[Dodo Recorder] Failed to create widget:', error)
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initWidget)
+    } else {
+      initWidget()
+    }
+  }
+}
+```
+
+This ensures the widget/highlighter is created after the document body is available and works with both synchronous and asynchronous page loads.
 
 ---
 
@@ -262,11 +476,14 @@ Prevents multiple widgets on page reload, conflicts with SPA routes, memory leak
 
 | File | Purpose | Lines |
 |------|---------|-------|
-| [`electron/browser/recording-widget.ts`](../electron/browser/recording-widget.ts) | Widget implementation | ~400 |
+| [`electron/browser/recording-widget.ts`](../electron/browser/recording-widget.ts) | Widget implementation | ~465 |
+| [`electron/browser/hover-highlighter.ts`](../electron/browser/hover-highlighter.ts) | Hover highlighter | ~400 |
 | [`electron/browser/injected-script.ts`](../electron/browser/injected-script.ts) | Event recording + exclusion | ~390 |
-| [`electron/browser/recorder.ts`](../electron/browser/recorder.ts) | Widget injection | ~170 |
+| [`electron/browser/recorder.ts`](../electron/browser/recorder.ts) | Widget injection | ~340 |
 
 **Key Functions:**
 - [`getWidgetScript()`](../electron/browser/recording-widget.ts:12) - Widget creation
-- [`getWidgetInitScript()`](../electron/browser/recording-widget.ts:376) - Initialization wrapper
+- [`getWidgetInitScript()`](../electron/browser/recording-widget.ts:438) - Initialization wrapper
+- [`getHighlighterScript()`](../electron/browser/hover-highlighter.ts:36) - Highlighter creation
+- [`getHighlighterInitScript()`](../electron/browser/hover-highlighter.ts:370) - Highlighter initialization
 - [`isWithinWidget()`](../electron/browser/injected-script.ts:258) - Exclusion check
