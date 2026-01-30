@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { FileText, FolderOpen, GitCommit, ChevronDown, ChevronUp, Info } from 'lucide-react'
+import { FileText, FolderOpen, GitCommit, ChevronDown, ChevronUp } from 'lucide-react'
 import type { BuildInfo } from '@/types/electron'
 
 export function DebugInfoWidget() {
@@ -14,7 +14,7 @@ export function DebugInfoWidget() {
       setBuildInfo(__BUILD_INFO__)
       return
     }
-    
+
     // In production, fetch from main process
     if (window.electronAPI?.getBuildInfo) {
       window.electronAPI.getBuildInfo().then(setBuildInfo).catch(console.error)
@@ -47,7 +47,6 @@ export function DebugInfoWidget() {
   }
 
   const commitHash = buildInfo?.commitHash || 'unknown'
-  const isDirty = buildInfo?.isDirty || false
 
   return (
     <div className="relative">
@@ -57,15 +56,13 @@ export function DebugInfoWidget() {
         className="flex items-center gap-1.5 px-2 py-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground hover:bg-accent/50 rounded transition-colors"
         title="Debug info"
       >
-        <Info className="h-3.5 w-3.5" />
         <span className="font-mono text-[10px]">{commitHash}</span>
-        {isDirty && <span className="text-[9px] text-amber-500/80">✕</span>}
         {isOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
       </button>
 
       {/* Collapsible panel */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 w-64 bg-card border border-border rounded-lg shadow-lg z-50 p-3">
+        <div className="absolute right-0 top-full mt-1 w-56 bg-card border border-border rounded-lg shadow-lg z-50 p-3">
           {/* Build Info Section */}
           {buildInfo && (
             <div className="mb-3 pb-3 border-b border-border">
@@ -101,20 +98,20 @@ export function DebugInfoWidget() {
                 <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs font-medium text-foreground">Logs</span>
               </div>
-              <div className="space-y-1">
+              <div className="flex gap-1">
                 <button
                   onClick={openLogFile}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors text-left"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
+                  title="Open log file"
                 >
                   <FileText className="h-3 w-3" />
-                  <span className="truncate">Open log file</span>
                 </button>
                 <button
                   onClick={openLogFolder}
-                  className="w-full flex items-center gap-2 px-2 py-1.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors text-left"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
+                  title="Open logs folder"
                 >
                   <FolderOpen className="h-3 w-3" />
-                  <span className="truncate">Open logs folder</span>
                 </button>
               </div>
             </div>

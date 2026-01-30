@@ -14,7 +14,7 @@
 ┌─────────────────────────────────────────────────┐
 │  TitleBar (custom window controls)              │
 ├─────────────────────────────────────────────────┤
-│  Header (logo + StatusBar)                      │
+│  Header (StatusBar + DebugInfoWidget)           │
 ├──────────────┬──────────────────────────────────┤
 │              │                                   │
 │  Settings    │  Recorded Actions                │
@@ -37,20 +37,46 @@
       <RecordingControls />
     </aside>
     {isTranscriptViewOpen ? (
-      <section className="flex-1 flex overflow-hidden">
-        <div className="flex-1 min-w-0"><ActionsList /></div>
+      <section className="flex-1 flex overflow-hidden bg-background">
+        <div className="flex-1 min-w-0 border-r border-border bg-background flex flex-col">
+          <div className="flex-shrink-0 px-4 py-3 border-b border-border flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-medium text-foreground">Recorded Actions</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Click on transcript to highlight actions
+              </p>
+            </div>
+          </div>
+          <ActionsList />
+        </div>
         <TranscriptView />
       </section>
     ) : (
-      <section className="flex-1 flex-col"><ActionsList /></section>
+      <section className="flex-1 flex flex-col overflow-hidden bg-background">
+        <div className="flex-shrink-0 px-4 py-3 border-b border-border flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-medium text-foreground">Recorded Actions</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {status === 'recording' ? 'Recording in progress...' : 'Actions will appear here during recording'}
+            </p>
+          </div>
+          {canViewTranscript && (
+            <Button onClick={() => setTranscriptViewOpen(true)}>
+              <FileText className="h-4 w-4" />
+              View transcript
+            </Button>
+          )}
+        </div>
+        <ActionsList />
+      </section>
     )}
   </main>
 </div>
 ```
 
 - **Sidebar:** 320px fixed, settings top + controls bottom
-- **Main content:** Conditional split view (50/50) or full-width ActionsList
-- **Both transcript panels:** Use `flex-1` for equal split
+- **Main content:** Conditional split view or full-width ActionsList
+- **Split view:** ActionsList and TranscriptView side by side with border divider
 
 ---
 
@@ -59,19 +85,40 @@
 ### TitleBar
 **File:** [`src/components/TitleBar.tsx`](../src/components/TitleBar.tsx)
 
-Custom window controls for frameless Electron window (minimize, maximize/restore, close) with macOS-style positioning and IPC communication.
+Custom window controls for frameless Electron window (minimize, maximize/restore, close) with platform-specific positioning.
+
+- **Height:** 36px (`h-9`)
+- **macOS:** Window controls on left (native system controls)
+- **Windows:** Window controls on right (minimize, maximize, close buttons)
 
 ### Header
 **Location:** [`App.tsx:30`](../src/App.tsx:30)
 
-Contains app logo, title, and StatusBar component.
+Contains `StatusBar` (left) and `DebugInfoWidget` (right).
 
 ### StatusBar
 **File:** [`src/components/StatusBar.tsx`](../src/components/StatusBar.tsx)
 
-Displays recording status (idle/recording/processing/saving), action count, and log file access buttons.
+Displays recording status, elapsed time (during recording), and action count.
 
-**Status indicators:** Gray (idle), red pulsing (recording), yellow (processing), blue (saving)
+**Status indicators:**
+- `idle`: Green dot (`bg-green-500`), label "Ready"
+- `recording`: Red pulsing dot (`bg-destructive animate-pulse-recording`), label "Recording"
+- `paused`: Yellow dot (`bg-yellow-500`), label "Paused"
+- `processing`: Blue dot (`bg-primary`), label "Processing"
+- `saving`: Accent color dot (`bg-accent`), label "Saving"
+
+During recording, shows elapsed time and action count.
+
+### DebugInfoWidget
+**File:** [`src/components/DebugInfoWidget.tsx`](../src/components/DebugInfoWidget.tsx)
+
+Collapsible widget in header showing build info and log access.
+
+**Features:**
+- Build info: commit hash, branch, build time, Node version
+- Log access: Two compact icon buttons for opening log file and log folder
+- Toggle button showing commit hash with expand/collapse chevron
 
 ---
 
@@ -81,41 +128,54 @@ Displays recording status (idle/recording/processing/saving), action count, and 
 
 ### Input Fields
 
-**1. Start URL** ([`SettingsPanel.tsx:100`](../src/components/SettingsPanel.tsx:100))
+**1. Start URL** ([`SettingsPanel.tsx:54`](../src/components/SettingsPanel.tsx:54))
 ```tsx
 <Input
   placeholder="https://example.com"
   value={startUrl}
   onChange={(e) => handleStartUrlChange(e.target.value)}
   disabled={isDisabled}
+  className="bg-background"
 />
 ```
-Auto-saved to persistent settings, validated before recording, disabled during recording.
+Auto-saved to persistent settings via `useSettings` hook, disabled during recording.
 
-**2. Output Folder** ([`SettingsPanel.tsx:113`](../src/components/SettingsPanel.tsx:113))
+**2. Output Folder** ([`SettingsPanel.tsx:67`](../src/components/SettingsPanel.tsx:67))
 ```tsx
 <div className="flex gap-2">
-  <Input value={outputPath} readOnly disabled={isDisabled} />
-  <Button onClick={handleSelectFolder} disabled={isDisabled}>
+  <Input
+    placeholder="Select a folder..."
+    value={outputPath}
+    readOnly
+    disabled={isDisabled}
+    className="bg-background flex-1"
+  />
+  <Button variant="secondary" size="icon" onClick={handleSelectFolder} disabled={isDisabled}>
     <Folder className="h-4 w-4" />
   </Button>
 </div>
 ```
 Read-only input + button opens native folder picker. Auto-saved.
 
-**3. Voice Recording Toggle** ([`SettingsPanel.tsx:136`](../src/components/SettingsPanel.tsx:136))
+**3. Voice Recording Toggle** ([`SettingsPanel.tsx:90`](../src/components/SettingsPanel.tsx:90))
 ```tsx
-<Switch
-  checked={isVoiceEnabled}
-  onCheckedChange={setVoiceEnabled}
-  disabled={isDisabled}
-/>
+<div className="flex items-center justify-between py-2">
+  <div className="flex items-center gap-2">
+    <Mic className="h-4 w-4 text-muted-foreground" />
+    <span className="text-sm">Voice Recording</span>
+  </div>
+  <Switch
+    checked={isVoiceEnabled}
+    onCheckedChange={setVoiceEnabled}
+    disabled={isDisabled}
+  />
+</div>
 ```
-Enables/disables audio transcription. When enabled, shows microphone selector.
+Enables/disables audio transcription. When enabled, shows microphone selector and informational text.
 
 **4. Microphone Selector** ([`src/components/MicrophoneSelector.tsx`](../src/components/MicrophoneSelector.tsx))
 
-Visible only when voice recording enabled. Features dropdown (select device), refresh button (re-enumerate), test button (verify working), auto-detection (devicechange event).
+Visible only when voice recording enabled. Features dropdown (select device) and refresh button (re-enumerate).
 
 **Device Enumeration** ([`src/lib/audioDevices.ts`](../src/lib/audioDevices.ts)):
 ```typescript
@@ -132,7 +192,7 @@ export async function enumerateAudioDevices(): Promise<AudioDevice[]> {
 }
 ```
 
-**Device Usage** ([`RecordingControls.tsx:121`](../src/components/RecordingControls.tsx:121)):
+**Device Usage** ([`RecordingControls.tsx:152`](../src/components/RecordingControls.tsx:152)):
 ```typescript
 const stream = await navigator.mediaDevices.getUserMedia({
   audio: {
@@ -149,25 +209,19 @@ const stream = await navigator.mediaDevices.getUserMedia({
 
 ### Settings Persistence
 
-**Load on mount** ([`SettingsPanel.tsx:28`](../src/components/SettingsPanel.tsx:28)):
+Settings are managed via the `useSettings` hook ([`src/lib/useSettings.ts`](../src/lib/useSettings.ts)):
+
 ```typescript
-useEffect(() => {
-  const loadPreferences = async () => {
-    const result = await window.electronAPI.getUserPreferences()
-    if (result.success && result.preferences) {
-      setStartUrl(result.preferences.startUrl)
-      setOutputPath(result.preferences.outputPath)
-    }
-    const micResult = await window.electronAPI.getMicrophoneSettings()
-    if (micResult.success && micResult.settings) {
-      setSelectedMicrophoneId(micResult.settings.selectedMicrophoneId)
-    }
-  }
-  loadPreferences()
-}, [])
+const { updatePreferences, updateMicrophoneSettings } = useSettings()
+
+// Update startUrl with automatic persistence
+const handleStartUrlChange = async (url: string) => {
+  setStartUrl(url)
+  await updatePreferences({ startUrl: url })
+}
 ```
 
-**Saved immediately via IPC:** URL, output path, microphone selection
+The hook loads settings on mount and provides centralized update functions that persist changes via IPC.
 
 ---
 
@@ -177,21 +231,21 @@ useEffect(() => {
 
 ### Buttons
 
-**1. Start Recording** ([`RecordingControls.tsx:459`](../src/components/RecordingControls.tsx:459))
+**1. Start Recording** ([`RecordingControls.tsx:543`](../src/components/RecordingControls.tsx:543))
 
-Shown when: `status === 'idle' && actions.length === 0`  
+Shown when: `status === 'idle' && actions.length === 0`
 Enabled when: `startUrl && outputPath && status === 'idle'`
 
 **Process:**
 1. Validates URL and output path
 2. Requests microphone permission (if voice enabled)
-3. Starts audio recording (if voice enabled)
-4. Launches Playwright browser
-5. Navigates to start URL
-6. Injects recording widget
+3. Validates selected microphone device exists
+4. Starts audio recording (if voice enabled)
+5. Launches Playwright browser
+6. Navigates to start URL
 7. Sets status to 'recording'
 
-**2. Stop Recording** ([`RecordingControls.tsx:471`](../src/components/RecordingControls.tsx:471))
+**2. Stop Recording** ([`RecordingControls.tsx:555`](../src/components/RecordingControls.tsx:555))
 
 Shown when: `status === 'recording'`
 
@@ -203,34 +257,34 @@ Shown when: `status === 'recording'`
 5. Generates transcript text
 6. Sets status to 'idle'
 
-**3. Save Session** ([`RecordingControls.tsx:497`](../src/components/RecordingControls.tsx:497))
+**3. Save Session** ([`RecordingControls.tsx:582`](../src/components/RecordingControls.tsx:582))
 
 Shown when: `status === 'idle' && actions.length > 0`
 
-Writes session bundle to output folder (INSTRUCTIONS.md, actions.json, screenshots/). Shows success state, disables to prevent duplicate saves.
+Writes session bundle to output folder (INSTRUCTIONS.md, actions.json, screenshots/). Shows success state, disables to prevent duplicate saves. Button uses `variant="success"` when not saved, `variant="outline"` when saved.
 
-**4. Reset** ([`RecordingControls.tsx:517`](../src/components/RecordingControls.tsx:517))
+**4. Reset** ([`RecordingControls.tsx:601`](../src/components/RecordingControls.tsx:601))
 
 Shown when: `status === 'idle' && actions.length > 0`
 
-Clears actions, transcript, audio state. Preserves settings (URL, path, voice toggle, microphone).
+Shows confirmation dialog if session hasn't been saved. Clears actions, transcript, audio state. Preserves settings (URL, path, voice toggle, microphone) and reloads saved preferences.
 
 ### Audio Status Display
 
-**Recording** ([`RecordingControls.tsx:404`](../src/components/RecordingControls.tsx:404)):
+**Recording** ([`RecordingControls.tsx:473`](../src/components/RecordingControls.tsx:473)):
 ```tsx
-<div className="space-y-2">
-  <AudioLevelMeter stream={audioStreamRef.current || undefined} />
-  <div className="bg-red-500/10 text-red-400">
-    <Mic className="animate-pulse" />
-    Recording audio {audioChunksCount}s
+<div className="flex items-center justify-center text-xs bg-red-500/10 text-red-400 px-3 py-2 rounded-md">
+  <div className="flex items-center gap-2">
+    <Mic className="h-3.5 w-3.5 animate-pulse" />
+    <span>Recording audio</span>
+    <span className="font-mono">{audioChunksCount}s</span>
   </div>
 </div>
 ```
 
-**Processing:** Spinner + "Transcribing audio..." (yellow)  
-**Complete:** Segment count display (green)  
-**Error:** Error message (red)
+**Processing:** Spinner + "Transcribing audio..." (amber/yellow)
+**Complete:** Segment count display (emerald/green)
+**Error:** Error message with MicOff icon (red)
 
 ---
 
@@ -240,19 +294,37 @@ Clears actions, transcript, audio state. Preserves settings (URL, path, voice to
 
 Displays recorded browser actions in real-time.
 
-**Header:** Shows title, status message, "View transcript" button (when `status === 'idle' && actions.length > 0 && transcriptText`)
+**Empty State:** Shows icon and message "No actions recorded yet" when no actions exist.
 
-**Action items:** Type icon, timestamp (MM:SS), target, expandable details (locators, confidence, bounding box, voice segments)
+**Action items:**
+- Numbered index (01, 02, etc.)
+- Type icon and color-coded badge
+- Timestamp (MM:SS)
+- Type badge: "action", "assertion", or "screenshot"
+- Description text (truncated with tooltip)
+- Expandable details (locators, confidence, bounding box, voice segments)
+- Delete button (Trash2 icon) - appears on hover when not recording
 
-**Highlighting** ([`ActionsList.tsx`](../src/components/ActionsList.tsx)):
+**Highlighting** ([`ActionsList.tsx:141`](../src/components/ActionsList.tsx:141)):
 ```tsx
-<div className={cn(
+className={cn(
   highlightedActionId === action.id
     ? 'bg-blue-500/20 border-l-4 border-l-blue-400'
     : 'hover:bg-card'
-)}>
+)}
 ```
 Triggered by clicking action reference in transcript or programmatic selection.
+
+**Action Types and Colors:**
+- `click`: Blue (`text-blue-400`)
+- `fill`: Green (`text-green-400`)
+- `navigate`: Purple (`text-purple-400`)
+- `keypress`: Yellow (`text-yellow-400`)
+- `select`: Orange (`text-orange-400`)
+- `check`: Orange (`text-orange-400`)
+- `scroll`: Cyan (`text-cyan-400`)
+- `assert`: Pink (`text-pink-400`)
+- `screenshot`: Indigo (`text-indigo-400`)
 
 ---
 
@@ -262,7 +334,14 @@ Triggered by clicking action reference in transcript or programmatic selection.
 
 See [`docs/transcript_view.md`](transcript_view.md) for details.
 
-**Summary:** Voice commentary with embedded, clickable action references. Split-pane layout (50/50 with ActionsList). Natural reading flow with sentence-level action placement.
+**Summary:** Voice commentary with embedded, clickable action references. Split-pane layout with ActionsList. Natural reading flow with sentence-level action placement.
+
+**Features:**
+- Header with close button (X icon)
+- Parses `[action:SHORT_ID:TYPE]` and `[screenshot:FILENAME]` references
+- Clickable action badges that highlight corresponding action in ActionsList
+- Smooth scroll to highlighted action
+- Screenshot references are skipped (rendered as action badges instead)
 
 ---
 
@@ -276,17 +355,18 @@ See [`docs/browser_widget.md`](browser_widget.md#3-voice-recording-indicator) fo
 
 ### Microphone Fallback
 
-**Code:** [`RecordingControls.tsx:97`](../src/components/RecordingControls.tsx:97)
+**Code:** [`RecordingControls.tsx:129`](../src/components/RecordingControls.tsx:129)
 
 ```typescript
-// Validate device exists
+// Validate selected device exists before requesting stream
 if (selectedMicrophoneId) {
   const devices = await navigator.mediaDevices.enumerateDevices()
   const deviceExists = devices.some(d => d.deviceId === selectedMicrophoneId)
+
   if (!deviceExists) {
-    console.warn('Selected microphone not found, falling back to default')
     setAudioError('Selected microphone not available, using default')
     setSelectedMicrophoneId(undefined)
+    await window.electronAPI.updateMicrophoneSettings({ selectedMicrophoneId: undefined })
   }
 }
 
@@ -319,27 +399,31 @@ interface RecordingState {
   transcriptSegments: TranscriptSegment[]
   transcriptText: string
   startTime: number | null
-  
+
   // Settings
   startUrl: string
   outputPath: string
   notes: string
   isVoiceEnabled: boolean
   selectedMicrophoneId: string | undefined
-  
+
   // Audio
   audioStatus: AudioStatus
   audioChunksCount: number
   audioError: string | null
-  
+
   // UI
   sessionSaved: boolean
   isTranscriptViewOpen: boolean
   highlightedActionId: string | null
-  
+
   // Actions: setStatus, addAction, setSelectedMicrophoneId, etc.
 }
 ```
+
+**RecordingStatus:** `'idle' | 'recording' | 'paused' | 'processing' | 'saving'`
+
+**AudioStatus:** `'idle' | 'recording' | 'processing' | 'complete' | 'error'`
 
 **Access pattern:**
 ```typescript
