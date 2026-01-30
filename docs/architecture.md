@@ -273,7 +273,7 @@ dodo-recorder/
 ├── shared/
 │   └── types.ts                # Shared types (RecordedAction, SessionBundle, etc.)
 ├── models/                     # Whisper components
-│   ├── unix/whisper            # macOS/Linux binary (committed)
+│   ├── unix/whisper            # macOS binary (committed)
 │   ├── win/whisper-cli.exe     # Windows binary (committed)
 │   └── ggml-small.en.bin      # Model weights (download manually, gitignored)
 └── docs/                       # Documentation
@@ -321,8 +321,8 @@ Uses OpenAI's Whisper model (same weights, same accuracy) but runs locally via C
 **Location:**
 ```
 models/
-├── unix/whisper            # Binary (committed)
-├── win/whisper-cli.exe     # Binary (committed)
+├── unix/whisper            # macOS binary (committed)
+├── win/whisper-cli.exe     # Windows binary (committed)
 └── ggml-small.en.bin      # Weights (download manually)
 ```
 

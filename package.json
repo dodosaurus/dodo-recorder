@@ -9,7 +9,6 @@
     "build:prod": "node ./build/build-prod.js",
     "postinstall": "node ./build/install-playwright-browsers.js",
     "install:browsers": "node ./build/install-playwright-browsers.js",
-    "install:browsers:all": "./build/install-playwright-browsers-all-platforms.sh",
     "generate-icons": "./build/generate-icons.sh"
   },
   "keywords": [

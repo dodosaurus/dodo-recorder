@@ -1,0 +1,7 @@
+# Mark Whisper binaries as executable
+models/unix/whisper binary
+models/win/whisper-cli.exe binary
+
+# Mark other Windows binaries
+models/win/*.exe binary
+models/win/*.dll binary

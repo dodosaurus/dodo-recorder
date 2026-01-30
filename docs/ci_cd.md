@@ -1,6 +1,6 @@
 # CI/CD Build Workflow
 
-GitHub Actions workflow for building Dodo Recorder across multiple platforms.
+GitHub Actions workflow for building Dodo Recorder.
 
 ---
 
@@ -20,11 +20,9 @@ GitHub Actions workflow for building Dodo Recorder across multiple platforms.
 
 ## Build Jobs
 
-4 platform-specific jobs (run conditionally based on selection):
+2 platform-specific jobs (run conditionally based on selection):
 - **build-macos-arm64** - Apple Silicon
-- **build-macos-x64** - Intel Macs
-- **build-windows** - Windows installer + portable
-- **build-linux** - AppImage + deb
+- **build-windows** - Windows installer
 
 **Each job:**
 - Sets up Node.js 18
@@ -87,9 +85,7 @@ To set up the `MACOS_CERTIFICATE` secret:
 | Platform | Artifact | Contents |
 |----------|----------|----------|
 | macOS ARM64 | `dodo-recorder-macos-arm64` | .dmg, .zip |
-| macOS x64 | `dodo-recorder-macos-x64` | .dmg, .zip |
-| Windows | `dodo-recorder-windows` | .exe (installer + portable) |
-| Linux | `dodo-recorder-linux` | .AppImage, .deb |
+| Windows x64 | `dodo-recorder-windows` | .exe |
 
 Retained 30 days in Actions tab.
 
@@ -132,13 +128,3 @@ npm run build
 - Increase timeout in workflow file
 - Check caching working
 - Verify Whisper download not timing out
-
----
-
-## Platform Notes
-
-**macOS:** ARM64 builds for M1-M4, x64 for Intel (both built on macOS-latest runners)
-
-**Windows:** NSIS installer + portable exe, no code signing, requires Git Bash for scripts
-
-**Linux:** AppImage + deb, no code signing

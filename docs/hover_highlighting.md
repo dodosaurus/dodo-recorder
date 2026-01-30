@@ -2,7 +2,7 @@
 
 Visual feedback during assertion mode showing which element will be asserted before clicking. Blue overlay with selector label, similar to browser DevTools inspector.
 
-**Features:** Dual trigger (widget button OR Cmd/Ctrl key), Shadow DOM isolation, RAF throttling, cross-platform.
+**Features:** Dual trigger (widget button OR Cmd/Ctrl key), Shadow DOM isolation, RAF throttling.
 
 ---
 
@@ -10,7 +10,7 @@ Visual feedback during assertion mode showing which element will be asserted bef
 
 ### Method 1: Transient Mode (Keyboard)
 
-1. Hold Cmd (macOS) or Ctrl (Windows/Linux)
+1. Hold Cmd (macOS) or Ctrl (Windows)
 2. Hover over elements → blue overlay appears
 3. Click to record assertion
 4. Release key → highlighting stops

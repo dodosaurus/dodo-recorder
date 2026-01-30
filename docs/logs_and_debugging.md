@@ -14,9 +14,8 @@ Two buttons in bottom-right status bar:
 
 ### Log File Locations
 
-**macOS:** `~/Library/Logs/dodo-recorder/main.log`  
-**Windows:** `%USERPROFILE%\AppData\Roaming\dodo-recorder\logs\main.log`  
-**Linux:** `~/.config/dodo-recorder/logs/main.log`
+**macOS:** `~/Library/Logs/dodo-recorder/main.log`
+**Windows:** `%USERPROFILE%\AppData\Roaming\dodo-recorder\logs\main.log`
 
 ### Manual Access
 
@@ -29,11 +28,6 @@ open ~/Library/Logs/dodo-recorder/main.log
 **Windows (PowerShell):**
 ```powershell
 Get-Content "$env:USERPROFILE\AppData\Roaming\dodo-recorder\logs\main.log" -Tail 50 -Wait
-```
-
-**Linux:**
-```bash
-tail -f ~/.config/dodo-recorder/logs/main.log
 ```
 
 ---
@@ -125,7 +119,7 @@ curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp
 
 **Access in production:**
 - macOS: `Cmd+Option+I`
-- Windows/Linux: `Ctrl+Shift+I`
+- Windows: `Ctrl+Shift+I`
 
 **Example renderer logs:**
 ```
@@ -198,9 +192,6 @@ rm ~/Library/Logs/dodo-recorder/*.log
 
 # Windows
 del "%USERPROFILE%\AppData\Roaming\dodo-recorder\logs\*.log"
-
-# Linux
-rm ~/.config/dodo-recorder/logs/*.log
 ```
 
 ---

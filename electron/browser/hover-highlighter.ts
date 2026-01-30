@@ -42,7 +42,7 @@ export function getHighlighterScript(): () => void {
     const DEBUG = false
 
     // Global state
-    let isCommandKeyPressed = false // Tracks Cmd (Mac) or Ctrl (Win/Linux)
+    let isCommandKeyPressed = false // Tracks Cmd (Mac) or Ctrl (Win)
     let currentTarget: Element | null = null
     let rafId: number | null = null
 

@@ -5,9 +5,9 @@
 - **Browser Recording:** Chromium browser automation via Playwright
 - **Rich Locator Extraction:** testId, role, text, CSS, XPath with confidence levels
 - **Voice Transcription:** Local Whisper.cpp with optimized early speech detection
-- **Screenshot Capture:** Cmd+Shift+S (Mac) / Ctrl+Shift+S (Windows/Linux) or widget button
+- **Screenshot Capture:** Cmd+Shift+S (Mac) / Ctrl+Shift+S (Windows) or widget button
 - **Recording Widget:** Floating browser widget for screenshots and assertion mode
-- **Assertion Mode:** Cmd+Click (Mac) / Ctrl+Click (Windows/Linux) or widget button
+- **Assertion Mode:** Cmd+Click (Mac) / Ctrl+Click (Windows) or widget button
 - **Enhanced Transcripts:** AI-friendly narrative with embedded action references
 - **Smart Voice Distribution:** 4s lookback, 2s lookahead temporal association
 - **Session Export:** Framework-agnostic JSON bundles (INSTRUCTIONS.md + actions.json + screenshots/)
@@ -18,8 +18,8 @@
 
 | Shortcut | Action |
 |----------|--------|
-| **Cmd+Click** (Mac) / **Ctrl+Click** (Windows/Linux) | Record assertion (not click) |
-| **Cmd+Shift+S** (Mac) / **Ctrl+Shift+S** (Windows/Linux) | Take screenshot |
+| **Cmd+Click** (Mac) / **Ctrl+Click** (Windows) | Record assertion (not click) |
+| **Cmd+Shift+S** (Mac) / **Ctrl+Shift+S** (Windows) | Take screenshot |
 
 ---
 

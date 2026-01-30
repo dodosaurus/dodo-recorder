@@ -30,11 +30,9 @@ function getBrowsersPath(): string {
  * Gets the path to the Chromium browser executable
  * This constructs the path manually since Playwright ignores PLAYWRIGHT_BROWSERS_PATH
  *
- * Supports all platforms and architectures:
+ * Supports supported platforms and architectures:
  * - macOS ARM64: chrome-mac-arm64
- * - macOS x64: chrome-mac-x64
  * - Windows x64: chrome-win64
- * - Linux x64: chrome-linux
  */
 function getBrowserExecutablePath(): string {
   const browsersPath = getBrowsersPath()
@@ -42,7 +40,7 @@ function getBrowserExecutablePath(): string {
   const chromiumPath = path.join(browsersPath, chromiumVersion)
   
   if (process.platform === 'darwin') {
-    // macOS: Try ARM64 first (most common), then x64
+    // macOS: Try ARM64 first (most common)
     const arm64Path = path.join(
       chromiumPath,
       'chrome-mac-arm64',
@@ -53,18 +51,6 @@ function getBrowserExecutablePath(): string {
     )
     if (fs.existsSync(arm64Path)) {
       return arm64Path
-    }
-    
-    const x64Path = path.join(
-      chromiumPath,
-      'chrome-mac-x64',
-      'Google Chrome for Testing.app',
-      'Contents',
-      'MacOS',
-      'Google Chrome for Testing'
-    )
-    if (fs.existsSync(x64Path)) {
-      return x64Path
     }
     
     // Fallback - return ARM64 path (will fail with helpful error)
@@ -83,21 +69,10 @@ function getBrowserExecutablePath(): string {
     
     // Fallback - return chrome-win64 path (will fail with helpful error)
     return win64Path
-  } else {
-    // Linux: Try chrome-linux64 first, then chrome-linux
-    const linux64Path = path.join(chromiumPath, 'chrome-linux64', 'chrome')
-    if (fs.existsSync(linux64Path)) {
-      return linux64Path
-    }
-    
-    const linuxPath = path.join(chromiumPath, 'chrome-linux', 'chrome')
-    if (fs.existsSync(linuxPath)) {
-      return linuxPath
-    }
-    
-    // Fallback - return chrome-linux64 path (will fail with helpful error)
-    return linux64Path
   }
+  
+  // Unsupported platform - throw error to satisfy TypeScript return type
+  throw new Error(`Unsupported platform: ${process.platform}`)
 }
 
 const browsersPath = getBrowsersPath()

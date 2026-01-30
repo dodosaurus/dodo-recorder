@@ -11,7 +11,7 @@ const ffmpeg = require('fluent-ffmpeg')
 /**
  * Get Whisper binary path based on platform
  * - Windows: models/win/whisper-cli.exe
- * - macOS/Linux: models/unix/whisper
+ * - macOS: models/unix/whisper
  */
 function getWhisperBinaryPath(): string {
   const appPath = app.isPackaged ? process.resourcesPath : app.getAppPath()
@@ -21,7 +21,7 @@ function getWhisperBinaryPath(): string {
     // Windows: use whisper-cli.exe
     return path.join(modelsDir, 'win', 'whisper-cli.exe')
   } else {
-    // Unix (macOS/Linux): use whisper binary
+    // macOS: use whisper binary
     return path.join(modelsDir, 'unix', 'whisper')
   }
 }

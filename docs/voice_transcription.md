@@ -384,8 +384,8 @@ curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp
 **Location:**
 ```
 models/
-├── unix/whisper            # Binary (committed)
-├── win/whisper-cli.exe     # Binary (committed)
+├── unix/whisper            # macOS binary (committed)
+├── win/whisper-cli.exe     # Windows binary (committed)
 └── ggml-small.en.bin      # Weights (download manually, gitignored)
 ```
 
@@ -597,7 +597,7 @@ Hard-coded delimiters: `.`, `!`, `?`
 
 **Check:**
 1. Model exists: `models/ggml-small.en.bin`
-2. Binary exists: `models/win/whisper-cli.exe` or `models/unix/whisper`
+2. Binary exists: `models/win/whisper-cli.exe` (Windows) or `models/unix/whisper` (macOS)
 3. FFmpeg working (check logs)
 4. Microphone permissions granted
 5. Audio chunks recorded (console logs)

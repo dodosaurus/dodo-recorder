@@ -2,14 +2,12 @@ import { useEffect, useState } from 'react'
 import { Minus, Square, X } from 'lucide-react'
 
 export function TitleBar() {
-  const [platform, setPlatform] = useState<'darwin' | 'win32' | 'linux'>('darwin')
+  const [platform, setPlatform] = useState<'darwin' | 'win32'>('darwin')
 
   useEffect(() => {
     const userAgent = navigator.userAgent.toLowerCase()
     if (userAgent.includes('win')) {
       setPlatform('win32')
-    } else if (userAgent.includes('linux')) {
-      setPlatform('linux')
     } else {
       setPlatform('darwin')
     }

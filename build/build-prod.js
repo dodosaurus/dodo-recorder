@@ -49,24 +49,15 @@ execSync('npx vite build', { stdio: 'inherit' });
 let builderArgs = '--config electron-builder.json --publish never';
 
 const platform = process.platform;
-const arch = process.env.TARGET_ARCH || process.arch;
 
-console.log(`🔨 Building for platform: ${platform}, arch: ${arch}`);
+console.log(`🔨 Building for platform: ${platform}`);
 
 if (platform === 'darwin') {
-  // macOS - with signing and notarization
-  builderArgs += ' --mac';
-  if (arch === 'x64') {
-    builderArgs += ' --x64';
-  } else {
-    builderArgs += ' --arm64';
-  }
+  // macOS - with signing and notarization (ARM64 only)
+  builderArgs += ' --mac --arm64';
 } else if (platform === 'win32') {
-  // Windows
+  // Windows x64
   builderArgs += ' --win --x64';
-} else if (platform === 'linux') {
-  // Linux
-  builderArgs += ' --linux --x64';
 } else {
   console.error(`Unsupported platform: ${platform}`);
   process.exit(1);

@@ -232,7 +232,7 @@ dodo-recorder/
 ├── shared/               # Code shared between main and renderer
 │   └── types.ts          # Shared type definitions
 └── models/               # Whisper.cpp binaries and AI model
-    ├── unix/             # Unix binary (macOS/Linux)
+    ├── unix/             # Unix binary (macOS)
     │   └── whisper        # Whisper.cpp binary (committed to git)
     ├── win/              # Windows binaries
     │   └── whisper-cli.exe # Whisper.cpp binary (committed to git)
@@ -296,7 +296,6 @@ The app uses [`electron-log`](https://www.npmjs.com/package/electron-log) for pr
 ```
 macOS:    ~/Library/Logs/dodo-recorder/main.log
 Windows:  %USERPROFILE%\AppData\Roaming\dodo-recorder\logs\main.log
-Linux:    ~/.config/dodo-recorder/logs/main.log
 ```
 
 **Usage in Main Process:**
@@ -358,7 +357,7 @@ See [`docs/logs_and_debugging.md`](docs/logs_and_debugging.md) for comprehensive
 - **Whisper Model:** The 466MB `models/ggml-small.en.bin` file must be downloaded manually (not in git). The app shows an error dialog if missing.
 - **Whisper Binaries:** Platform-specific Whisper.cpp binaries are committed to git:
   - **Windows**: `models/win/whisper-cli.exe`
-  - **macOS/Linux**: `models/unix/whisper`
+  - **macOS**: `models/unix/whisper`
   - These are compiled from the [ggerganov/whisper.cpp](https://github.com/ggerganov/whisper.cpp) project
   - When updating Whisper binaries, ensure they are compiled for the target platforms and placed in the appropriate `models/` subdirectory
   - The app uses the `small.en` model (466MB) for a balance of accuracy, speed, and size

@@ -18,13 +18,11 @@
 
 ## 🖥️ Platform Support
 
-**Current Release:**
-- ✅ **macOS Apple Silicon (ARM64)** - tested
-- ✅ **macOS Intel (x64)** — not tested
-- ✅ **Windows** — not tested
-- ✅ **Linux** — not tested
+**Supported Platforms:**
+- ✅ **macOS Apple Silicon (ARM64)**
+- ✅ **Windows x64**
 
-**CI/CD Builds:** Cross-platform builds are available via GitHub Actions. See [`docs/ci_cd.md`](docs/ci_cd.md) for details.
+**CI/CD Builds:** Builds are available via GitHub Actions. See [`docs/ci_cd.md`](docs/ci_cd.md) for details.
 
 ## 🎯 Overview
 
@@ -88,8 +86,8 @@ session-YYYY-MM-DD-HHMMSS/
 
 | Shortcut | Action |
 |----------|--------|
-| **Cmd+Shift+S** (Mac)<br>**Ctrl+Shift+S** (Windows/Linux) | Take Screenshot |
-| **Cmd + Click** (Mac)<br>**Ctrl + Click** (Windows/Linux) | Record Assertion |
+| **Cmd+Shift+S** (Mac)<br>**Ctrl+Shift+S** (Windows) | Take Screenshot |
+| **Cmd + Click** (Mac)<br>**Ctrl + Click** (Windows) | Record Assertion |
 
 ### 🔐 Privacy & Local Processing
 
@@ -104,8 +102,7 @@ session-YYYY-MM-DD-HHMMSS/
 
 - **Node.js 18+** and npm
 - **Git**
-- **macOS Apple Silicon (M1–M4)** for production builds
-- **macOS, Windows, or Linux** for development (build from source)
+- **macOS Apple Silicon (M1–M4)** or **Windows x64** for development
 
 ### Installation Steps
 
@@ -128,7 +125,7 @@ npm install
 
 The Whisper model file (466 MB) is not in the repository. Download it once:
 
-**macOS/Linux:**
+**macOS:**
 ```bash
 curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 ```
@@ -140,7 +137,7 @@ curl.exe -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper
 
 > ℹ️ The whisper.cpp binary is already included in the repository:
 > - **Windows**: `models/win/whisper-cli.exe`
-> - **macOS/Linux**: `models/unix/whisper`
+> - **macOS**: `models/unix/whisper`
 
 #### 3. Verify Setup
 
@@ -178,7 +175,7 @@ Built apps are created in the `release/` folder for your current platform.
 ```
 dodo-recorder/
 ├── models/                          # Whisper components
-│   ├── unix/                       # Unix binary (macOS/Linux)
+│   ├── unix/                       # Unix binary (macOS)
 │   │   └── whisper                # Whisper.cpp binary (committed)
 │   ├── win/                        # Windows binaries
 │   │   └── whisper-cli.exe         # Whisper.cpp binary (committed)
@@ -211,7 +208,7 @@ Found a bug or have a feature request? Please open an issue on [GitHub Issues](h
 
 **Solution:**
 
-**macOS/Linux:**
+**macOS:**
 ```bash
 curl -L -o models/ggml-small.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.en.bin
 ```
@@ -234,27 +231,23 @@ git pull origin main
 
 The binary is located at:
 - **Windows**: `models/win/whisper-cli.exe`
-- **macOS/Linux**: `models/unix/whisper`
+- **macOS**: `models/unix/whisper`
 
 ### Debugging
 
 For debugging in development mode, the app provides comprehensive logging:
 
 - **Console logs**: Visible in terminal when running `npm run dev`
-- **DevTools**: Press `Cmd+Option+I` (Mac) or `Ctrl+Shift+I` (Windows/Linux) to open browser DevTools
+- **DevTools**: Press `Cmd+Option+I` (Mac) or `Ctrl+Shift+I` (Windows) to open browser DevTools
 - **Log files** (production builds): See [`docs/logs_and_debugging.md`](docs/logs_and_debugging.md)
 
 ### Platform-Specific Issues
 
-**macOS Apple Silicon (M1–M4):**
+**macOS Apple Silicon (ARM64):**
 - If you see permission errors, you may need to grant microphone access in System Preferences → Security & Privacy → Microphone
 - Production builds (`.dmg`) are signed and notarized for secure installation
 
-**macOS Intel (x64):**
-- Production builds not currently available
-- Build from source using `npm run build` for local testing
-
-**Windows/Linux:**
+**Windows x64:**
 - Production builds not currently available
 - Build from source for local testing
 - Ensure FFmpeg is installed and accessible in your PATH for audio processing
@@ -288,7 +281,7 @@ A: Run `./build/install-playwright-browsers.sh` to download the Playwright Chrom
 
 - **[User Guide](docs/user_guide.md)**: Complete feature documentation, keyboard shortcuts, and output format details
 - **[Architecture](docs/architecture.md)**: System design, data flow, and technical implementation
-- **[CI/CD Builds](docs/ci_cd.md)**: GitHub Actions workflow for cross-platform builds
+- **[CI/CD Builds](docs/ci_cd.md)**: GitHub Actions workflow for builds
 - **[Code Signing](docs/code_signing.md)**: macOS code signing setup and configuration
 - **[Voice Transcription](docs/voice_transcription.md)**: Deep dive into the local transcription system
 - **[Output Format](docs/output_format.md)**: Detailed explanation of session bundle structure

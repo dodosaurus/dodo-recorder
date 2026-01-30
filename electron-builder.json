@@ -37,14 +37,6 @@
     "sign": null,
     "signAndEditExecutable": false
   },
-  "linux": {
-    "target": [
-      "AppImage",
-      "deb"
-    ],
-    "icon": "build/icon.png",
-    "category": "Development"
-  },
   "extraResources": [
     {
       "from": "models",

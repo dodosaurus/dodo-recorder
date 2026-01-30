@@ -3,7 +3,7 @@
 # This allows us to bundle the browsers with the Electron app for cross-platform builds
 #
 # This script downloads browser packages directly from Playwright's CDN
-# for all platforms: macOS ARM64, macOS x64, Windows x64, Linux x64
+# for all platforms: macOS ARM64, Windows x64
 
 set -e
 
@@ -69,14 +69,8 @@ download_browser() {
 # macOS ARM64
 download_browser "macOS ARM64" "mac-arm64" "chrome-mac-arm64.zip" || true
 
-# macOS x64
-download_browser "macOS x64" "mac-x64" "chrome-mac-x64.zip" || true
-
 # Windows x64
 download_browser "Windows x64" "win64" "chrome-win64.zip" || true
-
-# Linux x64
-download_browser "Linux x64" "linux" "chrome-linux.zip" || true
 
 echo "=========================================="
 echo "✅ All Playwright browsers installed"

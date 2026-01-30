@@ -3,7 +3,6 @@
  * Automatically logs to files in standard OS locations:
  * - macOS: ~/Library/Logs/dodo-recorder/main.log
  * - Windows: %USERPROFILE%\AppData\Roaming\dodo-recorder\logs\main.log
- * - Linux: ~/.config/dodo-recorder/logs/main.log
  *
  * Features:
  * - Automatic file rotation

@@ -18,7 +18,7 @@ Steps to reproduce:
 What you expected to happen.
 
 ## Environment
-- OS: [e.g., macOS 14.0, Windows 11, Ubuntu 22.04]
+- OS: [e.g., macOS 14.0, Windows 11]
 - Node version: [e.g., 18.17.0]
 - App version: [e.g., 0.1.0]
 
