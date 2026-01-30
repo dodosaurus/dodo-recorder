@@ -415,18 +415,22 @@ npm run install:browsers
 
 **Problem:** Build fails during code signing
 
-**Solutions:**
+**Common errors and solutions:**
 
-1. **Verify all secrets are set correctly** (for CI/CD)
-2. **Check `.env` file exists and contains correct values** (for local builds)
-3. **Verify `APPLE_TEAM_ID` matches your certificate**
-4. **Ensure certificate includes "Developer ID Application"**
-5. **If using CSC_LINK, verify the .p12 file path is correct**
+**"cannot find valid 'Developer ID Application' identity":**
+- Certificate has UUID name instead of proper "Developer ID Application: Your Name (TEAM_ID)" format
+- Use `CSC_LINK=./certificate.p12` with `CSC_KEY_PASSWORD` to bypass Keychain auto-discovery
+- Or specify `CSC_NAME` with the SHA-1 hash from `security find-identity -v -p codesigning`
 
-**Error: "not a file" during build:**
-- This indicates `MACOS_CERTIFICATE` secret is not set or is invalid
-- Ensure you exported the certificate as .p12 and converted to base64
-- Check the secret value doesn't have extra whitespace or newlines
+**"not a file" during CI/CD build:**
+- `MACOS_CERTIFICATE` secret is not set or invalid
+- Ensure certificate is exported as .p12 and converted to base64 without extra whitespace
+
+**General solutions:**
+1. Verify all secrets are set correctly (for CI/CD)
+2. Check `.env` file exists and contains correct values (for local builds)
+3. Verify `APPLE_TEAM_ID` matches your certificate
+4. Ensure certificate includes "Developer ID Application"
 
 ### macOS Notarization Fails
 
@@ -434,21 +438,49 @@ npm run install:browsers
 
 **Problem:** Build succeeds but app is not notarized
 
-**Solutions:**
+**Common errors and solutions:**
 
-1. **Verify all Apple credentials are set:**
-   - `APPLE_ID`
-   - `APPLE_APP_SPECIFIC_PASSWORD`
-   - `APPLE_TEAM_ID`
+**"HTTP status code: 403. A required agreement is missing or has expired":**
+- Go to [Apple Developer portal](https://developer.apple.com/account)
+- Review and accept all required agreements (updated annually)
+- Wait a few minutes for changes to propagate
 
-2. **Generate a new app-specific password** at appleid.apple.com
+**"Unexpected token 'E', is not valid JSON":**
+- Invalid or expired `APPLE_APP_SPECIFIC_PASSWORD`
+- Generate new app-specific password at [appleid.apple.com](https://appleid.apple.com)
+- Verify credentials with: `xcrun notarytool history --apple-id "..." --password "..." --team-id "..."`
 
-3. **Check your Apple Developer account is in good standing**
+**General solutions:**
+1. Verify all Apple credentials are set: `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
+2. Check your Apple Developer account is in good standing
+3. The build will warn if credentials are missing
 
-4. **The build will warn you if notarization credentials are missing:**
-   ```
-   ⚠️  Warning: .env file not found. macOS builds will not be signed/notarized.
-   ```
+---
+
+### Verifying Signed & Notarized Builds
+
+After a production build, verify the app is properly signed and notarized:
+
+```bash
+# Check signature
+codesign -dv --verbose=4 release/mac-arm64/Dodo\ Recorder.app
+
+# Check notarization
+spctl -a -vv -t install release/mac-arm64/Dodo\ Recorder.app
+# Expected: "accepted" + "source=Notarized Developer ID"
+
+# Check stapled ticket
+stapler validate release/mac-arm64/Dodo\ Recorder.app
+# Expected: "The validate action worked!"
+```
+
+---
+
+### Security Notes
+
+- Never commit `.env`, `certificate.p12`, or credentials to version control
+- These files are already gitignored
+- Backup certificate and passwords securely
 
 ### Build Timeout
 
@@ -504,6 +536,6 @@ This file is read by the Electron app to display build information in the UI.
 
 ## Additional Resources
 
-- **[Code Signing](docs/code_signing.md)** - Detailed guide for setting up code signing
 - **[User Guide](docs/user_guide.md)** - Complete feature documentation
 - **[Architecture](docs/architecture.md)** - System design and technical implementation
+- **[Logs and Debugging](docs/logs_and_debugging.md)** - Debugging guide
