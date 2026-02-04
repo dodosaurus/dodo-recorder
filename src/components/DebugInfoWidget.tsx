@@ -72,6 +72,10 @@ export function DebugInfoWidget() {
               </div>
               <div className="space-y-1 text-[10px] text-muted-foreground">
                 <div className="flex justify-between">
+                  <span>Version:</span>
+                  <span className="font-mono text-foreground font-semibold">{buildInfo.version}</span>
+                </div>
+                <div className="flex justify-between">
                   <span>Commit:</span>
                   <span className="font-mono text-foreground">{commitHash}</span>
                 </div>

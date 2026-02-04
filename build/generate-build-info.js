@@ -61,6 +61,16 @@ const buildTime = new Date().toISOString();
 // Node version
 const nodeVersion = process.version;
 
+// Read version from package.json
+let version = 'unknown';
+try {
+  const packageJsonPath = path.join(__dirname, '..', 'package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  version = packageJson.version || 'unknown';
+} catch (e) {
+  console.warn('Could not read version from package.json:', e.message);
+}
+
 // Create output directory if it doesn't exist
 if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
@@ -68,6 +78,7 @@ if (!fs.existsSync(outputDir)) {
 
 // Create build info object
 const buildInfo = {
+  version,
   commitHash,
   commitFull,
   branch: branchName,

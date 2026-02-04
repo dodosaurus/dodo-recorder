@@ -10,6 +10,7 @@ export interface MicrophoneSettings {
 }
 
 export interface BuildInfo {
+  version: string
   commitHash: string
   commitFull: string
   branch: string
