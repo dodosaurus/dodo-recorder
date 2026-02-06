@@ -26,13 +26,19 @@
 
 ## Pause/Resume Recording
 
-Control recording pause from either the app UI or browser widget.
+Pause and resume recording is only available in the browser widget.
 
 ### App UI (Recording Panel)
 
-**Pause Button:** Shown when recording. Pauses actions and audio.
-**Resume Button:** Shown when paused. Resumes recording seamlessly.
-**Stop Button:** Always available during recording or pause. Ends the session.
+**Status Display:** Shows current recording state:
+- "Recording" (red pulsing) - Session is active
+- "Paused" (yellow) - Session is paused via browser widget
+- "Processing" (blue) - Transcribing audio
+- "Saving" (accent) - Saving session to disk
+
+When paused, app UI shows a message: "Recording paused. Use the browser widget to resume."
+
+**Stop Button:** Available during recording or pause. Ends the session.
 
 ### Browser Widget (Floating)
 
@@ -55,8 +61,6 @@ Control recording pause from either the app UI or browser widget.
 - Audio resumes seamlessly
 - Timer excludes paused duration
 - Timeline remains synchronized between actions and voice
-
-**Note:** Stop recording is only available in app UI, not browser widget.
 
 ---
 

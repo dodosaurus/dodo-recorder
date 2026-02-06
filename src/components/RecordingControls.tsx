@@ -2,7 +2,7 @@ import { useRecordingStore } from '@/stores/recordingStore'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogFooter } from '@/components/ui/dialog'
 import { useSettings } from '@/lib/useSettings'
-import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw, CheckCircle, Pause } from 'lucide-react'
+import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw, CheckCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import type { RecordedAction, SessionBundle } from '@/types/session'
@@ -559,26 +559,6 @@ export function RecordingControls() {
     return null
   }
 
-  const pauseRecording = async () => {
-    if (!window.electronAPI || status !== 'recording') return
-
-    try {
-      await window.electronAPI.pauseRecording()
-    } catch (error) {
-      console.error('Failed to pause recording:', error)
-    }
-  }
-
-  const resumeRecording = async () => {
-    if (!window.electronAPI || status !== 'paused') return
-
-    try {
-      await window.electronAPI.resumeRecording()
-    } catch (error) {
-      console.error('Failed to resume recording:', error)
-    }
-  }
-
   return (
     <>
       <Dialog
@@ -614,36 +594,19 @@ export function RecordingControls() {
 
       {(status === 'recording' || status === 'paused') && (
         <div className="space-y-2">
-          <div className="flex gap-2">
-            {status === 'recording' && (
-              <Button
-                className="flex-1"
-                size="lg"
-                variant="outline"
-                onClick={pauseRecording}
-              >
-                <Pause className="h-4 w-4 mr-2" /> Pause
-              </Button>
-            )}
-            {status === 'paused' && (
-              <Button
-                className="flex-1"
-                size="lg"
-                variant="outline"
-                onClick={resumeRecording}
-              >
-                <Play className="h-4 w-4 mr-2" /> Resume
-              </Button>
-            )}
-            <Button
-              className="flex-1"
-              size="lg"
-              variant="destructive"
-              onClick={stopRecording}
-            >
-              <Square className="h-4 w-4 mr-2" /> Stop
-            </Button>
-          </div>
+          {status === 'paused' && (
+            <p className="text-xs text-center text-muted-foreground">
+              Recording paused. Use the browser widget to resume.
+            </p>
+          )}
+          <Button
+            className="w-full"
+            size="lg"
+            variant="destructive"
+            onClick={stopRecording}
+          >
+            <Square className="h-4 w-4 mr-2" /> Stop Recording
+          </Button>
         </div>
       )}
 

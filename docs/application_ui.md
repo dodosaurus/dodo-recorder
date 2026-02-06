@@ -245,26 +245,7 @@ Enabled when: `startUrl && outputPath && status === 'idle'`
 6. Navigates to start URL
 7. Sets status to 'recording'
 
-**2. Pause Recording**
-
-Shown when: `status === 'recording'` (side-by-side with Stop button)
-
-**Process:**
-1. Calls IPC `pauseRecording()`
-2. Pauses MediaRecorder (audio)
-3. Sets status to 'paused'
-
-**3. Resume Recording**
-
-Shown when: `status === 'paused'` (side-by-side with Stop button)
-
-**Process:**
-1. Accumulates paused duration
-2. Calls IPC `resumeRecording()`
-3. Resumes MediaRecorder (audio)
-4. Sets status to 'recording'
-
-**3. Stop Recording**
+**2. Stop Recording**
 
 Shown when: `status === 'recording'` or `status === 'paused'`
 
@@ -276,13 +257,27 @@ Shown when: `status === 'recording'` or `status === 'paused'`
 5. Generates transcript text
 6. Sets status to 'idle'
 
-**4. Save Session** ([`RecordingControls.tsx:582`](../src/components/RecordingControls.tsx:582))
+**Note:** Pause and resume are only available in the browser widget, not the app UI. When paused, the app UI shows a message prompting users to use the browser widget to resume.
+
+**3. Save Session**
+
+Shown when: `status === 'recording'` or `status === 'paused'`
+
+**Process:**
+1. Stops browser recording, closes browser
+2. Stops audio recording (if enabled)
+3. Transcribes audio via Whisper
+4. Distributes voice segments to actions
+5. Generates transcript text
+6. Sets status to 'idle'
+
+**4. Save Session** ([`RecordingControls.tsx`](../src/components/RecordingControls.tsx)) ([`RecordingControls.tsx:582`](../src/components/RecordingControls.tsx:582))
 
 Shown when: `status === 'idle' && actions.length > 0`
 
 Writes session bundle to output folder (INSTRUCTIONS.md, actions.json, screenshots/). Shows success state, disables to prevent duplicate saves. Button uses `variant="success"` when not saved, `variant="outline"` when saved.
 
-**5. Reset** ([`RecordingControls.tsx:601`](../src/components/RecordingControls.tsx:601))
+**5. Reset** ([`RecordingControls.tsx`](../src/components/RecordingControls.tsx))
 
 Shown when: `status === 'idle' && actions.length > 0`
 
