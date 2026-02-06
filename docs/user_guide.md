@@ -24,20 +24,39 @@
 
 ---
 
-## Recording Widget
+## Pause/Resume Recording
 
-Floating widget in browser (top-right by default, draggable):
+Control recording pause from either the app UI or browser widget.
 
-**Pause/Resume button:** Pause or resume recording (pause icon ⏸ or play icon ▶)
-**Screenshot button:** Capture screenshot (camera icon, disabled while paused)
-**Assertion button:** Toggle assertion mode (eye icon, turns blue when active, disabled while paused)
-**Voice indicator:** Red pulsing dot when voice recording active (hidden while paused)
+### App UI (Recording Panel)
 
-**While paused:**
-- All action recording is stopped (clicks, inputs, navigation, etc.)
-- Screenshot and assertion buttons are disabled
-- Elapsed time freezes
-- Audio recording is paused
+**Pause Button:** Shown when recording. Pauses actions and audio.
+**Resume Button:** Shown when paused. Resumes recording seamlessly.
+**Stop Button:** Always available during recording or pause. Ends the session.
+
+### Browser Widget (Floating)
+
+**Pause/Resume Button:** Toggle between pause (⏸) and resume (▶) icons.
+**Screenshot Button:** Camera icon, disabled while paused.
+**Assertion Button:** Eye icon, blue when active, disabled while paused.
+**Voice Indicator:** Red pulsing dot (hidden while paused).
+
+### Behavior
+
+**When paused:**
+- All action recording stops (clicks, inputs, navigation, screenshots, assertions)
+- Audio recording pauses (no audio chunks recorded during pause)
+- Screenshot and assertion buttons disabled
+- Elapsed timer freezes
+- Voice indicator hides
+
+**When resumed:**
+- Recording continues from pause moment
+- Audio resumes seamlessly
+- Timer excludes paused duration
+- Timeline remains synchronized between actions and voice
+
+**Note:** Stop recording is only available in app UI, not browser widget.
 
 ---
 

@@ -66,6 +66,20 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
           }
         })
 
+        browserRecorder.on('paused', () => {
+          if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+            mainWindow.webContents.send('recording-state-changed', { status: 'paused' })
+            logger.debug('Forwarded paused event to renderer')
+          }
+        })
+
+        browserRecorder.on('resumed', () => {
+          if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+            mainWindow.webContents.send('recording-state-changed', { status: 'recording' })
+            logger.debug('Forwarded resumed event to renderer')
+          }
+        })
+
         await browserRecorder.start(startUrl, screenshotDir)
         await transcriber.initialize()
 
@@ -89,6 +103,12 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
 
     return handleIpc(async () => {
       const actions = browserRecorder?.getActions() || []
+      
+      // Remove event listeners to prevent memory leaks
+      if (browserRecorder) {
+        browserRecorder.removeAllListeners()
+      }
+      
       await browserRecorder?.stop()
       browserRecorder = null
       isRecording = false
@@ -103,10 +123,6 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
 
     return handleIpc(async () => {
       await browserRecorder!.pause()
-      // Notify renderer of state change
-      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-        mainWindow.webContents.send('recording-state-changed', { status: 'paused' })
-      }
       return {}
     }, 'Failed to pause recording')
   })
@@ -118,10 +134,6 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
 
     return handleIpc(async () => {
       await browserRecorder!.resume()
-      // Notify renderer of state change
-      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
-        mainWindow.webContents.send('recording-state-changed', { status: 'recording' })
-      }
       return {}
     }, 'Failed to resume recording')
   })

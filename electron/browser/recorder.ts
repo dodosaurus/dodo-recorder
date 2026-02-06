@@ -422,6 +422,8 @@ export class BrowserRecorder extends EventEmitter {
     } catch (error) {
       logger.error('Failed to update pause state in browser:', error)
     }
+
+    this.emit('paused')
   }
 
   /**
@@ -495,6 +497,8 @@ export class BrowserRecorder extends EventEmitter {
     } catch (error) {
       logger.error('Failed to update resume state in browser:', error)
     }
+
+    this.emit('resumed')
   }
 
   /**
