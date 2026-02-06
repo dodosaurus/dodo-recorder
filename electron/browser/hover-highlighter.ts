@@ -370,14 +370,31 @@ export function getHighlighterScript(): () => void {
 export function getHighlighterInitScript(): () => void {
   return () => {
     const DEBUG = false // Match debug flag from main script
+    const HIGHLIGHTER_HOST_ID = '__dodo-highlight-overlay-host'
+    let observer: MutationObserver | null = null
+    
+    const createHighlighter = () => {
+      // Only create if highlighter doesn't already exist
+      if (document.getElementById(HIGHLIGHTER_HOST_ID)) {
+        if (DEBUG) console.log('[Dodo Highlighter Init] Highlighter already exists, skipping')
+        return
+      }
+      
+      if (typeof (window as any).__dodoCreateHighlighter === 'function') {
+        if (DEBUG) console.log('[Dodo Highlighter Init] Creating highlighter...')
+        ;(window as any).__dodoCreateHighlighter()
+      } else {
+        console.warn('[Dodo Highlighter Init] __dodoCreateHighlighter not available')
+      }
+    }
     
     const initHighlighter = () => {
       try {
         // Wait for document.body to be available before creating highlighter
         const checkBodyAndCreate = () => {
-          if (document.body && typeof (window as any).__dodoCreateHighlighter === 'function') {
-            if (DEBUG) console.log('[Dodo Highlighter] Initializing highlighter...')
-            ;(window as any).__dodoCreateHighlighter()
+          if (document.body) {
+            createHighlighter()
+            setupHighlighterMonitor()
           } else {
             // If body doesn't exist yet, wait a bit and try again
             setTimeout(checkBodyAndCreate, 50)
@@ -389,6 +406,54 @@ export function getHighlighterInitScript(): () => void {
       } catch (error) {
         console.error('[Dodo Highlighter] Failed to initialize:', error)
       }
+    }
+    
+    /**
+     * Monitor for highlighter removal and recreate it
+     * This handles aggressive DOM manipulation by SPAs, cookie banners, modals, etc.
+     */
+    const setupHighlighterMonitor = () => {
+      if (observer) {
+        // Observer already running
+        return
+      }
+      
+      if (DEBUG) console.log('[Dodo Highlighter] Setting up highlighter monitor...')
+      
+      // Use MutationObserver to watch for highlighter removal
+      observer = new MutationObserver((mutations) => {
+        // Check if highlighter still exists in DOM
+        const highlighterExists = document.getElementById(HIGHLIGHTER_HOST_ID)
+        
+        if (!highlighterExists && document.body) {
+          if (DEBUG) console.log('[Dodo Highlighter] Highlighter removed from DOM, recreating...')
+          createHighlighter()
+        }
+      })
+      
+      // Observe body for child list changes (when elements are added/removed)
+      // Also observe documentElement in case body itself is replaced
+      if (document.body) {
+        observer.observe(document.body, {
+          childList: true,
+          subtree: false, // Only watch direct children of body
+        })
+      }
+      
+      // Watch document.documentElement for body replacement
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: false,
+      })
+      
+      // Periodic check as backup (every 2 seconds)
+      setInterval(() => {
+        const highlighterExists = document.getElementById(HIGHLIGHTER_HOST_ID)
+        if (!highlighterExists && document.body) {
+          if (DEBUG) console.log('[Dodo Highlighter] Highlighter missing (periodic check), recreating...')
+          createHighlighter()
+        }
+      }, 2000)
     }
     
     if (document.readyState === 'loading') {

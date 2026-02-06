@@ -2,25 +2,26 @@ import { useRecordingStore } from '@/stores/recordingStore'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogFooter } from '@/components/ui/dialog'
 import { useSettings } from '@/lib/useSettings'
-import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Play, Square, Save, Loader2, Mic, MicOff, RotateCcw, CheckCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import type { RecordedAction, SessionBundle, TranscriptSegment } from '@/types/session'
+import type { RecordedAction, SessionBundle } from '@/types/session'
 import { buildNarrativeWithSentenceLevelDistribution } from '../../shared/narrativeBuilder'
 
 export function RecordingControls() {
   const {
-    status, startUrl, outputPath, actions, transcriptSegments, notes, isVoiceEnabled,
+    status, startUrl, outputPath, actions, transcriptSegments, isVoiceEnabled,
     audioStatus, audioChunksCount, audioError, startTime, sessionSaved, selectedMicrophoneId,
+    pausedAt, pausedDurationMs,
     setStatus, setStartTime, addAction, setTranscriptSegments, setTranscriptText, reset,
-    setAudioStatus, incrementAudioChunks, setAudioError, setSessionSaved, setSelectedMicrophoneId
+    setAudioStatus, incrementAudioChunks, setAudioError, setSessionSaved, setSelectedMicrophoneId,
+    setPausedAt, setPausedDuration
   } = useRecordingStore(useShallow((state) => ({
     status: state.status,
     startUrl: state.startUrl,
     outputPath: state.outputPath,
     actions: state.actions,
     transcriptSegments: state.transcriptSegments,
-    notes: state.notes,
     isVoiceEnabled: state.isVoiceEnabled,
     audioStatus: state.audioStatus,
     audioChunksCount: state.audioChunksCount,
@@ -28,6 +29,8 @@ export function RecordingControls() {
     startTime: state.startTime,
     sessionSaved: state.sessionSaved,
     selectedMicrophoneId: state.selectedMicrophoneId,
+    pausedAt: state.pausedAt,
+    pausedDurationMs: state.pausedDurationMs,
     setStatus: state.setStatus,
     setStartTime: state.setStartTime,
     addAction: state.addAction,
@@ -39,6 +42,8 @@ export function RecordingControls() {
     setAudioError: state.setAudioError,
     setSessionSaved: state.setSessionSaved,
     setSelectedMicrophoneId: state.setSelectedMicrophoneId,
+    setPausedAt: state.setPausedAt,
+    setPausedDuration: state.setPausedDuration,
   })))
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -58,6 +63,41 @@ export function RecordingControls() {
     })
     return unsubscribe
   }, [addAction])
+
+  // Listen for pause/resume state changes from browser widget
+  useEffect(() => {
+    if (!window.electronAPI) return
+    const unsubscribe = window.electronAPI.onRecordingStateChanged((data) => {
+      console.log('🔔 Recording state changed from widget:', data.status)
+      setStatus(data.status)
+      
+      if (data.status === 'paused') {
+        setPausedAt(Date.now())
+        // Pause audio recording
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.pause()
+          console.log('🎤 Audio recording paused')
+        }
+        setAudioActive(false)
+      } else if (data.status === 'recording') {
+        // Accumulate paused duration
+        if (pausedAt) {
+          const newDuration = pausedDurationMs + (Date.now() - pausedAt)
+          setPausedDuration(newDuration)
+          setPausedAt(null)
+        }
+        // Resume audio recording
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
+          mediaRecorderRef.current.resume()
+          console.log('🎤 Audio recording resumed')
+        }
+        if (isVoiceEnabled) {
+          setAudioActive(true)
+        }
+      }
+    })
+    return unsubscribe
+  }, [setStatus, setPausedAt, setPausedDuration, pausedAt, pausedDurationMs, isVoiceEnabled])
 
   const cleanupAudioMonitoring = () => {
     if (audioContextRef.current) {
@@ -82,7 +122,7 @@ export function RecordingControls() {
   }
 
   const canStart = startUrl && outputPath && status === 'idle'
-  const canStop = status === 'recording'
+  const canStop = status === 'recording' || status === 'paused'
   const canSave = status === 'idle' && actions.length > 0
 
   const startRecording = async () => {
@@ -277,6 +317,7 @@ export function RecordingControls() {
       }
     }
   }
+
 
   const stopRecording = async () => {
     if (!canStop || !window.electronAPI) return
@@ -551,7 +592,7 @@ export function RecordingControls() {
         </Button>
       )}
 
-      {status === 'recording' && (
+      {(status === 'recording' || status === 'paused') && (
         <Button
           className="w-full"
           size="lg"

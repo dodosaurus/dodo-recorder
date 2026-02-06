@@ -3,10 +3,11 @@
 ## Features
 
 - **Browser Recording:** Chromium browser automation via Playwright
+- **Pause/Resume:** Pause and resume recording from app or browser widget
 - **Rich Locator Extraction:** testId, role, text, CSS, XPath with confidence levels
 - **Voice Transcription:** Local Whisper.cpp with optimized early speech detection
 - **Screenshot Capture:** Cmd+Shift+S (Mac) / Ctrl+Shift+S (Windows) or widget button
-- **Recording Widget:** Floating browser widget for screenshots and assertion mode
+- **Recording Widget:** Floating browser widget with pause/resume, screenshots, and assertion mode
 - **Assertion Mode:** Cmd+Click (Mac) / Ctrl+Click (Windows) or widget button
 - **Enhanced Transcripts:** AI-friendly narrative with embedded action references
 - **Smart Voice Distribution:** 4s lookback, 2s lookahead temporal association
@@ -27,9 +28,16 @@
 
 Floating widget in browser (top-right by default, draggable):
 
-**Screenshot button:** Capture screenshot (camera icon)  
-**Assertion button:** Toggle assertion mode (eye icon, turns blue when active)  
-**Voice indicator:** Red pulsing dot when voice recording active
+**Pause/Resume button:** Pause or resume recording (pause icon ⏸ or play icon ▶)
+**Screenshot button:** Capture screenshot (camera icon, disabled while paused)
+**Assertion button:** Toggle assertion mode (eye icon, turns blue when active, disabled while paused)
+**Voice indicator:** Red pulsing dot when voice recording active (hidden while paused)
+
+**While paused:**
+- All action recording is stopped (clicks, inputs, navigation, etc.)
+- Screenshot and assertion buttons are disabled
+- Elapsed time freezes
+- Audio recording is paused
 
 ---
 

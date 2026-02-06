@@ -1,3 +1,8 @@
+- we need to think about more how widget should looks like when paused
+- we stil lrecording the voice when it is paused we need to solve this
+- no transcript is produced when we have no action recorded, it should be
+
+
 
 - [ ] When voice recording is on, we need to somehow listen during the recording if there is any sound recorded or if it gets through some threshold. If not, first warn the user that no sound or little sound is coming from the microphone. When the recording is over and the sound was really poor and it doesn't get through some threshold, we shouldn't give this to the Wispr model and we should create just a transcript of the browser actions. 
 

@@ -26,6 +26,9 @@ export function getWidgetScript(): () => void {
       __dodoAssertionMode: () => boolean
       __dodoDisableAssertionMode: () => void
       __dodoAudioActive: boolean
+      __dodoRecordingPaused?: boolean
+      __dodoPauseRecording?: () => Promise<void>
+      __dodoResumeRecording?: () => Promise<void>
       __dodoCreateHighlighter?: () => void
     }
 
@@ -35,10 +38,13 @@ export function getWidgetScript(): () => void {
       return
     }
 
-    // Initialize audio state globals if not already set
+    // Initialize state globals if not already set
     const win = window as unknown as DodoWindow
     if (typeof win.__dodoAudioActive === 'undefined') {
       win.__dodoAudioActive = false
+    }
+    if (typeof win.__dodoRecordingPaused === 'undefined') {
+      win.__dodoRecordingPaused = false
     }
     
     // Detect OS for tooltip text
@@ -84,9 +90,15 @@ export function getWidgetScript(): () => void {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
           user-select: none;
           cursor: move;
-          transition: opacity 0.2s ease;
+          transition: opacity 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
           display: flex;
           gap: 8px;
+        }
+
+        .dodo-widget.paused {
+          background: rgba(100, 116, 139, 0.15);
+          border: 2px solid rgba(148, 163, 184, 0.6);
+          box-shadow: 0 4px 16px rgba(100, 116, 139, 0.2);
         }
 
         .dodo-widget.dragging {
@@ -112,6 +124,11 @@ export function getWidgetScript(): () => void {
           justify-content: center;
           min-width: 40px;
           height: 40px;
+        }
+
+        .widget-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
 
         .widget-btn svg {
@@ -203,12 +220,16 @@ export function getWidgetScript(): () => void {
 
         /* Voice recording indicator */
         .voice-indicator {
-          display: block;
+          display: none;
           width: 10px;
           height: 10px;
           background: #ef4444;
           border-radius: 50%;
           animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .voice-indicator.active {
+          display: block;
         }
 
         @keyframes pulse {
@@ -227,6 +248,21 @@ export function getWidgetScript(): () => void {
     const widget = document.createElement('div')
     widget.className = 'dodo-widget'
     widget.id = 'widget'
+
+    // Pause/Resume button
+    const pauseResumeBtn = document.createElement('button')
+    pauseResumeBtn.className = 'widget-btn'
+    pauseResumeBtn.id = 'pause-resume-btn'
+    pauseResumeBtn.title = 'Pause Recording'
+    pauseResumeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="4" width="4" height="16" fill="rgba(100, 116, 139, 0.8)" stroke="rgba(148, 163, 184, 0.9)"></rect>
+      <rect x="14" y="4" width="4" height="16" fill="rgba(100, 116, 139, 0.8)" stroke="rgba(148, 163, 184, 0.9)"></rect>
+    </svg>`
+
+    const pauseResumeTooltip = document.createElement('span')
+    pauseResumeTooltip.className = 'tooltip'
+    pauseResumeTooltip.textContent = 'Pause Recording'
+    pauseResumeBtn.appendChild(pauseResumeTooltip)
 
     // Screenshot button
     const screenshotBtn = document.createElement('button')
@@ -266,7 +302,34 @@ export function getWidgetScript(): () => void {
     const voiceIndicator = document.createElement('div')
     voiceIndicator.className = 'voice-indicator'
     voiceIndicator.id = 'voice-indicator'
+    
+    // Check initial audio state and show indicator if active
+    if (win.__dodoAudioActive) {
+      voiceIndicator.classList.add('active')
+    }
+    
+    // Poll for audio state changes during the first second after widget creation
+    // This handles race conditions where audio activity is set before widget is ready
+    let pollCount = 0
+    const pollInterval = setInterval(() => {
+      pollCount++
+      
+      // Check if audio is now active and indicator is not showing
+      if (win.__dodoAudioActive && !voiceIndicator.classList.contains('active')) {
+        const isPaused = win.__dodoRecordingPaused === true
+        if (!isPaused) {
+          voiceIndicator.classList.add('active')
+          console.log('[Dodo Widget] Audio indicator activated via polling')
+        }
+      }
+      
+      // Stop polling after 10 checks (1 second total)
+      if (pollCount >= 10) {
+        clearInterval(pollInterval)
+      }
+    }, 100)
 
+    widget.appendChild(pauseResumeBtn)
     widget.appendChild(screenshotBtn)
     widget.appendChild(assertionBtn)
     widget.appendChild(voiceIndicator)
@@ -350,6 +413,57 @@ export function getWidgetScript(): () => void {
       }, 300)
     }
     
+    // Pause/Resume button click handler
+    pauseResumeBtn.addEventListener('click', async (e) => {
+      e.stopPropagation()
+
+      const win = window as unknown as DodoWindow
+      const isPaused = win.__dodoRecordingPaused === true
+
+      try {
+        if (isPaused) {
+          // Resume
+          if (typeof win.__dodoResumeRecording === 'function') {
+            await win.__dodoResumeRecording()
+            console.log('[Dodo Widget] Recording resumed')
+            pauseResumeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="6" y="4" width="4" height="16" fill="rgba(100, 116, 139, 0.8)" stroke="rgba(148, 163, 184, 0.9)"></rect>
+              <rect x="14" y="4" width="4" height="16" fill="rgba(100, 116, 139, 0.8)" stroke="rgba(148, 163, 184, 0.9)"></rect>
+            </svg>`
+            pauseResumeTooltip.textContent = 'Pause Recording'
+            // Re-enable other buttons
+            screenshotBtn.disabled = false
+            assertionBtn.disabled = false
+            // Remove paused visual state
+            widget.classList.remove('paused')
+            // Show voice indicator if audio is active
+            if (win.__dodoAudioActive) {
+              voiceIndicator.classList.add('active')
+            }
+          }
+        } else {
+          // Pause
+          if (typeof win.__dodoPauseRecording === 'function') {
+            await win.__dodoPauseRecording()
+            console.log('[Dodo Widget] Recording paused')
+            pauseResumeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3" fill="rgba(100, 116, 139, 0.8)" stroke="rgba(148, 163, 184, 0.9)"></polygon>
+            </svg>`
+            pauseResumeTooltip.textContent = 'Resume Recording'
+            // Disable other buttons while paused
+            screenshotBtn.disabled = true
+            assertionBtn.disabled = true
+            // Add paused visual state
+            widget.classList.add('paused')
+            // Hide voice indicator when paused
+            voiceIndicator.classList.remove('active')
+          }
+        }
+      } catch (error) {
+        console.error('[Dodo Widget] Pause/Resume failed:', error)
+      }
+    })
+
     // Screenshot button click handler
     screenshotBtn.addEventListener('click', async (e) => {
       e.stopPropagation()
@@ -437,12 +551,31 @@ export function getWidgetScript(): () => void {
  */
 export function getWidgetInitScript(): () => void {
   return () => {
+    const WIDGET_HOST_ID = '__dodo-recorder-widget-host'
+    let observer: MutationObserver | null = null
+    
+    const createWidget = () => {
+      // Only create if widget doesn't already exist
+      if (document.getElementById(WIDGET_HOST_ID)) {
+        console.log('[Dodo Recorder Init] Widget already exists, skipping')
+        return
+      }
+      
+      if (typeof (window as any).__dodoCreateWidget === 'function') {
+        console.log('[Dodo Recorder Init] Creating widget...')
+        ;(window as any).__dodoCreateWidget()
+      } else {
+        console.warn('[Dodo Recorder Init] __dodoCreateWidget not available')
+      }
+    }
+    
     const initWidget = () => {
       try {
         // Wait for document.body to be available before creating widget
         const checkBodyAndCreate = () => {
-          if (document.body && typeof (window as any).__dodoCreateWidget === 'function') {
-            (window as any).__dodoCreateWidget()
+          if (document.body) {
+            createWidget()
+            setupWidgetMonitor()
           } else {
             // If body doesn't exist yet, wait a bit and try again
             setTimeout(checkBodyAndCreate, 50)
@@ -454,6 +587,54 @@ export function getWidgetInitScript(): () => void {
       } catch (error) {
         console.error('[Dodo Recorder] Failed to create widget:', error)
       }
+    }
+    
+    /**
+     * Monitor for widget removal and recreate it
+     * This handles aggressive DOM manipulation by SPAs, cookie banners, modals, etc.
+     */
+    const setupWidgetMonitor = () => {
+      if (observer) {
+        // Observer already running
+        return
+      }
+      
+      console.log('[Dodo Recorder] Setting up widget monitor...')
+      
+      // Use MutationObserver to watch for widget removal
+      observer = new MutationObserver((mutations) => {
+        // Check if widget still exists in DOM
+        const widgetExists = document.getElementById(WIDGET_HOST_ID)
+        
+        if (!widgetExists && document.body) {
+          console.log('[Dodo Recorder] Widget removed from DOM, recreating...')
+          createWidget()
+        }
+      })
+      
+      // Observe body for child list changes (when elements are added/removed)
+      // Also observe documentElement in case body itself is replaced
+      if (document.body) {
+        observer.observe(document.body, {
+          childList: true,
+          subtree: false, // Only watch direct children of body
+        })
+      }
+      
+      // Watch document.documentElement for body replacement
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: false,
+      })
+      
+      // Periodic check as backup (every 2 seconds)
+      setInterval(() => {
+        const widgetExists = document.getElementById(WIDGET_HOST_ID)
+        if (!widgetExists && document.body) {
+          console.log('[Dodo Recorder] Widget missing (periodic check), recreating...')
+          createWidget()
+        }
+      }, 2000)
     }
     
     if (document.readyState === 'loading') {

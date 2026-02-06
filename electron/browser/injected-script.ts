@@ -251,9 +251,16 @@ export function getInjectionScript(): () => void {
       __dodoAssertionMode?: () => boolean
       __dodoDisableAssertionMode?: () => void
       __dodoCreateHighlighter?: () => void
+      __dodoRecordingPaused?: boolean
     }
     const recordAction = (window as unknown as DodoWindow).__dodoRecordAction
     const takeScreenshot = (window as unknown as DodoWindow).__dodoTakeScreenshot
+    
+    // Helper to check if recording is paused
+    const isRecordingPaused = (): boolean => {
+      const win = window as unknown as DodoWindow
+      return win.__dodoRecordingPaused === true
+    }
 
     // ===== Helper: Check if event is within widget =====
     const isWithinWidget = (target: Element): boolean => {
@@ -266,6 +273,8 @@ export function getInjectionScript(): () => void {
     const inputDebounceMap = new WeakMap<Element, ReturnType<typeof setTimeout>>()
 
     document.addEventListener('click', (e) => {
+      if (isRecordingPaused()) return
+      
       const target = e.target as Element
       if (!target || isWithinWidget(target)) return
 
@@ -291,6 +300,8 @@ export function getInjectionScript(): () => void {
     }, true)
 
     document.addEventListener('input', (e) => {
+      if (isRecordingPaused()) return
+      
       const target = e.target as HTMLInputElement | HTMLTextAreaElement
       if (!target || isWithinWidget(target)) return
 
@@ -300,6 +311,8 @@ export function getInjectionScript(): () => void {
       }
 
       const timerId = setTimeout(() => {
+        if (isRecordingPaused()) return
+        
         recordAction(JSON.stringify({
           type: 'fill',
           target: getElementInfo(target),
@@ -318,16 +331,21 @@ export function getInjectionScript(): () => void {
       const existingTimer = inputDebounceMap.get(target)
       if (existingTimer) {
         clearTimeout(existingTimer)
-        recordAction(JSON.stringify({
-          type: 'fill',
-          target: getElementInfo(target),
-          value: target.value,
-        }))
+        
+        if (!isRecordingPaused()) {
+          recordAction(JSON.stringify({
+            type: 'fill',
+            target: getElementInfo(target),
+            value: target.value,
+          }))
+        }
         inputDebounceMap.delete(target)
       }
     }, true)
 
     document.addEventListener('change', (e) => {
+      if (isRecordingPaused()) return
+      
       const target = e.target as HTMLSelectElement
       if (target.tagName === 'SELECT' && !isWithinWidget(target)) {
         recordAction(JSON.stringify({
@@ -339,6 +357,8 @@ export function getInjectionScript(): () => void {
     }, true)
 
     document.addEventListener('keydown', (e) => {
+      if (isRecordingPaused()) return
+      
       if (['Enter', 'Tab', 'Escape'].includes(e.key)) {
         const target = e.target as Element
         if (!target || isWithinWidget(target)) return
@@ -357,6 +377,14 @@ export function getInjectionScript(): () => void {
       }
 
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+        // Block screenshot shortcut while paused
+        if (isRecordingPaused()) {
+          e.preventDefault()
+          e.stopPropagation()
+          console.log('[Dodo Recorder] Screenshot blocked - recording is paused')
+          return
+        }
+        
         const target = e.target as Element
         if (target && isWithinWidget(target)) return
 

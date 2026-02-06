@@ -9,6 +9,8 @@ interface RecordingState {
   transcriptSegments: TranscriptSegment[]
   transcriptText: string
   startTime: number | null
+  pausedAt: number | null
+  pausedDurationMs: number
   startUrl: string
   outputPath: string
   notes: string
@@ -24,6 +26,8 @@ interface RecordingState {
   highlightedActionId: string | null
   
   setStatus: (status: RecordingStatus) => void
+  setPausedAt: (time: number | null) => void
+  setPausedDuration: (duration: number) => void
   addAction: (action: RecordedAction) => void
   removeAction: (id: string) => void
   addTranscriptSegment: (segment: TranscriptSegment) => void
@@ -50,6 +54,8 @@ const initialState = {
   transcriptSegments: [] as TranscriptSegment[],
   transcriptText: '',
   startTime: null as number | null,
+  pausedAt: null as number | null,
+  pausedDurationMs: 0,
   startUrl: '',
   outputPath: '',
   notes: '',
@@ -67,6 +73,10 @@ export const useRecordingStore = create<RecordingState>((set) => ({
   ...initialState,
   
   setStatus: (status) => set({ status }),
+  
+  setPausedAt: (time) => set({ pausedAt: time }),
+  
+  setPausedDuration: (duration) => set({ pausedDurationMs: duration }),
   
   addAction: (action) => set((state) => ({
     actions: [...state.actions, action]

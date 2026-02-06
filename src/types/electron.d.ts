@@ -23,11 +23,14 @@ export interface ElectronAPI {
   selectOutputFolder: () => Promise<string | null>
   startRecording: (startUrl: string, outputPath: string, startTime: number) => Promise<IpcResult>
   stopRecording: () => Promise<IpcResult<{ actions: RecordedAction[] }>>
+  pauseRecording: () => Promise<IpcResult>
+  resumeRecording: () => Promise<IpcResult>
   updateAudioActivity: (active: boolean) => Promise<void>
   saveSession: (sessionData: SessionBundle) => Promise<IpcResult<{ path: string }>>
   transcribeAudio: (audioBuffer: ArrayBuffer) => Promise<IpcResult<{ segments: TranscriptSegment[] }>>
   checkMicrophonePermission: () => Promise<{ granted: boolean; denied?: boolean }>
   onActionRecorded: (callback: (action: RecordedAction) => void) => () => void
+  onRecordingStateChanged: (callback: (data: { status: 'recording' | 'paused' }) => void) => () => void
   distributeVoiceSegments: (actions: RecordedAction[], segments: TranscriptSegment[], startTime: number) => Promise<IpcResult<{ actions: RecordedAction[] }>>
   generateFullTranscript: (segments: TranscriptSegment[]) => Promise<IpcResult<{ transcript: string }>>
   generateTranscriptWithReferences: (actions: RecordedAction[], sessionId: string, startTime: number, startUrl?: string) => Promise<IpcResult<{ transcript: string }>>

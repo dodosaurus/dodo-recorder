@@ -96,6 +96,36 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
     }, 'Failed to stop recording')
   })
 
+  ipcMain.handle('pause-recording', async () => {
+    if (!isRecording || !browserRecorder) {
+      return ipcError('No recording in progress')
+    }
+
+    return handleIpc(async () => {
+      await browserRecorder!.pause()
+      // Notify renderer of state change
+      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send('recording-state-changed', { status: 'paused' })
+      }
+      return {}
+    }, 'Failed to pause recording')
+  })
+
+  ipcMain.handle('resume-recording', async () => {
+    if (!isRecording || !browserRecorder) {
+      return ipcError('No recording in progress')
+    }
+
+    return handleIpc(async () => {
+      await browserRecorder!.resume()
+      // Notify renderer of state change
+      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.send('recording-state-changed', { status: 'recording' })
+      }
+      return {}
+    }, 'Failed to resume recording')
+  })
+
   ipcMain.handle('update-audio-activity', async (_event, active: boolean) => {
     if (browserRecorder) {
       await browserRecorder.updateAudioActivity(active)

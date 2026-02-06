@@ -95,6 +95,11 @@ export class BrowserRecorder extends EventEmitter {
   private initialNavigationComplete: boolean = false
   private audioActive: boolean = false
   private lastRecordedUrl: string | null = null
+  
+  // Pause/resume state
+  private isPaused: boolean = false
+  private pauseStartedAt: number | null = null
+  private pausedDurationMs: number = 0
 
   /**
    * Checks if Playwright Chromium browser is installed
@@ -207,6 +212,23 @@ export class BrowserRecorder extends EventEmitter {
       }
     })
 
+    // Expose pause/resume functions to browser context
+    await this.page.exposeFunction('__dodoPauseRecording', async () => {
+      try {
+        await this.pause()
+      } catch (e) {
+        logger.error('Failed to pause recording:', e)
+      }
+    })
+
+    await this.page.exposeFunction('__dodoResumeRecording', async () => {
+      try {
+        await this.resume()
+      } catch (e) {
+        logger.error('Failed to resume recording:', e)
+      }
+    })
+
     // Inject the recording script into the page
     await this.page.addInitScript(getInjectionScript())
     
@@ -255,13 +277,14 @@ export class BrowserRecorder extends EventEmitter {
    */
   private async captureScreenshot(): Promise<string | null> {
     if (!this.page || !this.screenshotDir) return null
+    if (this.isPaused) return null // Don't capture screenshots while paused
 
     try {
-      const timestamp = Date.now() - this.startTime
-      const filename = `screenshot-${timestamp}.png`
+      const effectiveElapsedMs = Date.now() - this.startTime - this.pausedDurationMs
+      const filename = `screenshot-${effectiveElapsedMs}.png`
       const filepath = path.join(this.screenshotDir, filename)
       
-      await this.page.screenshot({ 
+      await this.page.screenshot({
         path: filepath,
         fullPage: false,
       })
@@ -275,9 +298,16 @@ export class BrowserRecorder extends EventEmitter {
   }
 
   private recordAction(partial: Omit<RecordedAction, 'id' | 'timestamp'>): void {
+    // Don't record actions while paused
+    if (this.isPaused) {
+      logger.debug('Action ignored (paused):', partial.type)
+      return
+    }
+
+    const effectiveElapsedMs = Date.now() - this.startTime - this.pausedDurationMs
     const action: RecordedAction = {
       id: randomUUID(),
-      timestamp: Date.now() - this.startTime,
+      timestamp: effectiveElapsedMs,
       ...partial,
     }
     
@@ -307,6 +337,19 @@ export class BrowserRecorder extends EventEmitter {
         const win = window as any
         win.__dodoAudioActive = isActive
 
+        // Update voice indicator visibility (only show if active AND not paused)
+        const voiceIndicator = document.querySelector('#__dodo-recorder-widget-host')
+          ?.shadowRoot?.querySelector('#voice-indicator')
+        
+        if (voiceIndicator) {
+          const isPaused = win.__dodoRecordingPaused === true
+          if (isActive && !isPaused) {
+            voiceIndicator.classList.add('active')
+          } else {
+            voiceIndicator.classList.remove('active')
+          }
+        }
+
         if (isActive && typeof win.__dodoShowEqualizer === 'function') {
           win.__dodoShowEqualizer()
         }
@@ -317,6 +360,140 @@ export class BrowserRecorder extends EventEmitter {
       }, active)
     } catch (error) {
       // Silently ignore failures (page may be navigating)
+    }
+  }
+
+  /**
+   * Pauses the recording session
+   * Actions and screenshots are not recorded while paused
+   * Paused time is excluded from elapsed time calculations
+   */
+  async pause(): Promise<void> {
+    if (!this.page || this.isPaused) {
+      logger.debug('Cannot pause - already paused or no page')
+      return
+    }
+
+    this.isPaused = true
+    this.pauseStartedAt = Date.now()
+    
+    logger.info('🔶 Recording paused')
+
+    try {
+      await this.page.evaluate(() => {
+        const win = window as any
+        win.__dodoRecordingPaused = true
+        
+        // Update widget visual state to show paused
+        const widgetHost = document.querySelector('#__dodo-recorder-widget-host')
+        const widget = widgetHost?.shadowRoot?.querySelector('.dodo-widget')
+        const voiceIndicator = widgetHost?.shadowRoot?.querySelector('#voice-indicator')
+        const pauseResumeBtn = widgetHost?.shadowRoot?.querySelector('#pause-resume-btn')
+        const pauseResumeTooltip = widgetHost?.shadowRoot?.querySelector('#pause-resume-btn .tooltip')
+        const screenshotBtn = widgetHost?.shadowRoot?.querySelector('#screenshot-btn') as HTMLButtonElement | null
+        const assertionBtn = widgetHost?.shadowRoot?.querySelector('#assertion-btn') as HTMLButtonElement | null
+        
+        if (widget) {
+          widget.classList.add('paused')
+        }
+        
+        // Hide voice indicator while paused
+        if (voiceIndicator) {
+          voiceIndicator.classList.remove('active')
+        }
+        
+        // Update pause button to play icon
+        if (pauseResumeBtn) {
+          pauseResumeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3" fill="rgba(100, 116, 139, 0.8)" stroke="rgba(148, 163, 184, 0.9)"></polygon>
+          </svg>`
+          
+          // Re-add tooltip
+          if (pauseResumeTooltip) {
+            pauseResumeBtn.appendChild(pauseResumeTooltip)
+            pauseResumeTooltip.textContent = 'Resume Recording'
+          }
+        }
+        
+        // Disable screenshot and assertion buttons
+        if (screenshotBtn) screenshotBtn.disabled = true
+        if (assertionBtn) assertionBtn.disabled = true
+      })
+    } catch (error) {
+      logger.error('Failed to update pause state in browser:', error)
+    }
+  }
+
+  /**
+   * Resumes the recording session
+   * Accumulates paused duration and continues recording
+   */
+  async resume(): Promise<void> {
+    if (!this.page || !this.isPaused) {
+      logger.debug('Cannot resume - not paused or no page')
+      return
+    }
+
+    // Accumulate paused duration
+    if (this.pauseStartedAt !== null) {
+      this.pausedDurationMs += Date.now() - this.pauseStartedAt
+      this.pauseStartedAt = null
+    }
+
+    this.isPaused = false
+    
+    logger.info('▶️ Recording resumed', `(paused for ${this.pausedDurationMs}ms total)`)
+
+    try {
+      await this.page.evaluate((audioActive: boolean) => {
+        const win = window as any
+        win.__dodoRecordingPaused = false
+        
+        // Restore audio activity state
+        win.__dodoAudioActive = audioActive
+        
+        // Update widget visual state to remove paused state
+        const widgetHost = document.querySelector('#__dodo-recorder-widget-host')
+        const widget = widgetHost?.shadowRoot?.querySelector('.dodo-widget')
+        const voiceIndicator = widgetHost?.shadowRoot?.querySelector('#voice-indicator')
+        const pauseResumeBtn = widgetHost?.shadowRoot?.querySelector('#pause-resume-btn')
+        const pauseResumeTooltip = widgetHost?.shadowRoot?.querySelector('#pause-resume-btn .tooltip')
+        const screenshotBtn = widgetHost?.shadowRoot?.querySelector('#screenshot-btn') as HTMLButtonElement | null
+        const assertionBtn = widgetHost?.shadowRoot?.querySelector('#assertion-btn') as HTMLButtonElement | null
+        
+        if (widget) {
+          widget.classList.remove('paused')
+        }
+        
+        // Show voice indicator if audio is active
+        if (voiceIndicator && audioActive) {
+          voiceIndicator.classList.add('active')
+        }
+        
+        // Update pause button back to pause icon
+        if (pauseResumeBtn) {
+          pauseResumeBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="6" y="4" width="4" height="16" fill="rgba(100, 116, 139, 0.8)" stroke="rgba(148, 163, 184, 0.9)"></rect>
+            <rect x="14" y="4" width="4" height="16" fill="rgba(100, 116, 139, 0.8)" stroke="rgba(148, 163, 184, 0.9)"></rect>
+          </svg>`
+          
+          // Re-add tooltip
+          if (pauseResumeTooltip) {
+            pauseResumeBtn.appendChild(pauseResumeTooltip)
+            pauseResumeTooltip.textContent = 'Pause Recording'
+          }
+        }
+        
+        // Re-enable screenshot and assertion buttons
+        if (screenshotBtn) screenshotBtn.disabled = false
+        if (assertionBtn) assertionBtn.disabled = false
+        
+        if (audioActive && typeof win.__dodoShowEqualizer === 'function') {
+          win.__dodoShowEqualizer()
+        }
+      }, this.audioActive)
+    } catch (error) {
+      logger.error('Failed to update resume state in browser:', error)
     }
   }
 

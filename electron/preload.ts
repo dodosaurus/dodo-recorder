@@ -42,11 +42,14 @@ export interface ElectronAPI {
   selectOutputFolder: () => Promise<string | null>
   startRecording: (startUrl: string, outputPath: string, startTime: number) => Promise<IpcResult>
   stopRecording: () => Promise<IpcResult<{ actions: RecordedAction[] }>>
+  pauseRecording: () => Promise<IpcResult>
+  resumeRecording: () => Promise<IpcResult>
   updateAudioActivity: (active: boolean) => Promise<void>
   saveSession: (sessionData: SessionBundle) => Promise<IpcResult<{ path: string }>>
   transcribeAudio: (audioBuffer: ArrayBuffer) => Promise<IpcResult<{ segments: TranscriptSegment[] }>>
   checkMicrophonePermission: () => Promise<{ granted: boolean; denied?: boolean }>
   onActionRecorded: (callback: (action: RecordedAction) => void) => () => void
+  onRecordingStateChanged: (callback: (data: { status: 'recording' | 'paused' }) => void) => () => void
   distributeVoiceSegments: (actions: RecordedAction[], segments: TranscriptSegment[], startTime: number) => Promise<IpcResult<{ actions: RecordedAction[] }>>
   generateFullTranscript: (segments: TranscriptSegment[]) => Promise<IpcResult<{ transcript: string }>>
   getUserPreferences: () => Promise<IpcResult<{ preferences: UserPreferences }>>
@@ -70,6 +73,10 @@ const electronAPI: ElectronAPI = {
   
   stopRecording: () => ipcRenderer.invoke('stop-recording'),
 
+  pauseRecording: () => ipcRenderer.invoke('pause-recording'),
+
+  resumeRecording: () => ipcRenderer.invoke('resume-recording'),
+
   updateAudioActivity: (active: boolean) => ipcRenderer.invoke('update-audio-activity', active),
   
   saveSession: (sessionData: SessionBundle) =>
@@ -91,6 +98,16 @@ const electronAPI: ElectronAPI = {
     }
     ipcRenderer.on('action-recorded', handler)
     return () => ipcRenderer.removeListener('action-recorded', handler)
+  },
+
+  onRecordingStateChanged: (callback: (data: { status: 'recording' | 'paused' }) => void) => {
+    const handler = (_: unknown, data: unknown) => {
+      if (data && typeof data === 'object' && 'status' in data) {
+        callback(data as { status: 'recording' | 'paused' })
+      }
+    }
+    ipcRenderer.on('recording-state-changed', handler)
+    return () => ipcRenderer.removeListener('recording-state-changed', handler)
   },
 
   distributeVoiceSegments: (actions: RecordedAction[], segments: TranscriptSegment[], startTime: number) =>

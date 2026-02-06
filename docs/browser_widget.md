@@ -2,7 +2,7 @@
 
 ## Overview
 
-Floating UI control in browser window during recording sessions. Provides screenshot capture and assertion mode without interfering with page content.
+Floating UI control in browser window during recording sessions. Provides pause/resume, screenshot capture, and assertion mode without interfering with page content.
 
 **Design Principles:** Shadow DOM isolation, widget interactions never recorded, draggable with edge snapping, keyboard shortcut alternatives.
 
@@ -40,6 +40,7 @@ const shadow = widgetHost.attachShadow({ mode: 'closed' })
   #shadow-root (closed)
     <style>...</style>
     <div class="dodo-widget" style="position: fixed; top: 20px; right: 20px;">
+      <button id="pause-resume-btn" class="widget-btn">...</button>
       <button id="screenshot-btn" class="widget-btn">...</button>
       <button id="assertion-btn" class="widget-btn">...</button>
       <div id="voice-indicator" class="voice-indicator"></div>
@@ -51,7 +52,59 @@ const shadow = widgetHost.attachShadow({ mode: 'closed' })
 
 ## Features
 
-### 1. Screenshot Button
+### 1. Pause/Resume Button
+
+**Visual:** Pause icon (two vertical bars) when recording, play icon (triangle) when paused.
+
+**Behavior:**
+- Pauses all action recording (clicks, inputs, navigation, screenshots, assertions)
+- Pauses audio recording via MediaRecorder.pause()
+- Disables screenshot and assertion buttons while paused
+- Excluded time from elapsed timer
+- Communicates state changes to main app via IPC events
+
+**Implementation:**
+```typescript
+pauseResumeBtn.addEventListener('click', async (e) => {
+  e.stopPropagation()
+
+  const win = window as unknown as DodoWindow
+  const isPaused = win.__dodoRecordingPaused === true
+
+  try {
+    if (isPaused) {
+      // Resume
+      if (typeof win.__dodoResumeRecording === 'function') {
+        await win.__dodoResumeRecording()
+        pauseResumeBtn.innerHTML = `<svg>...pause icon...</svg>`
+        pauseResumeTooltip.textContent = 'Pause Recording'
+        // Re-enable other buttons
+        screenshotBtn.disabled = false
+        assertionBtn.disabled = false
+      }
+    } else {
+      // Pause
+      if (typeof win.__dodoPauseRecording === 'function') {
+        await win.__dodoPauseRecording()
+        pauseResumeBtn.innerHTML = `<svg>...play icon...</svg>`
+        pauseResumeTooltip.textContent = 'Resume Recording'
+        // Disable other buttons while paused
+        screenshotBtn.disabled = true
+        assertionBtn.disabled = true
+      }
+    }
+  } catch (error) {
+    console.error('[Dodo Widget] Pause/Resume failed:', error)
+  }
+})
+```
+
+**State Management:**
+- Main process sets `window.__dodoRecordingPaused` via `page.evaluate()`
+- Widget button enables/disables based on pause state
+- Injected script checks pause state before recording actions
+
+### 2. Screenshot Button
 
 **Visual:** Camera icon (22x22px), dark gray body, multi-layered lens, flash animation on capture.
 
@@ -77,9 +130,9 @@ screenshotBtn.addEventListener('click', async (e) => {
 })
 ```
 
-**Keyboard shortcut:** Cmd/Ctrl+Shift+S (handled in injected-script.ts)
+**Keyboard shortcut:** Cmd/Ctrl+Shift+S (handled in injected-script.ts, blocked while paused)
 
-### 2. Assertion Button
+### 3. Assertion Button
 
 **Visual:** Eye icon with iris/pupil rendering, blue-tinted when active.
 
@@ -106,9 +159,9 @@ window.__dodoDisableAssertionMode = () => {
 }
 ```
 
-**Keyboard shortcut:** Cmd/Ctrl+Click (handled in injected-script.ts)
+**Keyboard shortcut:** Cmd/Ctrl+Click (handled in injected-script.ts, blocked while paused)
 
-### 3. Voice Recording Indicator
+### 4. Voice Recording Indicator
 
 **Visual:** 10px red pulsing dot, positioned after assertion button.
 
@@ -128,9 +181,9 @@ window.__dodoDisableAssertionMode = () => {
 }
 ```
 
-**State sync:** Main process sets `window.__dodoAudioActive` via [`page.evaluate()`](../electron/browser/recorder.ts:306-317). The indicator shows/hides based on this global variable - no polling interval.
+**State sync:** Main process sets `window.__dodoAudioActive` via [`page.evaluate()`](../electron/browser/recorder.ts:306-317). The indicator shows/hides based on this global variable - no polling interval. Hidden while paused.
 
-### 4. Drag and Drop
+### 5. Drag and Drop
 
 ```typescript
 let isDragging = false
@@ -178,7 +231,7 @@ document.addEventListener('mouseup', () => {
 })
 ```
 
-### 5. Edge Snapping
+### 6. Edge Snapping
 
 After drag release, widget snaps to nearest edge (top/right/bottom/left) with 20px padding and cubic-bezier animation (0.3s).
 
@@ -369,14 +422,17 @@ window.__dodoDisableAssertionMode = () => { ... }
 // Exposed by recorder via page.exposeFunction()
 const recordAction = window.__dodoRecordAction
 const takeScreenshot = window.__dodoTakeScreenshot
+const pauseRecording = window.__dodoPauseRecording
+const resumeRecording = window.__dodoResumeRecording
 ```
 
 **Recorder → Widget:**
 ```typescript
-// Audio activity state
+// Audio activity state and pause state
 await this.page.evaluate((isActive) => {
   const win = window as any
   win.__dodoAudioActive = isActive
+  win.__dodoRecordingPaused = false  // Set pause state
 
   if (isActive && typeof win.__dodoShowEqualizer === 'function') {
     win.__dodoShowEqualizer()
@@ -386,6 +442,13 @@ await this.page.evaluate((isActive) => {
     win.__dodoHideEqualizer()
   }
 }, active)
+```
+
+**Widget → Main App (via IPC):**
+```typescript
+// Pause/resume triggered from widget notifies main app
+mainWindow.webContents.send('recording-state-changed', { status: 'paused' })
+mainWindow.webContents.send('recording-state-changed', { status: 'recording' })
 ```
 
 ---

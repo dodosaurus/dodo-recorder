@@ -245,9 +245,33 @@ Enabled when: `startUrl && outputPath && status === 'idle'`
 6. Navigates to start URL
 7. Sets status to 'recording'
 
-**2. Stop Recording** ([`RecordingControls.tsx:555`](../src/components/RecordingControls.tsx:555))
+**2. Pause Recording** ([`RecordingControls.tsx:327`](../src/components/RecordingControls.tsx:327))
 
-Shown when: `status === 'recording'`
+Shown when: `status === 'recording'` (side-by-side with Stop button)
+
+**Process:**
+1. Calls IPC `pauseRecording()`
+2. Pauses MediaRecorder (audio)
+3. Sets status to 'paused'
+4. Records pause start time
+5. Disables audio activity indicator
+6. Freezes elapsed timer
+
+**3. Resume Recording** ([`RecordingControls.tsx:347`](../src/components/RecordingControls.tsx:347))
+
+Shown when: `status === 'paused'` (side-by-side with Stop button)
+
+**Process:**
+1. Accumulates paused duration
+2. Calls IPC `resumeRecording()`
+3. Resumes MediaRecorder (audio)
+4. Sets status to 'recording'
+5. Restores audio activity indicator
+6. Resumes elapsed timer (excluding paused time)
+
+**4. Stop Recording** ([`RecordingControls.tsx:381`](../src/components/RecordingControls.tsx:381))
+
+Shown when: `status === 'recording'` or `status === 'paused'`
 
 **Process:**
 1. Stops browser recording, closes browser
@@ -257,13 +281,13 @@ Shown when: `status === 'recording'`
 5. Generates transcript text
 6. Sets status to 'idle'
 
-**3. Save Session** ([`RecordingControls.tsx:582`](../src/components/RecordingControls.tsx:582))
+**5. Save Session** ([`RecordingControls.tsx:582`](../src/components/RecordingControls.tsx:582))
 
 Shown when: `status === 'idle' && actions.length > 0`
 
 Writes session bundle to output folder (INSTRUCTIONS.md, actions.json, screenshots/). Shows success state, disables to prevent duplicate saves. Button uses `variant="success"` when not saved, `variant="outline"` when saved.
 
-**4. Reset** ([`RecordingControls.tsx:601`](../src/components/RecordingControls.tsx:601))
+**6. Reset** ([`RecordingControls.tsx:601`](../src/components/RecordingControls.tsx:601))
 
 Shown when: `status === 'idle' && actions.length > 0`
 
@@ -399,6 +423,8 @@ interface RecordingState {
   transcriptSegments: TranscriptSegment[]
   transcriptText: string
   startTime: number | null
+  pausedAt: number | null
+  pausedDurationMs: number
 
   // Settings
   startUrl: string
@@ -417,7 +443,7 @@ interface RecordingState {
   isTranscriptViewOpen: boolean
   highlightedActionId: string | null
 
-  // Actions: setStatus, addAction, setSelectedMicrophoneId, etc.
+  // Actions: setStatus, addAction, setPausedAt, setPausedDuration, etc.
 }
 ```
 

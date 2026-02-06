@@ -13,25 +13,37 @@ const statusConfig: Record<RecordingStatus, { label: string; color: string }> = 
 }
 
 export function StatusBar() {
-  const { status, startTime, actionsCount } = useRecordingStore(useShallow((state) => ({
+  const { status, startTime, actionsCount, pausedAt, pausedDurationMs } = useRecordingStore(useShallow((state) => ({
     status: state.status,
     startTime: state.startTime,
     actionsCount: state.actions.length,
+    pausedAt: state.pausedAt,
+    pausedDurationMs: state.pausedDurationMs,
   })))
   const [elapsed, setElapsed] = useState(0)
 
   useEffect(() => {
-    if (status !== 'recording' || !startTime) {
+    if ((status !== 'recording' && status !== 'paused') || !startTime) {
       setElapsed(0)
       return
     }
 
-    const interval = setInterval(() => {
-      setElapsed(Date.now() - startTime)
-    }, 1000)
+    // If paused, freeze the timer
+    if (status === 'paused' && pausedAt) {
+      const frozenElapsed = pausedAt - startTime - pausedDurationMs
+      setElapsed(frozenElapsed)
+      return
+    }
 
-    return () => clearInterval(interval)
-  }, [status, startTime])
+    // If recording, update timer excluding paused duration
+    if (status === 'recording') {
+      const interval = setInterval(() => {
+        setElapsed(Date.now() - startTime - pausedDurationMs)
+      }, 1000)
+
+      return () => clearInterval(interval)
+    }
+  }, [status, startTime, pausedAt, pausedDurationMs])
 
   const { label, color } = statusConfig[status]
 
@@ -42,7 +54,7 @@ export function StatusBar() {
         <span className="text-muted-foreground">{label}</span>
       </div>
       
-      {status === 'recording' && (
+      {(status === 'recording' || status === 'paused') && (
         <>
           <div className="text-muted-foreground">
             <span className="text-foreground font-medium">{formatTimestamp(elapsed)}</span>
