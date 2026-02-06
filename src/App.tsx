@@ -11,17 +11,18 @@ import { Button } from '@/components/ui/button'
 import { useShallow } from 'zustand/react/shallow'
 
 export default function App() {
-  const { status, actions, transcriptText, isTranscriptViewOpen, setTranscriptViewOpen } = useRecordingStore(
+  const { status, actions, transcriptText, transcriptSegments, isTranscriptViewOpen, setTranscriptViewOpen } = useRecordingStore(
     useShallow((state) => ({
       status: state.status,
       actions: state.actions,
       transcriptText: state.transcriptText,
+      transcriptSegments: state.transcriptSegments,
       isTranscriptViewOpen: state.isTranscriptViewOpen,
       setTranscriptViewOpen: state.setTranscriptViewOpen,
     }))
   )
   
-  const canViewTranscript = status === 'idle' && actions.length > 0 && transcriptText
+  const canViewTranscript = status === 'idle' && (transcriptText || transcriptSegments.length > 0)
   
   return (
     <div className="h-screen flex flex-col overflow-hidden select-none">
@@ -47,7 +48,7 @@ export default function App() {
                 <div>
                   <h2 className="text-sm font-medium text-foreground">Recorded Actions</h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Click on transcript to highlight actions
+                    {actions.length === 0 ? 'No browser actions recorded' : 'Click on transcript to highlight actions'}
                   </p>
                 </div>
               </div>
@@ -61,7 +62,10 @@ export default function App() {
               <div>
                 <h2 className="text-sm font-medium text-foreground">Recorded Actions</h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {status === 'recording' ? 'Recording in progress...' : 'Actions will appear here during recording'}
+                  {status === 'recording' ? 'Recording in progress...' : 
+                    status === 'idle' && transcriptSegments.length > 0 && actions.length === 0 ? 
+                      'No browser actions recorded. Only voice commentary available.' :
+                      'Actions will appear here during recording'}
                 </p>
               </div>
               {canViewTranscript && (

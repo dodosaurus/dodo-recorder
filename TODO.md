@@ -1,10 +1,4 @@
-- we need to think about more how widget should looks like when paused
-- we stil lrecording the voice when it is paused we need to solve this
-- no transcript is produced when we have no action recorded, it should be
-
-
-
-- [ ] When voice recording is on, we need to somehow listen during the recording if there is any sound recorded or if it gets through some threshold. If not, first warn the user that no sound or little sound is coming from the microphone. When the recording is over and the sound was really poor and it doesn't get through some threshold, we shouldn't give this to the Wispr model and we should create just a transcript of the browser actions. 
+- [ ] When voice recording is on, we need to somehow "listen" during the recording if there is any sound recorded or if it gets through some threshold. If not, first warn the user that no sound or little sound is coming from the microphone. When the recording is over and the sound was really poor (maybe another check before giving it to a whisper model) and it doesn't get through some threshold input volume for ex., we shouldn't give this to the whisper model and we should create just a transcript of the browser actions
 
 - [ ] Add the feature where you can freeze the DOM. For example, when there is some loading state, the user will be able to freeze the DOM and then assert the elements or click on something. Then they could again refresh the played DOM, or it should be unfrozen if it could be done like that. 
 
@@ -12,6 +6,7 @@
 - [ ] make recording widget nicer - add more options there - think about what is needed, what for ex. Playwright Codegen has and we do not
 - [ ] after some change is made, Electron app running in dev mode, pops on top of all windows in my MacOS - maybe some live change watch is enabled and app is reloaded and jumps on top? I want live reload, but app should not pops on top of all my MacOS env
 
+- [x] No transcript is produced when we have no action recorded, it should be
 - [x] add assertion mode where elements will on hover will be highlighted like with Playwright Codgene/dev tools insepcting elements - or we can have a mode that will be by default off, but we can turn that "inspection" mode on (it resembles also inspect from chrome dev tools)
 - [x] add more options for output format - user could configure what he wants to include
 - [x] add some panel in browser for assertion mode/taking screenshot, so we are not dependent on hotkeys (similar to Playwright Codegen)

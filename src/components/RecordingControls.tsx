@@ -123,7 +123,7 @@ export function RecordingControls() {
 
   const canStart = startUrl && outputPath && status === 'idle'
   const canStop = status === 'recording' || status === 'paused'
-  const canSave = status === 'idle' && actions.length > 0
+  const canSave = status === 'idle' && (actions.length > 0 || transcriptSegments.length > 0)
 
   const startRecording = async () => {
     console.log('🎬 startRecording() called')
@@ -470,7 +470,7 @@ export function RecordingControls() {
     if (!window.electronAPI) return
 
     // Show warning if session hasn't been saved
-    if (!sessionSaved && actions.length > 0) {
+    if (!sessionSaved && (actions.length > 0 || transcriptSegments.length > 0)) {
       setShowResetWarning(true)
       return
     }
@@ -580,6 +580,12 @@ export function RecordingControls() {
       <div className="p-4 border-t border-border space-y-3">
         {renderAudioStatus()}
 
+        {status === 'idle' && transcriptSegments.length > 0 && actions.length === 0 && (
+          <p className="text-xs text-center text-muted-foreground">
+            No browser actions recorded. Only voice commentary captured.
+          </p>
+        )}
+
       {status === 'idle' && actions.length === 0 && (
         <Button
           className="w-full"
@@ -624,7 +630,7 @@ export function RecordingControls() {
         </Button>
       )}
 
-      {status === 'idle' && actions.length > 0 && (
+      {status === 'idle' && (actions.length > 0 || transcriptSegments.length > 0) && (
         <div className="space-y-2">
           <Button
             className="w-full"

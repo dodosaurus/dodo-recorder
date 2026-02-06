@@ -42,10 +42,13 @@ export class SessionWriter {
       const startUrl = session.actions.find(a => a.type === 'navigate')?.url
 
       // Calculate duration
-      const firstAction = session.actions[0]
-      const lastAction = session.actions[session.actions.length - 1]
-      const durationMs = lastAction.timestamp - firstAction.timestamp
-      const duration = this.formatDuration(durationMs)
+      let duration = '0s'
+      if (session.actions.length > 0) {
+        const firstAction = session.actions[0]
+        const lastAction = session.actions[session.actions.length - 1]
+        const durationMs = lastAction.timestamp - firstAction.timestamp
+        duration = this.formatDuration(durationMs)
+      }
       
       // Count action types for metadata
       const actionTypeCounts = session.actions.reduce((acc, action) => {

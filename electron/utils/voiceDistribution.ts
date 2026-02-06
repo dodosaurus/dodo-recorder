@@ -53,7 +53,17 @@ export function distributeVoiceSegments(
   sessionStartTime: number
 ): RecordedAction[] {
   if (segments.length === 0) return actions
-  if (actions.length === 0) return []
+  if (actions.length === 0) {
+    // Return a synthetic action to hold the voice segments when no actions exist
+    const syntheticAction: RecordedAction = {
+      id: 'voice-only-' + Date.now(),
+      timestamp: segments[0].startTime,
+      type: 'navigate',
+      url: 'Voice commentary session (no browser actions)',
+      voiceSegments: segments
+    }
+    return [syntheticAction]
+  }
 
   // Sort inputs to ensure correct temporal ordering
   // Note: Checks if already sorted to avoid redundant operations
