@@ -12,6 +12,12 @@ import { getInjectionScript } from './injected-script'
 import { getWidgetScript, getWidgetInitScript } from './recording-widget'
 import { getHighlighterScript, getHighlighterInitScript } from './hover-highlighter'
 
+enum RecorderState {
+  IDLE = 'idle',
+  RECORDING = 'recording',
+  PAUSED = 'paused',
+}
+
 /**
  * Gets the path to the Playwright browsers directory
  * In development: uses project root's playwright-browsers
@@ -96,10 +102,14 @@ export class BrowserRecorder extends EventEmitter {
   private audioActive: boolean = false
   private lastRecordedUrl: string | null = null
   
-  // Pause/resume state
-  private isPaused: boolean = false
+  private state: RecorderState = RecorderState.IDLE
+  
   private pauseStartedAt: number | null = null
   private pausedDurationMs: number = 0
+
+  private get isPaused(): boolean {
+    return this.state === RecorderState.PAUSED
+  }
 
   /**
    * Checks if Playwright Chromium browser is installed
@@ -142,11 +152,18 @@ export class BrowserRecorder extends EventEmitter {
    * @returns Promise that resolves when recording has started
    */
   async start(url: string, screenshotDir?: string): Promise<void> {
+    if (this.state !== RecorderState.IDLE) {
+      throw new Error(`Cannot start recording from state ${this.state}`)
+    }
+
+    this.state = RecorderState.RECORDING
     this.startTime = Date.now()
     this.actions = []
     this.screenshotDir = screenshotDir || null
     this.initialNavigationComplete = false
     this.lastRecordedUrl = url // Initialize with the start URL to avoid recording it as a navigation
+    this.pausedDurationMs = 0
+    this.pauseStartedAt = null
 
     // Log the Playwright browsers path (set at module load time)
     logger.info(`Playwright browsers path: ${browsersPath}`)
@@ -367,14 +384,22 @@ export class BrowserRecorder extends EventEmitter {
    * Pauses the recording session
    * Actions and screenshots are not recorded while paused
    * Paused time is excluded from elapsed time calculations
+   * @throws {Error} If not in RECORDING state
    */
   async pause(): Promise<void> {
-    if (!this.page || this.isPaused) {
-      logger.debug('Cannot pause - already paused or no page')
-      return
+    if (this.state !== RecorderState.RECORDING) {
+      const error = new Error(`Cannot pause from state ${this.state}`)
+      logger.warn('Pause failed:', error.message)
+      throw error
     }
 
-    this.isPaused = true
+    if (!this.page) {
+      const error = new Error('Cannot pause - no page available')
+      logger.warn('Pause failed:', error.message)
+      throw error
+    }
+
+    this.state = RecorderState.PAUSED
     this.pauseStartedAt = Date.now()
     
     logger.info('🔶 Recording paused')
@@ -429,11 +454,19 @@ export class BrowserRecorder extends EventEmitter {
   /**
    * Resumes the recording session
    * Accumulates paused duration and continues recording
+   * @throws {Error} If not in PAUSED state
    */
   async resume(): Promise<void> {
-    if (!this.page || !this.isPaused) {
-      logger.debug('Cannot resume - not paused or no page')
-      return
+    if (this.state !== RecorderState.PAUSED) {
+      const error = new Error(`Cannot resume from state ${this.state}`)
+      logger.warn('Resume failed:', error.message)
+      throw error
+    }
+
+    if (!this.page) {
+      const error = new Error('Cannot resume - no page available')
+      logger.warn('Resume failed:', error.message)
+      throw error
     }
 
     // Accumulate paused duration
@@ -442,7 +475,7 @@ export class BrowserRecorder extends EventEmitter {
       this.pauseStartedAt = null
     }
 
-    this.isPaused = false
+    this.state = RecorderState.RECORDING
     
     logger.info('▶️ Recording resumed', `(paused for ${this.pausedDurationMs}ms total)`)
 
@@ -506,6 +539,8 @@ export class BrowserRecorder extends EventEmitter {
    * Removes all event listeners to prevent memory leaks
    */
   async stop(): Promise<void> {
+    this.state = RecorderState.IDLE
+
     // Remove all event listeners
     if (this.page && this.frameNavigatedHandler) {
       this.page.removeListener('framenavigated', this.frameNavigatedHandler)

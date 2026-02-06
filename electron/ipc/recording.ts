@@ -122,8 +122,15 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
     }
 
     return handleIpc(async () => {
-      await browserRecorder!.pause()
-      return {}
+      try {
+        await browserRecorder!.pause()
+        return {}
+      } catch (error) {
+        if (error instanceof Error) {
+          return ipcError(error.message)
+        }
+        return ipcError('Failed to pause recording')
+      }
     }, 'Failed to pause recording')
   })
 
@@ -133,8 +140,15 @@ export function registerRecordingHandlers(mainWindow: BrowserWindow | null) {
     }
 
     return handleIpc(async () => {
-      await browserRecorder!.resume()
-      return {}
+      try {
+        await browserRecorder!.resume()
+        return {}
+      } catch (error) {
+        if (error instanceof Error) {
+          return ipcError(error.message)
+        }
+        return ipcError('Failed to resume recording')
+      }
     }, 'Failed to resume recording')
   })
 
