@@ -1,5 +1,5 @@
 - [ ] When voice recording is on, we need to somehow "listen" during the recording if there is any sound recorded or if it gets through some threshold. If not, first warn the user that no sound or little sound is coming from the microphone. When the recording is over and the sound was really poor (maybe another check before giving it to a whisper model) and it doesn't get through some threshold input volume for ex., we shouldn't give this to the whisper model and we should create just a transcript of the browser actions
-
+- [ ] fix bug when we pause recording in browser and press stop in app, the process crashes
 - [ ] Add the feature where you can freeze the DOM. For example, when there is some loading state, the user will be able to freeze the DOM and then assert the elements or click on something. Then they could again refresh the played DOM, or it should be unfrozen if it could be done like that. 
 
 - [ ] fix bug then sometimes it is not rendered (it probably depends on initially loaded parent HTML, for ex. youtube.com is problematic)
