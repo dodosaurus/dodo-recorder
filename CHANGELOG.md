@@ -13,6 +13,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [0.3.0] - 2026-02-09
+
+### Added
+
+**New Features:**
+- ⏸️ Pause/Resume recording - users can now pause and resume recording sessions with full state synchronization
+- 📋 Security review documentation - comprehensive security and refactoring analysis for recent implementations
+- 🔒 IPC error handling - enhanced error handling and validation for pause/resume operations
+
+**Technical Enhancements:**
+- State management for pause/resume - tracking paused duration and state transitions
+- Visual feedback in browser widget - pause button with status indication
+- Synchronized audio pause/resume - audio recording follows recording state
+- Event forwarding to renderer - recording state changes propagate to UI
+
+### Changed
+
+**Platform Focus:**
+- Removed Linux support mentions - focusing on macOS ARM64 and Windows x64
+- Removed macOS x64 mentions - focusing on Apple Silicon (ARM64)
+
+**UI/UX Improvements:**
+- Version display in debug widget - shows current application version
+- Simplified pause/resume controls - streamlined recording controls UI
+- Improved browser widget documentation - updated widget behavior documentation
+- Enhanced application UI documentation - revised layout and component documentation
+- Better architecture documentation - updated architecture guide
+
+### Fixed
+
+**Bug Fixes:**
+- Handle sessions with no actions recorded - prevents errors when stopping empty recordings
+- Windows dropdown styling - corrected dropdown display issues on Windows
+- Whisper binary permissions - fixed execution permissions for bundled whisper binary
+- Local macOS app build - resolved issues with local macOS app building
+
+**Build System:**
+- Reverted notarization changes - rolled back problematic notarization attempts
+- Improved build documentation - updated build guides for current configuration
+
 ## [0.2.0] - 2026-01-28
 
 ### Added
@@ -102,6 +142,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build info generation for release tracking
 - Playwright browser bundling improvements
 
-[Unreleased]: https://github.com/dodosaurus/dodo-recorder/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/dodosaurus/dodo-recorder/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/dodosaurus/dodo-recorder/releases/tag/v0.3.0
 [0.2.0]: https://github.com/dodosaurus/dodo-recorder/releases/tag/v0.2.0
 [0.1.0]: https://github.com/dodosaurus/dodo-recorder/releases/tag/v0.1.0
