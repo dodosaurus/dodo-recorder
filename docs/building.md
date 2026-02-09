@@ -11,6 +11,7 @@ This document describes how to build Dodo Recorder for local testing and product
 - [Development Mode](#development-mode)
 - [Local Test Build](#local-test-build)
 - [Production Build](#production-build)
+- [Creating a Release Tag](#creating-a-release-tag)
 - [Build Scripts](#build-scripts)
 - [Build Configuration](#build-configuration)
 - [Environment Variables](#environment-variables)
@@ -144,6 +145,66 @@ npm run build:prod
 **Platform support:** macOS ARM64, Windows x64
 
 **Signing:** Full code signing and notarization (macOS), no signing (Windows)
+
+---
+
+## Creating a Release Tag
+
+After bumping the version in `package.json` and `CHANGELOG.md`, create a Git tag to mark the release:
+
+```bash
+# 1. Verify changes are committed
+git status
+
+# 2. Create annotated tag with version number
+git tag -a v0.3.0 -m "Release v0.3.0"
+
+# 3. Push the tag to remote repository
+git push origin v0.3.0
+
+# 4. Push all tags (alternative)
+git push origin --tags
+```
+
+**Tag Naming Convention:**
+- Use semantic versioning with `v` prefix: `v0.3.0`, `v1.0.0`, etc.
+- Use annotated tags (`-a` flag) to include release notes
+- Tag should match the version in `package.json`
+
+**Viewing Tags:**
+
+```bash
+# List all tags
+git tag
+
+# Show tag details
+git show v0.3.0
+
+# List tags in chronological order
+git tag --sort=-creatordate
+```
+
+**Deleting Tags (if needed):**
+
+```bash
+# Delete local tag
+git tag -d v0.3.0
+
+# Delete remote tag
+git push origin --delete v0.3.0
+```
+
+**CI/CD Integration:**
+
+When creating a GitHub Release:
+1. Create the tag locally and push as shown above
+2. Go to GitHub → Releases → "Draft a new release"
+3. Select the tag you just pushed
+4. Copy the changelog from `CHANGELOG.md`
+5. Upload the build artifacts from `release/`
+6. Publish the release
+
+Alternatively, you can specify the `release_tag` parameter when triggering the CI/CD workflow to automatically upload artifacts to the release.
 
 ---
 
